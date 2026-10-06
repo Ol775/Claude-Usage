@@ -21,4 +21,12 @@ marker = "## "
 i = s.index(marker)
 open("CHANGELOG.md", "w").write(s[:i] + f"## {v} – alpha\n- {note}\n\n" + s[i:])
 PY
+# keep the README heading in step with the version
+python3 - "$new" <<'PY'
+import re, sys
+p = "../README.md"
+s = open(p).read()
+s = re.sub(r"## ClaudeUsage  \(v[^)]*\)", f"## ClaudeUsage  (v{sys.argv[1]} alpha)", s, count=1)
+open(p, "w").write(s)
+PY
 echo "Version is now $new"

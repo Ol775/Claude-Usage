@@ -97,8 +97,14 @@ final class App: NSObject, NSApplicationDelegate {
             dashboard = w
             applyWindowStyle()
         }
+        // Bring the window all the way forward: un-hide / un-minimise, then activate. (On recent macOS a plain
+        // activate(ignoringOtherApps:) can leave the window behind other apps.)
+        NSApp.unhide(nil)
+        if dashboard?.isMiniaturized == true { dashboard?.deminiaturize(nil) }
         NSApp.activate(ignoringOtherApps: true)
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
         dashboard?.makeKeyAndOrderFront(nil)
+        dashboard?.orderFrontRegardless()
     }
 
     @objc func showAbout() {
