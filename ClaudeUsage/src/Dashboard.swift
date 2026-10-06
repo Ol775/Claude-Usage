@@ -964,8 +964,9 @@ struct SettingsPage: View {
     }
 
     @ViewBuilder private var changelogGroup: some View {
-        let entries = Changelog.load()
-        SGroup(title: "Change log", footer: entries.isEmpty ? nil : "Newest first. Every version of Claude Usage and what changed in it.") {
+        let all = Changelog.load()
+        let entries = Array(all.prefix(3))          // the app only shows the last three versions; the rest is on GitHub
+        SGroup(title: "Change log", footer: entries.isEmpty ? nil : (all.count > 3 ? "The last 3 of \(all.count) versions, newest first." : "Newest first.")) {
             if entries.isEmpty {
                 SRow(title: "Change log unavailable") { EmptyView() }
             } else {
@@ -993,6 +994,10 @@ struct SettingsPage: View {
                         }
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
+                }
+                if all.count > 3 {
+                    SDivider()
+                    SRow(title: "Full change log") { Button("View on GitHub") { store.actions.openChangelog() } }
                 }
             }
         }

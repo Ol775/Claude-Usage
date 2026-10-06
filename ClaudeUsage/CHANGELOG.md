@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.6.1 – alpha (2026-10-06)
+- Change log in About shows only the last 3 versions (full history on GitHub)
+
 ## 0.6.0 – alpha (2026-10-06)
 - Change log in Settings → About (every version, newest first); repository renamed to Claude-Usage
 
