@@ -26,23 +26,26 @@ final class App: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ n: Notification) {
         settings.applyAppearance()
         applyPolicy()
-        settings.onChange = { [weak self] in DispatchQueue.main.async { self?.applyPolicy(); self?.build(self?.store.snapshot ?? Snapshot()) } }
+        settings.onChange = { [weak self] in DispatchQueue.main.async { self?.applyPolicy(); self?.applyWindowStyle(); self?.scheduleTimer(); self?.build(self?.store.snapshot ?? Snapshot()) } }
         store.actions = Actions(
             signIn: { [weak self] in self?.signIn() }, signOut: { [weak self] in self?.signOut() },
             cancelSignIn: { [weak self] in self?.loginProcess?.terminate() },
             choosePhoto: { [weak self] in self?.choosePhoto() }, removePhoto: { [weak self] in removeAvatar(); self?.photoChanged() },
             refresh: { [weak self] in self?.lastFetch = .distantPast; self?.refresh() },
-            testNotify: { [weak self] in self?.notify("Claude Usage Bar", "Notifications are working.") },
+            testNotify: { [weak self] in self?.notify("Claude Usage", "Notifications are working.") },
             openNotificationSettings: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
-            })
+            },
+            requestNotifications: { [weak self] in self?.requestNotifications() },
+            exportData: { [weak self] in self?.exportData() },
+            copySummary: { [weak self] in self?.copySummary() })
         installMainMenu()
-        if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in } }
-        item.button?.attributedTitle = NSAttributedString(string: "◆ …", attributes: [.foregroundColor: claudeOrange])
+        if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
+        item.button?.attributedTitle = NSAttributedString(string: "✻ …", attributes: [.foregroundColor: claudeOrange])
         build(Snapshot())
 
         if CommandLine.arguments.contains("--test-notify") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.notify("Claude Usage Bar", "Notifications are working.") }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.notify("Claude Usage", "Notifications are working.") }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { exit(0) }
             return
         }
@@ -52,8 +55,15 @@ final class App: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.showDashboard(.overview) }
         }
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refresh() }
+        scheduleTimer()
     }
+
+    func scheduleTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: Double(max(1, settings.refreshMinutes)) * 60, repeats: true) { [weak self] _ in self?.refresh() }
+    }
+
+    func applyWindowStyle() { dashboard?.backgroundColor = settings.isOLED ? .black : .windowBackgroundColor }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showDashboard(); return true }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -70,16 +80,19 @@ final class App: NSObject, NSApplicationDelegate {
 
     @objc func openDashboard() { showDashboard(.overview) }
     @objc func openSettings() { showDashboard(.settings) }
+    @objc func openReports() { showDashboard(.reports) }
+    @objc func copySummaryAction() { copySummary() }
     func showDashboard(_ tab: DashTab? = nil) {
         if let t = tab { store.tab = t }
         if dashboard == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1020, height: 720),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            w.title = "Claude Usage Bar"; w.contentMinSize = NSSize(width: 860, height: 600); w.isReleasedWhenClosed = false
+            w.title = "Claude Usage"; w.contentMinSize = NSSize(width: 860, height: 600); w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: DashboardView(store: store))
             if !w.setFrameUsingName("Dashboard") { w.center() }
             w.setFrameAutosaveName("Dashboard")
             dashboard = w
+            applyWindowStyle()
         }
         NSApp.activate(ignoringOtherApps: true)
         dashboard?.makeKeyAndOrderFront(nil)
@@ -88,7 +101,7 @@ final class App: NSObject, NSApplicationDelegate {
     @objc func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: "Claude Usage Bar",
+            .applicationName: "Claude Usage",
             .applicationVersion: "\(AppInfo.version) \(AppInfo.stage)",
             .version: AppInfo.build,
             .credits: NSAttributedString(string: "Shows your Claude session and weekly limits, reset times and usage forecasts.\nAn unofficial app – not affiliated with Anthropic.",
@@ -100,12 +113,12 @@ final class App: NSObject, NSApplicationDelegate {
         let appItem = NSMenuItem(); main.addItem(appItem)
         let appMenu = NSMenu()
         func add(_ m: NSMenu, _ t: String, _ a: Selector, _ k: String, target: AnyObject? = nil) { let i = m.addItem(withTitle: t, action: a, keyEquivalent: k); i.target = target }
-        add(appMenu, "About Claude Usage Bar", #selector(showAbout), "", target: self)
+        add(appMenu, "About Claude Usage", #selector(showAbout), "", target: self)
         appMenu.addItem(.separator())
         add(appMenu, "Settings…", #selector(openSettings), ",", target: self)
         appMenu.addItem(.separator())
-        add(appMenu, "Hide Claude Usage Bar", #selector(NSApplication.hide(_:)), "h")
-        add(appMenu, "Quit Claude Usage Bar", #selector(NSApplication.terminate(_:)), "q")
+        add(appMenu, "Hide Claude Usage", #selector(NSApplication.hide(_:)), "h")
+        add(appMenu, "Quit Claude Usage", #selector(NSApplication.terminate(_:)), "q")
         appItem.submenu = appMenu
         let winItem = NSMenuItem(); main.addItem(winItem)
         let win = NSMenu(title: "Window")
@@ -133,6 +146,7 @@ final class App: NSObject, NSApplicationDelegate {
                 if let f = fetched, let a = acct {
                     self.lastFetch = Date()
                     self.store.account = a
+                    if a.loggedIn { ActivityStore.shared.markSignedIn() }
                     if f.error == nil {
                         self.store.limits = f.limits; self.store.limitError = nil; self.store.stale = false
                         History.shared.record(f.limits); self.store.samples = History.shared.samples
@@ -142,6 +156,7 @@ final class App: NSObject, NSApplicationDelegate {
                     if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.showDashboard(.account) }
                 }
                 self.store.snapshot = s; self.store.lastUpdated = Date()
+                self.refreshNotifStatus()
                 self.build(s)
             }
         }
@@ -150,20 +165,79 @@ final class App: NSObject, NSApplicationDelegate {
     // MARK: notifications
 
     func notify(_ title: String, _ body: String) {
-        guard App.notificationsEnabled, settings.notificationsOn || title == "Claude Usage Bar" else { return }
-        let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
+        guard App.notificationsEnabled, settings.notificationsOn || title == "Claude Usage" else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { st in
-            if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
-                center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
-            } else {
-                // Permission denied: fall back to a plain AppleScript notification (generic icon).
-                let esc = { (x: String) in x.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
-                let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-                p.arguments = ["-e", "display notification \"\(esc(body))\" with title \"\(esc(title))\""]
-                try? p.run()
+            DispatchQueue.main.async {
+                if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
+                    let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
+                    center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
+                } else {
+                    // macOS is blocking notifications for this app: show our own banner (with the icon) so the alert isn't lost.
+                    Toast.show(title, body) { [weak self] in self?.showDashboard(.settings) }
+                }
             }
         }
+    }
+
+    func refreshNotifStatus() {
+        guard App.notificationsEnabled else { return }
+        UNUserNotificationCenter.current().getNotificationSettings { st in
+            DispatchQueue.main.async {
+                switch st.authorizationStatus {
+                case .authorized, .provisional: self.store.notifStatus = "Allowed"; self.store.notifBlocked = false
+                case .denied: self.store.notifStatus = "Blocked"; self.store.notifBlocked = true
+                default: self.store.notifStatus = "Not asked yet"; self.store.notifBlocked = false
+                }
+            }
+        }
+    }
+
+    func requestNotifications() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            DispatchQueue.main.async {
+                self.refreshNotifStatus()
+                if !granted { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!) }
+            }
+        }
+    }
+
+    // MARK: export & share
+
+    func exportData() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose a folder for the CSV files"; panel.prompt = "Export"
+        panel.canChooseFiles = false; panel.canChooseDirectories = true; panel.canCreateDirectories = true
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let dir = panel.url else { return }
+        let s = store.snapshot
+        let day = ISO8601DateFormatter(); day.formatOptions = [.withFullDate]
+        var daily = "date,tokens\n"
+        for (d, v) in zip(s.dailyDates, s.daily) { daily += "\(day.string(from: d)),\(v)\n" }
+        let tf = ISO8601DateFormatter()
+        var limits = "time,session_percent,session_resets,weekly_percent,weekly_resets\n"
+        for x in History.shared.samples {
+            limits += "\(tf.string(from: x.t)),\(x.session),\(x.sessionReset.map { tf.string(from: $0) } ?? ""),\(x.weekly),\(x.weeklyReset.map { tf.string(from: $0) } ?? "")\n"
+        }
+        let a = dir.appendingPathComponent("claude-usage-daily.csv"), b = dir.appendingPathComponent("claude-usage-limits.csv")
+        do {
+            try daily.write(to: a, atomically: true, encoding: .utf8); try limits.write(to: b, atomically: true, encoding: .utf8)
+            NSWorkspace.shared.activateFileViewerSelecting([a, b])
+        } catch {
+            let al = NSAlert(); al.messageText = "Couldn’t save the files"; al.informativeText = error.localizedDescription; al.runModal()
+        }
+    }
+
+    func copySummary() {
+        var lines = ["Claude usage – " + Date().formatted(date: .abbreviated, time: .shortened)]
+        for l in store.limits where l.kind != .other {
+            lines.append("\(l.name): \(Int(l.percent.rounded()))% – \(untilText(l.resets).lowercased())")
+            lines.append("  \(Predictor.describe(Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days)))")
+        }
+        let s = store.snapshot
+        lines.append("Today: \(fmt(s.today.billable)) tokens, \(s.messagesToday) responses · 7 days: \(fmt(s.week.billable)) · month: \(fmt(s.month.billable))")
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+        Toast.show("Summary copied", "Your usage summary is on the clipboard.")
     }
 
     func checkLimits() {
@@ -175,11 +249,11 @@ final class App: NSObject, NSApplicationDelegate {
         for l in store.limits where l.kind != .other {
             let reset = l.resets.map { Int($0.timeIntervalSince1970 / 60) } ?? 0
             let pct = Int(l.percent)
-            for t in [80, 95, 100] where pct >= t {
+            for t in Array(Set([settings.warnThreshold, settings.criticalThreshold, 100])).sorted() where pct >= t {
                 let when = untilText(l.resets).replacingOccurrences(of: "Resets", with: "resets")
                 once("\(l.name)|\(reset)|\(t)", t >= 100 ? "\(l.name) limit reached" : "\(l.name) at \(t)%", "Usage is \(pct)% – \(when)")
             }
-            if settings.predictiveAlerts, case .hits(let at, _, _) = Predictor.forecast(l, samples: store.samples) {
+            if settings.predictiveAlerts, case .hits(let at, _, _) = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days) {
                 let soon = at.timeIntervalSinceNow < (l.kind == .session ? 3600 : 86400)
                 if soon { once("\(l.name)|\(reset)|pace", "On pace to hit your \(l.kind == .session ? "session" : "weekly") limit", Predictor.describe(.hits(at: at, perHour: 0, recent: true))) }
             }
@@ -252,16 +326,23 @@ final class App: NSObject, NSApplicationDelegate {
     func build(_ s: Snapshot) {
         checkLimits()
         let font = NSFont.menuBarFont(ofSize: 0)
-        let t = NSMutableAttributedString(string: "◆ ", attributes: [.foregroundColor: claudeOrange, .font: font])
+        let t = NSMutableAttributedString(string: "✻", attributes: [.foregroundColor: claudeOrange, .font: font])
         func piece(_ l: Limit) -> NSAttributedString {
             var attrs: [NSAttributedString.Key: Any] = [.font: font]
-            if l.percent >= 95 { attrs[.foregroundColor] = alertRed }      // otherwise default colour, so it follows the menu bar
+            if l.percent >= Double(settings.criticalThreshold) { attrs[.foregroundColor] = alertRed }      // otherwise default colour, so it follows the menu bar
             return NSAttributedString(string: "\(Int(l.percent.rounded()))%", attributes: attrs)
         }
-        if let sess = store.limits.first(where: { $0.kind == .session }) {
-            t.append(piece(sess))
-            if let w = store.limits.first(where: { $0.kind == .weekly }) { t.append(NSAttributedString(string: " · ", attributes: [.font: font])); t.append(piece(w)) }
-        } else { t.append(NSAttributedString(string: fmt(s.today.billable), attributes: [.font: font])) }
+        func plain(_ x: String) -> NSAttributedString { NSAttributedString(string: x, attributes: [.font: font]) }
+        let sess = store.limits.first(where: { $0.kind == .session }), week = store.limits.first(where: { $0.kind == .weekly })
+        switch settings.menuBarStyle {
+        case .iconOnly: break
+        case .tokens: t.append(plain(" " + fmt(s.today.billable)))
+        case .session: if let x = sess { t.append(plain(" ")); t.append(piece(x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
+        case .weekly: if let x = week { t.append(plain(" ")); t.append(piece(x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
+        case .both:
+            if let x = sess { t.append(plain(" ")); t.append(piece(x)); if let w = week { t.append(plain(" · ")); t.append(piece(w)) } }
+            else { t.append(plain(" " + fmt(s.today.billable))) }
+        }
         item.button?.attributedTitle = t
 
         let m = NSMenu()
@@ -272,7 +353,7 @@ final class App: NSObject, NSApplicationDelegate {
             add(m, RowView(left: store.limitError ?? "Loading limits…", leftBold: false, size: 12, tint: .secondaryLabelColor))
         } else {
             for l in main {
-                let f = Predictor.forecast(l, samples: store.samples)
+                let f = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days)
                 var hot = false
                 switch f { case .hits, .reached: hot = true; default: break }
                 add(m, UsageBarView(l, forecast: Predictor.describe(f), hot: hot))
@@ -305,8 +386,10 @@ final class App: NSObject, NSApplicationDelegate {
         let f = DateFormatter(); f.timeStyle = .short
         add(m, RowView(left: "Updated \(f.string(from: s.updated)) · \(AppInfo.display)", leftBold: false, size: 10, tint: .secondaryLabelColor))
         let d = NSMenuItem(title: "Open Dashboard…", action: #selector(openDashboard), keyEquivalent: "d"); d.target = self; m.addItem(d)
+        let rp = NSMenuItem(title: "Open Reports…", action: #selector(openReports), keyEquivalent: "e"); rp.target = self; m.addItem(rp)
+        let cs = NSMenuItem(title: "Copy Usage Summary", action: #selector(copySummaryAction), keyEquivalent: "c"); cs.target = self; m.addItem(cs)
         let r = NSMenuItem(title: "Refresh", action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
-        let ab = NSMenuItem(title: "About Claude Usage Bar", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
+        let ab = NSMenuItem(title: "About Claude Usage", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
         m.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = m
     }
@@ -319,10 +402,26 @@ final class App: NSObject, NSApplicationDelegate {
         refresh()
         var steps: [(AppearanceMode, DashTab, AccentTheme)] = []
         for a in [AppearanceMode.dark, .light] { for t in DashTab.allCases { steps.append((a, t, .claude)) } }
-        steps.append((.dark, .overview, .blue)); steps.append((.light, .usage, .green)); steps.append((.dark, .usage, .purple))
+        for t in [DashTab.overview, .reports, .usage, .settings] { steps.append((.oled, t, .claude)) }
         var i = 0
+        func finish() { try? "done".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8); DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) } }
+        // Full-height renders of the long pages (a normal window only shows the top), captured from outside by the tour script.
+        func tall(_ idx: Int = 0) {
+            let shots: [(AppearanceMode, String)] = [(.dark, "insights"), (.light, "insights"), (.oled, "insights")]
+            guard idx < shots.count else { finish(); return }
+            let (mode, name) = shots[idx]
+            settings.appearance = mode
+            let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 1020, height: 3700), styleMask: [.borderless], backing: .buffered, defer: false)
+            w.contentView = NSHostingView(rootView: InsightsView(store: store).frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
+            w.orderFrontRegardless()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                try? "\(100 + idx) tall-\(name)-\(mode.rawValue) \(w.windowNumber)".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { w.orderOut(nil); tall(idx + 1) }
+            }
+        }
+        if CommandLine.arguments.contains("--tall-only") { DispatchQueue.main.asyncAfter(deadline: .now() + 6) { tall() }; return }
         func next() {
-            guard i < steps.count else { try? "done".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8); DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) }; return }
+            guard i < steps.count else { tall(); return }
             let (a, t, th) = steps[i]; i += 1
             settings.appearance = a; settings.theme = th; store.tab = t
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
@@ -361,6 +460,23 @@ if CommandLine.arguments.contains("--snapshot") {
         host.cacheDisplay(in: host.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/menu_snapshot_\(name).png"))
     }
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--dump") {
+    // Dev aid: prints 30-day totals so they can be cross-checked against the raw logs.
+    let snap = scan(), cal = Calendar.current, today = cal.startOfDay(for: Date())
+    var t = DayRecord(), active = 0
+    for i in 0..<30 {
+        let d = cal.date(byAdding: .day, value: -i, to: today)!
+        guard let r = snap.days[dayKey(d)] else { continue }
+        t.prompts += r.prompts; t.responses += r.responses; t.toolCalls += r.toolCalls; t.sessions += r.sessions
+        t.input += r.input; t.output += r.output; t.cacheWrite += r.cacheWrite; t.cacheRead += r.cacheRead; t.cost += r.cost
+        if r.billable > 0 { active += 1 }
+    }
+    print("30d prompts=\(t.prompts) responses=\(t.responses) tools=\(t.toolCalls) sessions=\(t.sessions) active=\(active)")
+    print("30d input=\(t.input) output=\(t.output) cacheWrite=\(t.cacheWrite) cacheRead=\(t.cacheRead) cost=\(money(t.cost))")
+    print("stored days=\(snap.days.count) unpriced=\(snap.unpricedModels.sorted())")
     exit(0)
 }
 

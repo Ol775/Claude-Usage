@@ -6,7 +6,7 @@ import SwiftUI
 enum AppInfo {
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0" }
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1" }
-    static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageBarStage"] as? String ?? "alpha" }
+    static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "alpha" }
     static var display: String { "v\(version) \(stage)" }
 }
 
@@ -40,9 +40,25 @@ enum AccentTheme: String, CaseIterable, Identifiable {
 }
 
 enum AppearanceMode: String, CaseIterable, Identifiable {
-    case system, light, dark
+    case system, light, dark, oled
     var id: String { rawValue }
-    var label: String { self == .system ? "Follow system" : (self == .light ? "Light" : "Dark") }
+    var label: String {
+        switch self { case .system: return "Follow system"; case .light: return "Light"; case .dark: return "Dark"; case .oled: return "OLED black" }
+    }
+}
+
+enum MenuBarStyle: String, CaseIterable, Identifiable {
+    case both, session, weekly, tokens, iconOnly
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .both: return "Session · Weekly"
+        case .session: return "Session only"
+        case .weekly: return "Weekly only"
+        case .tokens: return "Tokens today"
+        case .iconOnly: return "Icon only"
+        }
+    }
 }
 
 var currentTheme: AccentTheme = .claude
@@ -69,6 +85,10 @@ final class Settings: ObservableObject {
     @Published var theme: AccentTheme { didSet { currentTheme = theme; if Settings.persist { d.set(theme.rawValue, forKey: "theme") }; onChange() } }
     @Published var showInDock: Bool { didSet { if Settings.persist { d.set(showInDock, forKey: "showInDock") }; onChange() } }
     @Published var notificationsOn: Bool { didSet { if Settings.persist { d.set(notificationsOn, forKey: "notificationsOn") } } }
+    @Published var menuBarStyle: MenuBarStyle { didSet { if Settings.persist { d.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }; onChange() } }
+    @Published var warnThreshold: Int { didSet { if Settings.persist { d.set(warnThreshold, forKey: "warnThreshold") } } }
+    @Published var criticalThreshold: Int { didSet { if Settings.persist { d.set(criticalThreshold, forKey: "criticalThreshold") } } }
+    @Published var refreshMinutes: Int { didSet { if Settings.persist { d.set(refreshMinutes, forKey: "refreshMinutes") }; onChange() } }
     @Published var predictiveAlerts: Bool { didSet { if Settings.persist { d.set(predictiveAlerts, forKey: "predictiveAlerts") } } }
 
     init() {
@@ -77,6 +97,10 @@ final class Settings: ObservableObject {
         showInDock = d.object(forKey: "showInDock") as? Bool ?? true
         notificationsOn = d.object(forKey: "notificationsOn") as? Bool ?? true
         predictiveAlerts = d.object(forKey: "predictiveAlerts") as? Bool ?? true
+        menuBarStyle = MenuBarStyle(rawValue: d.string(forKey: "menuBarStyle") ?? "") ?? .both
+        warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
+        criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95
+        refreshMinutes = d.object(forKey: "refreshMinutes") as? Int ?? 1
         currentTheme = theme
     }
 
@@ -84,7 +108,8 @@ final class Settings: ObservableObject {
         switch appearance {
         case .system: NSApp.appearance = nil
         case .light: NSApp.appearance = NSAppearance(named: .aqua)
-        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .dark, .oled: NSApp.appearance = NSAppearance(named: .darkAqua)
         }
     }
+    var isOLED: Bool { appearance == .oled }
 }

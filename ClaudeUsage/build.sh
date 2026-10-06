@@ -1,15 +1,15 @@
 #!/bin/zsh
-# Builds ClaudeUsageBar.app from src/. Version comes from ./VERSION; STAGE and BUILD below.
+# Builds "Claude Usage.app" from src/. Version comes from ./VERSION; STAGE and BUILD below.
 set -e
 cd "$(dirname "$0")"
 VERSION=$(cat VERSION)
 STAGE="alpha"
 BUILD="${BUILD:-1}"
-APP="ClaudeUsageBar.app"
+APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
 swiftc -O -target "$(uname -m)-apple-macos13.0" \
-  src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/Views.swift src/Dashboard.swift \
-  -o "$APP/Contents/MacOS/ClaudeUsageBar"
+  src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/Views.swift src/Toast.swift src/Activity.swift src/Dashboard.swift src/Reports.swift src/Insights.swift \
+  -o "$APP/Contents/MacOS/ClaudeUsage"
 rm -rf build/AppIcon.iconset && mkdir -p build/AppIcon.iconset
 swiftc src/makeicon.swift -o build/makeicon
 build/makeicon build/AppIcon.iconset
@@ -18,18 +18,18 @@ cat > "$APP/Contents/Info.plist" <<P
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleExecutable</key><string>ClaudeUsageBar</string>
-<key>CFBundleIdentifier</key><string>local.claudeusagebar</string>
+<key>CFBundleExecutable</key><string>ClaudeUsage</string>
+<key>CFBundleIdentifier</key><string>local.claudeusage</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
-<key>CFBundleName</key><string>Claude Usage Bar</string>
-<key>CFBundleDisplayName</key><string>Claude Usage Bar</string>
+<key>CFBundleName</key><string>Claude Usage</string>
+<key>CFBundleDisplayName</key><string>Claude Usage</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$VERSION</string>
 <key>CFBundleVersion</key><string>$BUILD</string>
-<key>ClaudeUsageBarStage</key><string>$STAGE</string>
+<key>ClaudeUsageStage</key><string>$STAGE</string>
 <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
-<key>NSHumanReadableCopyright</key><string>Claude Usage Bar $VERSION $STAGE – unofficial, not affiliated with Anthropic</string>
+<key>NSHumanReadableCopyright</key><string>Claude Usage $VERSION $STAGE – unofficial, not affiliated with Anthropic</string>
 </dict></plist>
 P
 codesign --force --sign - "$APP"

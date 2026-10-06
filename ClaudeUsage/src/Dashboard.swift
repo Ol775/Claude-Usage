@@ -13,15 +13,20 @@ struct Actions {
     var refresh: () -> Void = {}
     var testNotify: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
+    var requestNotifications: () -> Void = {}
+    var exportData: () -> Void = {}
+    var copySummary: () -> Void = {}
 }
 
 enum DashTab: String, CaseIterable, Identifiable {
-    case overview, usage, account, settings
+    case overview, reports, insights, usage, account, settings
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
     var icon: String {
         switch self {
         case .overview: return "gauge.with.dots.needle.50percent"
+        case .reports: return "chart.xyaxis.line"
+        case .insights: return "lightbulb"
         case .usage: return "chart.bar.xaxis"
         case .account: return "person.crop.circle"
         case .settings: return "gearshape"
@@ -41,6 +46,8 @@ final class Store: ObservableObject {
     @Published var loginBusy = false
     @Published var photo: NSImage? = avatarImage
     @Published var lastUpdated: Date?
+    @Published var notifStatus = "Checking…"
+    @Published var notifBlocked = false
     var actions = Actions()
 }
 
@@ -55,11 +62,17 @@ extension Color {
     static var danger: Color { Color(nsColor: alertRed) }
 }
 
-extension View {
-    func card() -> some View {
-        background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+struct CardStyle: ViewModifier {
+    @ObservedObject var settings = Settings.shared
+    func body(content: Content) -> some View {
+        content
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(settings.isOLED ? Color(white: 0.07) : Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(settings.isOLED ? Color(white: 0.20) : Color(nsColor: .separatorColor), lineWidth: 1))
     }
+}
+
+extension View {
+    func card() -> some View { modifier(CardStyle()) }
 }
 
 // MARK: - Shell
@@ -73,10 +86,12 @@ struct DashboardView: View {
             List(DashTab.allCases, selection: Binding(get: { store.tab }, set: { if let v = $0 { store.tab = v } })) { tab in
                 Label { Text(tab.title) } icon: { Image(systemName: tab.icon).foregroundStyle(Color.brand) }.tag(tab)
             }
+            .scrollContentBackground(.hidden)
+            .background(settings.isOLED ? Color.black : Color.clear)
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 230)
             .safeAreaInset(edge: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Claude Usage Bar").font(.caption.weight(.semibold))
+                    Text("Claude Usage").font(.caption.weight(.semibold))
                     Text("\(AppInfo.display) · build \(AppInfo.build)").font(.caption2).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(12)
@@ -85,14 +100,17 @@ struct DashboardView: View {
             Group {
                 switch store.tab {
                 case .overview: OverviewView(store: store)
+                case .reports: ReportsView(store: store)
+                case .insights: InsightsView(store: store)
                 case .usage: UsageView(store: store)
                 case .account: AccountPage(store: store)
                 case .settings: SettingsPage(store: store, settings: settings)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor))
         }
+        .background(settings.isOLED ? Color.black : Color.clear)
         .tint(.brand)
         .frame(minWidth: 860, minHeight: 600)
     }
@@ -134,7 +152,7 @@ struct OverviewView: View {
                 } else {
                     HStack(alignment: .top, spacing: 16) {
                         ForEach(Array(store.limits.enumerated()).filter { $0.element.kind != .other }, id: \.offset) { _, l in
-                            LimitCard(limit: l, samples: store.samples)
+                            LimitCard(limit: l, samples: store.samples, activity: store.snapshot.days)
                         }
                     }
                     let extra = store.limits.filter { $0.kind == .other }
@@ -187,8 +205,9 @@ struct Ring: View {
 struct LimitCard: View {
     let limit: Limit
     let samples: [Sample]
+    var activity: [String: DayRecord] = [:]
 
-    var forecast: Forecast { Predictor.forecast(limit, samples: samples) }
+    var forecast: Forecast { Predictor.forecast(limit, samples: samples, activity: activity) }
     var hot: Bool {
         if limit.percent >= 95 { return true }
         if case .hits = forecast { return true }
@@ -257,7 +276,7 @@ struct ProjectionCard: View {
                 let start = resets.addingTimeInterval(-l.window)
                 let now = Date()
                 let pts = points(l, resets: resets, now: now)
-                let f = Predictor.forecast(l, samples: store.samples, now: now)
+                let f = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days, now: now)
                 let proj = projection(f, l: l, resets: resets, now: now)
                 Chart {
                     ForEach(pts) { p in
@@ -397,6 +416,34 @@ struct UsageView: View {
                     .padding(18).frame(maxWidth: .infinity).card()
                 }
 
+                let projects = s.byProjectWeek.map { ($0.key, $0.value.billable) }.filter { $0.1 > 0 }.sorted { $0.1 > $1.1 }.prefix(8)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("By project (7 days)").font(.headline)
+                    if projects.isEmpty {
+                        Text("No usage yet").foregroundStyle(.secondary).frame(height: 80)
+                    } else {
+                        Chart(Array(projects), id: \.0) { m in
+                            BarMark(x: .value("Tokens", m.1), y: .value("Project", m.0), height: .fixed(16)).foregroundStyle(Color.brand).cornerRadius(3)
+                                .annotation(position: .top, alignment: .leading, spacing: 3) {
+                                    (Text(m.0).foregroundColor(.secondary) + Text("  \(fmt(m.1))").fontWeight(.semibold)).font(.caption)
+                                }
+                        }
+                        .chartXAxis(.hidden).chartYAxis(.hidden)
+                        .frame(height: max(100, CGFloat(projects.count) * 44))
+                    }
+                }
+                .padding(18).frame(maxWidth: .infinity, alignment: .leading).card()
+
+                let busyHour = s.hourOfDay30.enumerated().max { $0.element < $1.element }
+                let busyDay = s.weekday30.enumerated().max { $0.element < $1.element }
+                let active = s.daily.filter { $0 > 0 }.count
+                HStack(spacing: 16) {
+                    StatTile(title: "Busiest hour", value: (busyHour?.element ?? 0) > 0 ? String(format: "%02d:00", busyHour!.offset) : "—", sub: "over the last 30 days")
+                    StatTile(title: "Busiest day", value: (busyDay?.element ?? 0) > 0 ? Calendar.current.weekdaySymbols[busyDay!.offset] : "—", sub: "over the last 30 days")
+                    StatTile(title: "Active days", value: "\(active)", sub: "of the last 30")
+                    StatTile(title: "Avg active day", value: active > 0 ? fmt(s.daily.reduce(0, +) / active) : "—", sub: "tokens")
+                }
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Token breakdown").font(.headline)
                     Grid(alignment: .trailing, horizontalSpacing: 24, verticalSpacing: 10) {
@@ -492,12 +539,17 @@ struct SettingsPage: View {
     @ObservedObject var settings: Settings
     @StateObject private var loginBox = Box(SMAppService.mainApp.status == .enabled)
 
+    private var rowBG: Color? { settings.isOLED ? Color(white: 0.07) : nil }
+
     var body: some View {
         Form {
             Section("Appearance") {
                 Picker("Mode", selection: $settings.appearance) {
                     ForEach(AppearanceMode.allCases) { Text($0.label).tag($0) }
                 }.pickerStyle(.segmented)
+                if settings.appearance == .oled {
+                    Text("Pure black backgrounds – saves power and looks deepest on OLED displays.").font(.caption).foregroundStyle(.secondary)
+                }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Colour theme")
                     HStack(spacing: 14) {
@@ -513,7 +565,14 @@ struct SettingsPage: View {
                         }
                     }
                 }
-            }
+            }.listRowBackground(rowBG)
+
+            Section("Menu bar") {
+                Picker("Show", selection: $settings.menuBarStyle) {
+                    ForEach(MenuBarStyle.allCases) { Text($0.label).tag($0) }
+                }
+            }.listRowBackground(rowBG)
+
             Section("General") {
                 Toggle("Show in Dock", isOn: $settings.showInDock)
                 Toggle("Launch at login", isOn: Binding(
@@ -523,22 +582,51 @@ struct SettingsPage: View {
                         catch { NSSound.beep() }
                         loginBox.value = SMAppService.mainApp.status == .enabled
                     }))
-            }
+                Picker("Refresh every", selection: $settings.refreshMinutes) {
+                    Text("1 minute").tag(1); Text("2 minutes").tag(2); Text("5 minutes").tag(5); Text("10 minutes").tag(10)
+                }
+            }.listRowBackground(rowBG)
+
             Section("Notifications") {
-                Toggle("Alert at 80%, 95% and 100% of a limit", isOn: $settings.notificationsOn)
+                HStack {
+                    Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill")
+                        .foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("macOS notifications: \(store.notifStatus)")
+                        if store.notifBlocked {
+                            Text("Blocked – alerts will appear as an on-screen banner with the app icon instead.").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    if store.notifBlocked { Button("Allow…") { store.actions.requestNotifications() } }
+                }
+                Toggle("Alert when a limit gets close", isOn: $settings.notificationsOn)
+                Stepper("Warn at \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 50...95, step: 5)
+                Stepper("Critical at \(settings.criticalThreshold)%", value: $settings.criticalThreshold, in: 60...99, step: 1)
                 Toggle("Warn when on pace to hit a limit early", isOn: $settings.predictiveAlerts)
                 HStack {
                     Button("Send test notification") { store.actions.testNotify() }
                     Button("Open notification settings") { store.actions.openNotificationSettings() }
                 }
-            }
+            }.listRowBackground(rowBG)
+
+            Section("Data") {
+                HStack {
+                    Button("Export data (CSV)…") { store.actions.exportData() }
+                    Button("Copy usage summary") { store.actions.copySummary() }
+                }
+                Text("Daily tokens and your limit history are exported as two CSV files.").font(.caption).foregroundStyle(.secondary)
+            }.listRowBackground(rowBG)
+
             Section("About") {
                 LabeledContent("Version", value: "\(AppInfo.version) \(AppInfo.stage)")
                 LabeledContent("Build", value: AppInfo.build)
-                Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage.")
+                Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                     .font(.caption).foregroundStyle(.secondary)
-            }
+            }.listRowBackground(rowBG)
         }
         .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(settings.isOLED ? Color.black : Color.clear)
     }
 }

@@ -41,7 +41,7 @@ final class History {
         if let last = samples.last, now.timeIntervalSince(last.t) < 170,
            last.session == new.session, last.weekly == new.weekly { return false }
         samples.append(new)
-        samples.removeAll { now.timeIntervalSince($0.t) > 14 * 86400 }
+        samples.removeAll { now.timeIntervalSince($0.t) > 90 * 86400 }
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         if let d = try? enc.encode(samples) { try? d.write(to: url, options: .atomic) }
         return true
@@ -60,7 +60,7 @@ enum Forecast {
 enum Predictor {
     /// Estimates when `percent` reaches 100 by extrapolating the burn rate.
     /// Uses the recent pace from stored samples when there are enough, otherwise the average since the window began.
-    static func forecast(_ l: Limit, samples: [Sample], now: Date = Date()) -> Forecast {
+    static func forecast(_ l: Limit, samples: [Sample], activity: [String: DayRecord] = [:], now: Date = Date()) -> Forecast {
         guard l.kind != .other else { return .none("") }
         if l.percent >= 100 { return .reached }
         guard let resets = l.resets, resets > now else { return .none("Waiting for the limit to reset") }
@@ -85,11 +85,44 @@ enum Predictor {
         } else if elapsedH >= 0.1 {
             rate = l.percent / elapsedH
         }
+        // Weekly limits also learn from the saved activity history: your usual tokens per weekday, scaled by how many
+        // percent this window's tokens have cost so far. It leads early in the window and hands over to the live pace later.
+        if l.kind == .weekly, let act = activityRate(l, resets: resets, now: now, days: activity) {
+            let w = max(0, 1 - elapsedH / 48)
+            rate = rate.map { $0 * (1 - w) + act * w } ?? act
+        }
         guard let perHour = rate else { return .none("Not enough data yet") }
         if perHour < 0.01 { return .safe(projected: l.percent, perHour: 0) }
         let hoursToHit = (100 - l.percent) / perHour
         if hoursToHit < remainingH { return .hits(at: now.addingTimeInterval(hoursToHit * 3600), perHour: perHour, recent: recent) }
         return .safe(projected: l.percent + perHour * remainingH, perHour: perHour)
+    }
+
+    /// Expected extra percent-per-hour until the reset, based on a typical week from saved daily activity. Nil without enough history.
+    static func activityRate(_ l: Limit, resets: Date, now: Date, days: [String: DayRecord]) -> Double? {
+        let cal = Calendar.current
+        let start = resets.addingTimeInterval(-l.window), today = cal.startOfDay(for: now)
+        var cursor = cal.startOfDay(for: start), used = 0
+        while cursor <= now { used += days[dayKey(cursor)]?.billable ?? 0; cursor = cal.date(byAdding: .day, value: 1, to: cursor)! }
+        guard used >= 2000, l.percent >= 1 else { return nil }
+        let pctPerToken = l.percent / Double(used)
+
+        var sum = [Double](repeating: 0, count: 7), n = [Double](repeating: 0, count: 7)
+        for i in 1...56 {                                       // typical tokens per weekday over the last 8 weeks
+            let d = cal.date(byAdding: .day, value: -i, to: today)!, wd = cal.component(.weekday, from: d) - 1
+            sum[wd] += Double(days[dayKey(d)]?.billable ?? 0); n[wd] += 1
+        }
+        let typical = (0..<7).map { n[$0] > 0 ? sum[$0] / n[$0] : 0 }
+        guard typical.reduce(0, +) > 0 else { return nil }
+
+        var remaining = max(0, typical[cal.component(.weekday, from: now) - 1] - Double(days[dayKey(now)]?.billable ?? 0))
+        var d = cal.date(byAdding: .day, value: 1, to: today)!
+        while d < resets {
+            remaining += typical[cal.component(.weekday, from: d) - 1] * min(1, resets.timeIntervalSince(d) / 86400)
+            d = cal.date(byAdding: .day, value: 1, to: d)!
+        }
+        let hoursLeft = resets.timeIntervalSince(now) / 3600
+        return hoursLeft > 0 ? pctPerToken * remaining / hoursLeft : nil
     }
 
     static func describe(_ f: Forecast, now: Date = Date()) -> String {

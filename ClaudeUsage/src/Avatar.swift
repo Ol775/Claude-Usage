@@ -4,7 +4,12 @@ import AppKit
 
 func supportDir() -> URL {
     let base = ProcessInfo.processInfo.environment["CUB_SUPPORT_DIR"].map { URL(fileURLWithPath: $0) }
-        ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsageBar")
+        ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")
+    // Migrate data from the app's previous name ("Claude Usage Bar") so history and photo carry over.
+    let old = base.deletingLastPathComponent().appendingPathComponent("ClaudeUsage" + "Bar")
+    if base.lastPathComponent == "ClaudeUsage", !FileManager.default.fileExists(atPath: base.path), FileManager.default.fileExists(atPath: old.path) {
+        try? FileManager.default.moveItem(at: old, to: base)
+    }
     try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
     return base
 }

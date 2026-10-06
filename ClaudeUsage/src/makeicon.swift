@@ -8,13 +8,11 @@ func render(_ px: Int) -> Data {
     let path = NSBezierPath(roundedRect: body, xRadius: s * 0.225, yRadius: s * 0.225)
     NSGradient(starting: NSColor(srgbRed: 1.00, green: 0.60, blue: 0.38, alpha: 1),
                ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
-    // three ascending white bars
-    NSColor.white.setFill()
-    let bw = s * 0.115, gap = s * 0.06, total = 3*bw + 2*gap
-    let x0 = (s - total) / 2, base = s * 0.29
-    for (i, h) in [0.20, 0.33, 0.47].enumerated() {
-        NSBezierPath(roundedRect: NSRect(x: x0 + CGFloat(i)*(bw+gap), y: base, width: bw, height: s*CGFloat(h)), xRadius: bw*0.3, yRadius: bw*0.3).fill()
-    }
+    // white "✻" glyph, centred
+    let font = NSFont.systemFont(ofSize: s * 0.60, weight: .regular)
+    let glyph = NSAttributedString(string: "\u{273B}", attributes: [.font: font, .foregroundColor: NSColor.white])
+    let gs = glyph.size()
+    glyph.draw(at: NSPoint(x: (s - gs.width) / 2, y: (s - gs.height) / 2 - s * 0.01))
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }
