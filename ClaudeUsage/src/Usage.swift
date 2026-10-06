@@ -60,7 +60,7 @@ func projectName(for url: URL) -> String {
 
 private func parseLog(_ url: URL, oldest: Date) -> [Rec] {
     let project = projectName(for: url)
-    guard let data = try? Data(contentsOf: url) else { return [] }
+    guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return [] }   // mapped, so big logs aren’t loaded into memory whole
     let usageNeedle = Data("\"usage\"".utf8), toolNeedle = Data("\"tool_use\"".utf8), userNeedle = Data("\"type\":\"user\"".utf8)
     let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     let iso2 = ISO8601DateFormatter()
