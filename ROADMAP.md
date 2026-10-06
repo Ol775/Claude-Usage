@@ -4,7 +4,7 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 
 ## Phase 1: Reliability (blocks beta)
 
-1. **Release-based updater.** The updater builds from source, so it needs the Command Line Tools. Switch it to download the release DMG or zip, verify a SHA-256 checksum, and swap the app in.
+1. ✅ **Release-based updater** (done in 0.9.2). Updates download the release DMG, verify its SHA-256 checksum and swap the app in, with no developer tools needed. It falls back to a source build if the download fails.
 2. **Test the paid ChatGPT (Codex) path.** The 5-hour and weekly windows are only verified with demo data. Verify with a paid account, or label the feature experimental until then.
 3. **Resilience to API changes.** Both usage endpoints are undocumented. Use schema-tolerant parsing, show a clear "the provider changed something" state, and keep the last good numbers visible instead of blanking.
 4. **Automated tests and CI.** Unit tests for the predictor, the log parser, pricing and the Claude and ChatGPT response parsers. A GitHub Actions macOS job runs `build.sh` and the tests on every push.

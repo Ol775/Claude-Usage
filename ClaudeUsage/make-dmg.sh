@@ -12,4 +12,5 @@ ln -s /Applications "$stage/Applications"
 rm -f "$out"
 hdiutil create -volname "Claude Usage $ver" -srcfolder "$stage" -fs HFS+ -format UDZO -ov "$out" >/dev/null
 rm -rf "$stage"
+(cd dist && shasum -a 256 "Claude-Usage-$ver.dmg" > "Claude-Usage-$ver.dmg.sha256")
 echo "$out"

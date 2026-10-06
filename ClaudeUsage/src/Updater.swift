@@ -2,7 +2,12 @@ import Foundation
 
 // Checks the GitHub repo for a newer version than the one installed.
 
-struct UpdateInfo { let version: String; let notes: [String] }
+struct UpdateInfo {
+    let version: String
+    let notes: [String]
+    var dmgURL: URL? = nil          // the release's disk image, when the update comes from a GitHub release
+    var sha256: String? = nil       // its expected checksum
+}
 
 enum UpdateStatus {
     case idle
@@ -77,16 +82,44 @@ enum Updater {
         return out
     }
 
-    /// Blocking check – call from a background queue.
-    static func check() -> UpdateStatus {
-        guard let raw = fetch("ClaudeUsage/VERSION") else {
-            return .failed("Couldn’t reach GitHub. Check your internet connection and try again.")
+    /// The newest GitHub release: version, disk image URL and checksum (from the asset digest or a `.sha256` file).
+    static func latestRelease() -> (version: String, dmg: URL?, sha: String?)? {
+        guard let url = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else { return nil }
+        var req = URLRequest(url: url, timeoutInterval: 15); req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        let sem = DispatchSemaphore(value: 0)
+        var data: Data?
+        URLSession.shared.dataTask(with: req) { d, r, _ in
+            if (r as? HTTPURLResponse)?.statusCode == 200 { data = d }
+            sem.signal()
+        }.resume()
+        sem.wait()
+        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = json["tag_name"] as? String else { return nil }
+        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        let assets = json["assets"] as? [[String: Any]] ?? []
+        let dmg = assets.first { ($0["name"] as? String)?.hasSuffix(".dmg") == true }
+        let dmgURL = (dmg?["browser_download_url"] as? String).flatMap(URL.init(string:))
+        var sha = (dmg?["digest"] as? String).flatMap { $0.hasPrefix("sha256:") ? String($0.dropFirst(7)) : nil }
+        if sha == nil, let name = dmg?["name"] as? String,
+           let sumURL = (assets.first { $0["name"] as? String == name + ".sha256" }?["browser_download_url"] as? String).flatMap(URL.init(string:)),
+           let text = (try? String(contentsOf: sumURL, encoding: .utf8)) {
+            sha = text.split(whereSeparator: { $0 == " " || $0 == "\n" }).first.map(String.init)
         }
-        let latest = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !latest.isEmpty, latest.first?.isNumber == true else { return .failed("Unexpected version file on GitHub.") }
+        return (version, dmgURL, sha?.lowercased())
+    }
+
+    /// Blocking check – call from a background queue. Releases are the source of truth; the VERSION file on main is
+    /// only a fallback if the release API can't be reached.
+    static func check() -> UpdateStatus {
+        var latest: String, dmg: URL? = nil, sha: String? = nil
+        if let r = latestRelease() { latest = r.version; dmg = r.dmg; sha = r.sha }
+        else if let raw = fetch("ClaudeUsage/VERSION") { latest = raw.trimmingCharacters(in: .whitespacesAndNewlines) }
+        else { return .failed("Couldn’t reach GitHub. Check your internet connection and try again.") }
+        guard !latest.isEmpty, latest.first?.isNumber == true else { return .failed("Unexpected version number on GitHub.") }
         guard isNewer(latest, than: installed) else { return .upToDate(Date()) }
         let notes = fetch("ClaudeUsage/CHANGELOG.md").map { notes(from: $0, newerThan: installed) } ?? []
-        return .available(UpdateInfo(version: latest, notes: notes))
+        return .available(UpdateInfo(version: latest, notes: notes, dmgURL: dmg, sha256: sha))
     }
 }
 
@@ -150,12 +183,63 @@ extension Updater {
         }
     }
 
-    /// Downloads and builds the update, but does not install it. Returns the built app, or an error message.
+    /// Downloads the release disk image, checks its SHA-256, and copies the app out. No developer tools needed.
+    private static func prepareFromRelease(_ info: UpdateInfo, root: URL, progress: @escaping (String) -> Void) -> (app: URL?, error: String?) {
+        guard let dmgURL = info.dmgURL else { return (nil, "No download for this release.") }
+        let fm = FileManager.default
+        progress("Downloading version \(info.version)…")
+        let dmg = root.appendingPathComponent("update.dmg")
+        let sem = DispatchSemaphore(value: 0)
+        var ok = false
+        URLSession.shared.downloadTask(with: URLRequest(url: dmgURL, timeoutInterval: 180)) { tmp, resp, _ in
+            if (resp as? HTTPURLResponse)?.statusCode == 200, let tmp = tmp { ok = (try? fm.moveItem(at: tmp, to: dmg)) != nil }
+            sem.signal()
+        }.resume()
+        sem.wait()
+        guard ok else { return (nil, "Couldn’t download the update.") }
+
+        if let want = info.sha256 {
+            progress("Verifying…")
+            let out = Pipe(); let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/shasum")
+            p.arguments = ["-a", "256", dmg.path]; p.standardOutput = out; p.standardError = FileHandle.nullDevice
+            guard (try? p.run()) != nil else { return (nil, "Couldn’t verify the download.") }
+            let text = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            p.waitUntilExit()
+            guard text.split(separator: " ").first.map({ $0.lowercased() }) == want else {
+                return (nil, "The download didn’t match its checksum, so it was discarded.")
+            }
+        }
+
+        progress("Unpacking…")
+        let mount = root.appendingPathComponent("mnt")
+        try? fm.createDirectory(at: mount, withIntermediateDirectories: true)
+        guard run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly", "-noverify", "-mountpoint", mount.path]) == 0 else {
+            return (nil, "Couldn’t open the downloaded disk image.")
+        }
+        defer { run("/usr/bin/hdiutil", ["detach", mount.path, "-force"]) }
+        let app = root.appendingPathComponent("Claude Usage.app")
+        guard run("/usr/bin/ditto", [mount.appendingPathComponent("Claude Usage.app").path, app.path]) == 0 else {
+            return (nil, "The disk image didn’t contain the app.")
+        }
+        let built = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String
+        guard built == info.version else { return (nil, "The download held version \(built ?? "?") instead of \(info.version).") }
+        guard run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path]) == 0 else { return (nil, "The app’s signature didn’t check out.") }
+        return (app, nil)
+    }
+
+    /// Downloads the update (from the release, else by building the source) but does not install it.
+    /// Returns the ready app, or an error message.
     static func prepare(_ info: UpdateInfo, lowPriority: Bool = false, progress: @escaping (String) -> Void) -> (app: URL?, error: String?) {
         let fm = FileManager.default
         let root = cachesDir.appendingPathComponent("update-\(Int(Date().timeIntervalSince1970))")
         do { try fm.createDirectory(at: root, withIntermediateDirectories: true) } catch { return (nil, "Couldn’t create a work folder.") }
 
+        if info.dmgURL != nil {
+            let r = prepareFromRelease(info, root: root, progress: progress)
+            if r.app != nil { return r }
+            if r.error?.contains("checksum") == true || r.error?.contains("signature") == true { return r }   // never fall back past a failed integrity check
+            progress("Release download failed, building from source…")
+        }
         progress("Downloading version \(info.version)…")
         let tar = root.appendingPathComponent("source.tar.gz")
         guard download(to: tar) else { return (nil, "Couldn’t download the update from GitHub. Check your internet connection and try again.") }
