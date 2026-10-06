@@ -237,6 +237,73 @@ final class AccountView: NSView {
     }
 }
 
+final class AvatarView: NSView {
+    var account = Account() { didSet { needsDisplay = true } }
+    override func draw(_ r: NSRect) {
+        let path = NSBezierPath(ovalIn: bounds)
+        if account.loggedIn {
+            NSGradient(starting: NSColor(srgbRed: 1.0, green: 0.62, blue: 0.40, alpha: 1), ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
+        } else { NSColor.labelColor.withAlphaComponent(0.15).setFill(); path.fill() }
+        let t = NSAttributedString(string: account.loggedIn ? account.initials : "?", attributes: [.font: NSFont.systemFont(ofSize: bounds.height * 0.38, weight: .semibold), .foregroundColor: account.loggedIn ? NSColor.white : NSColor.secondaryLabelColor])
+        t.draw(at: NSPoint(x: bounds.midX - t.size().width/2, y: bounds.midY - t.size().height/2))
+    }
+}
+
+final class AccountWindow: NSObject {
+    let window: NSWindow
+    let avatar = AvatarView(), title = NSTextField(labelWithString: ""), detail = NSTextField(wrappingLabelWithString: "")
+    let primary = NSButton(title: "", target: nil, action: nil), secondary = NSButton(title: "", target: nil, action: nil)
+    let hint = NSTextField(labelWithString: "")
+    var onSignIn: () -> Void = {}, onSignOut: () -> Void = {}, onCancel: () -> Void = {}
+    var account = Account(), busy = false
+
+    override init() {
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 380, height: 360), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+        super.init()
+        window.title = "Claude Usage Bar"; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
+        let fx = NSVisualEffectView(frame: window.contentView!.bounds); fx.material = .underWindowBackground
+        fx.blendingMode = .behindWindow; fx.state = .active; fx.autoresizingMask = [.width, .height]
+        window.contentView = fx
+        avatar.frame = NSRect(x: 146, y: 236, width: 88, height: 88)
+        title.font = .boldSystemFont(ofSize: 20); title.alignment = .center; title.frame = NSRect(x: 20, y: 196, width: 340, height: 28)
+        detail.font = .systemFont(ofSize: 13); detail.textColor = .secondaryLabelColor; detail.alignment = .center
+        detail.frame = NSRect(x: 40, y: 124, width: 300, height: 62)
+        primary.isBordered = false; primary.wantsLayer = true
+        primary.layer?.backgroundColor = NSColor(srgbRed: 0.85, green: 0.42, blue: 0.22, alpha: 1).cgColor
+        primary.layer?.cornerRadius = 10; primary.frame = NSRect(x: 70, y: 72, width: 240, height: 42)
+        primary.target = self; primary.action = #selector(primaryTap)
+        secondary.bezelStyle = .inline; secondary.isBordered = false; secondary.frame = NSRect(x: 110, y: 30, width: 160, height: 24)
+        secondary.target = self; secondary.action = #selector(secondaryTap)
+        hint.font = .systemFont(ofSize: 11); hint.textColor = .secondaryLabelColor; hint.alignment = .center; hint.frame = NSRect(x: 20, y: 8, width: 340, height: 16)
+        [avatar, title, detail, primary, secondary, hint].forEach { fx.addSubview($0) }
+        update(account, busy: false)
+    }
+    func update(_ a: Account, busy b: Bool) {
+        account = a; busy = b; avatar.account = a
+        if a.loggedIn {
+            title.stringValue = a.name
+            detail.stringValue = [a.email, a.plan.isEmpty ? "" : "Claude \(a.plan) plan"].filter { !$0.isEmpty }.joined(separator: "\n")
+            primary.isHidden = true; hint.stringValue = "Signed in · usage updates every minute"
+            setSecondary("Sign out", color: .secondaryLabelColor)
+        } else {
+            title.stringValue = "Sign in to Claude Usage Bar"
+            detail.stringValue = "Connect your Claude account to see your session and weekly limits, when they reset, and get alerts before you hit them."
+            primary.isHidden = false; primary.isEnabled = !b
+            primary.attributedTitle = NSAttributedString(string: b ? "Waiting for browser…" : "Sign in with Claude", attributes: [.foregroundColor: NSColor.white, .font: NSFont.boldSystemFont(ofSize: 14)])
+            primary.layer?.opacity = b ? 0.6 : 1
+            hint.stringValue = b ? "Finish signing in in your browser window" : "Opens Claude’s own sign-in page in your browser"
+            setSecondary(b ? "Cancel" : "", color: .secondaryLabelColor)
+        }
+    }
+    func setSecondary(_ t: String, color: NSColor) {
+        secondary.isHidden = t.isEmpty
+        secondary.attributedTitle = NSAttributedString(string: t, attributes: [.foregroundColor: color, .font: NSFont.systemFont(ofSize: 12)])
+    }
+    func show() { window.center(); NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
+    @objc func primaryTap() { onSignIn() }
+    @objc func secondaryTap() { account.loggedIn ? onSignOut() : onCancel() }
+}
+
 final class UsageBarView: NSView {
     let limit: Limit
     init(_ limit: Limit) { self.limit = limit; super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 62)) }
@@ -259,6 +326,9 @@ final class App: NSObject, NSApplicationDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var timer: Timer?
     var account = Account()
+    let accountWindow = AccountWindow()
+    var loginProcess: Process?
+    var shownLogin = false
     var limits: [Limit] = []
     var limitError: String?
     var lastFetch = Date.distantPast
@@ -270,6 +340,9 @@ final class App: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ n: Notification) {
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in } }
         item.button?.attributedTitle = NSAttributedString(string: "◆ …", attributes: [.foregroundColor: claudeOrange])
+        accountWindow.onSignIn = { [weak self] in self?.signIn() }
+        accountWindow.onSignOut = { [weak self] in self?.signOut() }
+        accountWindow.onCancel = { [weak self] in self?.cancelSignIn() }
         build(Snapshot())
         if CommandLine.arguments.contains("--test-notify") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.testNotification() }
@@ -289,7 +362,9 @@ final class App: NSObject, NSApplicationDelegate {
                 fetched = acct!.loggedIn ? fetchLimits() : ([], "Sign in to see your limits")
             }
             DispatchQueue.main.async {
-                if let f = fetched { self.lastFetch = Date(); self.limits = f.limits; self.limitError = f.error; self.account = acct ?? self.account }
+                if let f = fetched { self.lastFetch = Date(); self.limits = f.limits; self.limitError = f.error; self.account = acct ?? self.account
+                    self.accountWindow.update(self.account, busy: self.loginProcess != nil)
+                    if !self.account.loggedIn && !self.shownLogin { self.shownLogin = true; self.accountWindow.show() } }
                 self.build(s)
             }
         }
@@ -324,26 +399,43 @@ final class App: NSObject, NSApplicationDelegate {
         }
         notified = seen
     }
+    @objc func showAccount() { accountWindow.update(account, busy: loginProcess != nil); accountWindow.show() }
     @objc func signIn() {
-        guard claudeBinary() != nil else {
+        guard let bin = claudeBinary() else {
             let a = NSAlert(); a.messageText = "Claude Code not found"
-            a.informativeText = "Install Claude Code first (claude.com/claude-code), then try again."
+            a.informativeText = "Sign-in uses Claude’s official login, which comes with Claude Code. Install it (claude.com/claude-code), then try again."
             NSApp.activate(ignoringOtherApps: true); a.runModal(); return
         }
-        DispatchQueue.global().async {
-            runClaude(["auth", "login"])          // opens Claude's own browser sign-in
-            DispatchQueue.main.async { self.lastFetch = .distantPast; self.refresh() }
+        guard loginProcess == nil else { return }
+        let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = ["auth", "login"]
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "\(NSHomeDirectory())/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        p.environment = env; p.standardOutput = Pipe(); p.standardError = Pipe()
+        p.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.loginProcess = nil; self.lastFetch = .distantPast; self.refresh()
+                DispatchQueue.global().async {
+                    let a = fetchAccount()
+                    DispatchQueue.main.async {
+                        self.accountWindow.update(a, busy: false)
+                        if a.loggedIn { self.notify("Signed in to Claude", "Welcome, \(a.name). Your limits are now showing in the menu bar.") }
+                    }
+                }
+            }
         }
+        do { try p.run(); loginProcess = p; accountWindow.update(account, busy: true) } catch { NSSound.beep() }
     }
+    @objc func cancelSignIn() { loginProcess?.terminate() }
     @objc func signOut() {
         let a = NSAlert(); a.messageText = "Sign out of Claude?"
-        a.informativeText = "This signs out Claude Code too, since they share one login."
+        a.informativeText = "This also signs out Claude Code, because they share one Claude login."
         a.addButton(withTitle: "Sign out"); a.addButton(withTitle: "Cancel")
         NSApp.activate(ignoringOtherApps: true)
         guard a.runModal() == .alertFirstButtonReturn else { return }
         DispatchQueue.global().async {
             runClaude(["auth", "logout"])
-            DispatchQueue.main.async { self.limits = []; self.lastFetch = .distantPast; self.refresh() }
+            DispatchQueue.main.async { self.limits = []; self.account = Account(); self.accountWindow.update(self.account, busy: false); self.lastFetch = .distantPast; self.refresh() }
         }
     }
     @objc func toggleLogin() {
@@ -405,9 +497,7 @@ final class App: NSObject, NSApplicationDelegate {
         m.addItem(.separator())
         let f = DateFormatter(); f.timeStyle = .medium
         add(m, RowView(left: "Updated \(f.string(from: s.updated)) · totals exclude cache reads", leftBold: false, size: 10, tint: .secondaryLabelColor))
-        let acc = account.loggedIn
-            ? NSMenuItem(title: "Sign out…", action: #selector(signOut), keyEquivalent: "")
-            : NSMenuItem(title: "Sign in with Claude…", action: #selector(signIn), keyEquivalent: "")
+        let acc = NSMenuItem(title: account.loggedIn ? "Account…" : "Sign in with Claude…", action: #selector(showAccount), keyEquivalent: ",")
         acc.target = self; m.addItem(acc)
         let ll = NSMenuItem(title: "Launch at login", action: #selector(toggleLogin), keyEquivalent: ""); ll.target = self
         ll.state = SMAppService.mainApp.status == .enabled ? .on : .off; m.addItem(ll)
@@ -433,6 +523,21 @@ if CommandLine.arguments.contains("--snapshot") {
     let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
     host.cacheDisplay(in: host.bounds, to: rep)
     try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/menu_snapshot.png"))
+    exit(0)
+}
+if CommandLine.arguments.contains("--snapshot-window") {
+    _ = NSApplication.shared
+    let w = AccountWindow()
+    let states: [(Account, Bool)] = [(Account(), false), (Account(), true), (fetchAccount(), false)]
+    var imgs: [NSBitmapImageRep] = []
+    for (a, b) in states {
+        w.update(a, busy: b); w.window.contentView!.appearance = NSAppearance(named: .darkAqua)
+        let v = w.window.contentView!; let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds)!
+        v.cacheDisplay(in: v.bounds, to: rep); imgs.append(rep)
+    }
+    let out = NSImage(size: NSSize(width: 380*3, height: 360))
+    out.lockFocus(); for (i, r) in imgs.enumerated() { r.draw(in: NSRect(x: CGFloat(i)*380, y: 0, width: 380, height: 360)) }; out.unlockFocus()
+    try? NSBitmapImageRep(data: out.tiffRepresentation!)!.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/window_snapshot.png"))
     exit(0)
 }
 let app = NSApplication.shared
