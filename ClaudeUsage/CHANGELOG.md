@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.1 – alpha (2026-10-06)
+- ChatGPT is now hidden everywhere (Overview, menu bar menu, charts) on a free plan; Settings → Account explains that free plans aren't supported
+
 ## 0.9.0 – alpha (2026-10-06)
 - Added optional ChatGPT (Codex) usage for paid plans: connect through OpenAI's Codex sign-in to see its limits on the Overview, in the menu bar menu, as a menu bar item and on the forecast and report charts. Free plans aren't supported
 - Added a Buy me a coffee button in Settings → About

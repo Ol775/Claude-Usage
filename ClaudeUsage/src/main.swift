@@ -639,7 +639,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
         }
         if store.stale { add(m, RowView(left: "Couldn’t reach Anthropic – showing the last reading", leftBold: false, size: 10, tint: .secondaryLabelColor)) }
-        if settings.chatgptEnabled {
+        if settings.chatgptEnabled && !store.chatgpt.isFree {
             m.addItem(.separator())
             header(m, store.chatgpt.planName)
             if store.chatgpt.limits.isEmpty {

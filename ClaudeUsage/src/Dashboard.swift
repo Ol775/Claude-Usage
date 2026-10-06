@@ -261,7 +261,7 @@ struct OverviewView: View {
                     }
                 }
 
-                if settings.chatgptEnabled { ChatGPTSection(store: store) }
+                if settings.chatgptEnabled && !store.chatgpt.isFree { ChatGPTSection(store: store) }      // a free plan is unsupported: only Settings → Account mentions it
                 if !store.limits.isEmpty { ProjectionCard(store: store) }
 
                 HStack(spacing: 16) {
