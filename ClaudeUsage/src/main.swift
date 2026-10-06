@@ -29,6 +29,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     // MARK: lifecycle
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        Pricing.loadCached()          // prices fetched earlier (see Pricing.refreshIfStale) apply from the first scan
         // Only one copy should run (a second one would add a second menu bar icon). Test flags (--tour etc.) are exempt.
         if CommandLine.arguments.contains("--quiet") { App.notificationsEnabled = false }
         if !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("--") && $0 != "--quiet" }), let id = Bundle.main.bundleIdentifier {
@@ -203,6 +204,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard !refreshing else { pendingRefresh = true; return }
         if Demo.enabled {            // screenshots: made-up data, nothing read from or saved to the real history
             let s = Demo.snapshot()
+            if ProcessInfo.processInfo.environment["CUB_DEMO_SIGNEDOUT"] != nil {      // dev aid: preview the first-run screen
+                store.account = Account(); store.limits = []; store.limitError = nil; store.snapshot = s; store.lastUpdated = Date(); build(s); return
+            }
             store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
             store.chatgpt = settings.chatgptEnabled ? ChatGPT.demo : ChatGPTState()
             store.gptSamples = settings.chatgptEnabled ? ChatGPT.demoSamples() : []
@@ -210,6 +214,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             build(s); return
         }
         refreshing = true
+        DispatchQueue.global(qos: .background).async { Pricing.refreshIfStale() }
         let needFetch = Date().timeIntervalSince(lastFetch) > 100
         let wantGPT = settings.chatgptEnabled
         DispatchQueue.global(qos: .utility).async {

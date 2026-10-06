@@ -66,6 +66,14 @@ func runSelfTests() -> Int32 {
     let c = Pricing.cost(model: "claude-opus-5", Usage(input: 1_000_000, output: 1_000_000))
     check(c == 30, "1M in + 1M out on opus-5 = $30 (got \(String(describing: c)))")
 
+    let good = Pricing.parse(json("{\"models\":[{\"prefix\":\"claude-test-1\",\"input\":3,\"output\":15,\"cacheRead\":0.3}]}"))
+    check(good?.count == 1 && good?.first?.1.output == 15, "valid pricing file parses")
+    check(Pricing.parse(json("{\"models\":[{\"prefix\":\"claude-x\",\"input\":-1,\"output\":15,\"cacheRead\":0}]}")) == nil, "negative price rejected")
+    check(Pricing.parse(json("{\"models\":[{\"prefix\":\"claude-x\",\"input\":99999,\"output\":15,\"cacheRead\":0}]}")) == nil, "absurd price rejected")
+    check(Pricing.parse(json("{\"models\":[{\"prefix\":\"evil\",\"input\":1,\"output\":1,\"cacheRead\":0}]}")) == nil, "non-claude prefix rejected")
+    check(Pricing.parse(json("{}")) == nil && Pricing.parse(json("{\"models\":[]}")) == nil, "empty pricing file rejected")
+    check(Pricing.builtIn.count >= 8, "built-in prices present")
+
     // Forecasting
     let session: (Double, TimeInterval) -> Limit = { pct, remaining in Limit(name: "Current session", percent: pct, resets: now.addingTimeInterval(remaining)) }
     if case .reached = Predictor.forecast(session(100, 3600), samples: [], now: now) {} else { check(false, "100% is reached") }

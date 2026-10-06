@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.6 – alpha (2026-10-06)
+- First-run welcome card when Claude Code isn't set up or signed in; model prices can now be updated from pricing.json without an app release (checked daily, validated, cached)
+
 ## 0.9.5 – alpha (2026-10-06)
 - Releases are now universal (Apple silicon and Intel); Homebrew install (brew install --cask Ol775/tap/claude-usage); the terminal installer verifies the checksum
 

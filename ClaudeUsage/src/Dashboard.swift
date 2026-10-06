@@ -227,15 +227,16 @@ struct OverviewView: View {
                 }
 
                 if store.limits.isEmpty {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.crop.circle.badge.exclamationmark").font(.title2).foregroundStyle(.secondary)
-                        Text(store.limitError ?? "Loading limits…")
-                        Spacer()
-                        if !store.account.loggedIn {
-                            Button("Sign In") { store.settingsCategory = .account; store.tab = .settings }.buttonStyle(.borderedProminent)
+                    if store.account.loggedIn {
+                        HStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.circle").font(.title2).foregroundStyle(.secondary)
+                            Text(store.limitError ?? "Loading limits…")
+                            Spacer()
                         }
+                        .padding(18).card()
+                    } else {
+                        OnboardingCard(store: store)
                     }
-                    .padding(18).card()
                 } else {
                     HStack(alignment: .top, spacing: 16) {
                         ForEach(Array(store.limits.enumerated()).filter { $0.element.kind != .other }, id: \.offset) { _, l in
@@ -416,6 +417,48 @@ struct CoffeeButton: View {
             .background(Capsule().fill(Color(red: 1.0, green: 0.867, blue: 0.0)))
         }
         .buttonStyle(.plain).help("buymeacoffee.com/ol775")
+    }
+}
+
+/// First-run help for someone who hasn't set Claude Code up yet: what's needed, what's done, and the next click.
+struct OnboardingCard: View {
+    @ObservedObject var store: Store
+    private var hasClaude: Bool { claudeBinary() != nil }
+
+    private func step(_ done: Bool, _ title: String, _ detail: String, @ViewBuilder action: () -> some View = { EmptyView() }) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle").font(.title3).foregroundStyle(done ? Color.green : Color.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            action()
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Welcome to Claude Usage").font(.title2.bold())
+                Text(store.limitError == nil || store.limitError == "Sign in to see your limits"
+                     ? "Two quick steps and your limits appear here and in the menu bar."
+                     : (store.limitError ?? ""))
+                    .foregroundStyle(.secondary)
+            }
+            step(hasClaude, "1. Get Claude Code", "Claude Usage reads the same login and logs as Claude Code, so it needs to be installed on this Mac.") {
+                if !hasClaude {
+                    Button("Get Claude Code") { if let u = URL(string: "https://claude.com/claude-code") { NSWorkspace.shared.open(u) } }
+                }
+            }
+            step(store.account.loggedIn, "2. Sign in", "Uses Claude’s official sign-in in your browser. Claude Usage never sees your password.") {
+                if store.loginBusy { ProgressView().controlSize(.small) }
+                else { Button("Sign In") { store.actions.signIn() }.buttonStyle(.borderedProminent).disabled(!hasClaude) }
+            }
+            Text("Optional: add ChatGPT (Codex) usage later in Settings → Account. Everything stays on your Mac.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+        .padding(20).card()
     }
 }
 

@@ -14,8 +14,8 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 
 6. ✅ **Low-friction install without Apple signing** (done in 0.9.5). A Homebrew tap (`brew install --cask Ol775/tap/claude-usage`) clears the quarantine flag, the terminal installer verifies the checksum, every release ships a `.sha256` file, and the README explains the first-launch prompt. The source build stays as the fully transparent route.
 7. ✅ **Universal build** (done in 0.9.5). Releases ship Apple silicon and Intel in one DMG.
-8. **Onboarding.** A first-run flow that detects whether Claude Code is installed and signed in, with empty states for new users.
-9. **Pricing table updates.** Update model prices without a new release, and show a clear "unpriced model" note.
+8. ✅ **Onboarding** (done in 0.9.6). A first-run welcome card shows what's needed (Claude Code installed, signed in) with the next click; signed-in accounts with no data yet see the normal empty charts.
+9. ✅ **Pricing table updates** (done in 0.9.6). Prices live in `ClaudeUsage/pricing.json`; the app checks it once a day, validates it, caches it and merges it over the built-in table. The "no price known" note remains for unknown models.
 10. **Compatibility.** Test on macOS 13, 14 and 15.
 
 ## Phase 3: Polish

@@ -9,7 +9,7 @@ struct Pricing {
     var cacheWrite: Double { input * 1.25 }
 
     /// Longest-prefix match so dated snapshot ids ("claude-haiku-4-5-20251001") resolve too.
-    static let table: [(String, Pricing)] = [
+    static let builtIn: [(String, Pricing)] = [
         ("claude-fable-5-1", Pricing(input: 10, output: 50, cacheRead: 0.25)),
         ("claude-mythos-5-1", Pricing(input: 10, output: 50, cacheRead: 0.25)),
         ("claude-fable-5", Pricing(input: 10, output: 50, cacheRead: 1.00)),
@@ -21,6 +21,46 @@ struct Pricing {
         ("claude-sonnet-4", Pricing(input: 3, output: 15, cacheRead: 0.30)),
         ("claude-haiku-4", Pricing(input: 1, output: 5, cacheRead: 0.10)),
     ]
+
+    // Prices can be refreshed without a new app release: pricing.json in the repo is fetched at most once a day,
+    // checked for sane values, cached next to the history, and merged over the built-in table.
+    private static let lock = NSLock()
+    private static var override: [(String, Pricing)] = []
+    static var table: [(String, Pricing)] {
+        lock.lock(); defer { lock.unlock() }
+        return override + builtIn.filter { b in !override.contains { $0.0 == b.0 } }
+    }
+    static var cacheURL: URL { supportDir().appendingPathComponent("pricing.json") }
+
+    /// Reads `{"models":[{"prefix","input","output","cacheRead"}]}`; nil if anything looks wrong (prices must be 0–1000 $/M).
+    static func parse(_ json: [String: Any]) -> [(String, Pricing)]? {
+        guard let models = json["models"] as? [[String: Any]], !models.isEmpty else { return nil }
+        var out: [(String, Pricing)] = []
+        for m in models {
+            guard let prefix = m["prefix"] as? String, prefix.hasPrefix("claude-"),
+                  let i = (m["input"] as? NSNumber)?.doubleValue, let o = (m["output"] as? NSNumber)?.doubleValue,
+                  let c = (m["cacheRead"] as? NSNumber)?.doubleValue,
+                  [i, o, c].allSatisfy({ $0 >= 0 && $0 <= 1000 }), i > 0, o > 0 else { return nil }
+            out.append((prefix, Pricing(input: i, output: o, cacheRead: c)))
+        }
+        return out
+    }
+
+    static func loadCached() {
+        guard let d = try? Data(contentsOf: cacheURL), let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let t = parse(j) else { return }
+        lock.lock(); override = t; lock.unlock()
+    }
+
+    /// Blocking; call from a background queue. Checks GitHub at most once a day.
+    static func refreshIfStale(force: Bool = false) {
+        let key = "pricingCheckedAt"
+        if !force, Date().timeIntervalSince(UserDefaults.standard.object(forKey: key) as? Date ?? .distantPast) < 86400 { return }
+        UserDefaults.standard.set(Date(), forKey: key)
+        guard let text = Updater.fetch("ClaudeUsage/pricing.json"), let d = text.data(using: .utf8),
+              let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let t = parse(j) else { return }
+        lock.lock(); override = t; lock.unlock()
+        try? d.write(to: cacheURL, options: .atomic)
+    }
 
     static func forModel(_ model: String) -> Pricing? {
         table.filter { model.hasPrefix($0.0) }.max { $0.0.count < $1.0.count }?.1
