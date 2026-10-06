@@ -162,7 +162,7 @@ struct SidebarView: View {
             .buttonStyle(.plain).help(narrow ? "Show sidebar labels" : "Collapse to icons")
             .padding(.bottom, 6)
 
-            ForEach(DashTab.allCases) { tab in
+            ForEach(Array(DashTab.allCases.enumerated()), id: \.element.id) { index, tab in
                 let selected = store.tab == tab
                 Button { store.tab = tab } label: {
                     HStack(spacing: 12) {
@@ -173,7 +173,9 @@ struct SidebarView: View {
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? (settings.isOLED ? Color(white: 0.16) : Color.brand.opacity(0.18)) : Color.clear))
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).help(tab.title)
+                .buttonStyle(.plain).help("\(tab.title) (⌘\(index + 1))")
+                .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                .accessibilityLabel(tab.title).accessibilityAddTraits(selected ? .isSelected : [])
             }
             Spacer()
             if narrow {
@@ -267,7 +269,7 @@ struct OverviewView: View {
                         }
                     }
                     Spacer()
-                    Button { store.actions.refresh() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+                    Button { store.actions.refresh() } label: { Label("Refresh", systemImage: "arrow.clockwise") }.keyboardShortcut("r", modifiers: .command).help("Refresh (⌘R)")
                 }
 
                 if store.limits.isEmpty {
@@ -349,6 +351,9 @@ struct ChatGPTSection: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text("ChatGPT").font(.title3.bold())
+                Text("EXPERIMENTAL").font(.system(size: 9, weight: .bold)).foregroundStyle(Color.orange)
+                    .padding(.horizontal, 7).padding(.vertical, 3).background(Capsule().fill(Color.orange.opacity(0.18)))
+                    .help("ChatGPT usage is experimental: the paid-plan limits have only been verified with sample data.")
                 Text("Codex limits").font(.caption).foregroundStyle(.secondary)
                 if !g.plan.isEmpty {
                     Text("\(g.plan.uppercased()) PLAN").font(.system(size: 9, weight: .bold)).foregroundStyle(Color.brand)
@@ -506,7 +511,7 @@ struct OnboardingCard: View {
                 if store.loginBusy { ProgressView().controlSize(.small) }
                 else { Button("Sign In") { store.actions.signIn() }.buttonStyle(.borderedProminent).disabled(!hasClaude) }
             }
-            Text("Optional: add ChatGPT (Codex) usage later in Settings → Account. Everything stays on your Mac.")
+            Text("Optional and experimental: add ChatGPT (Codex) usage later in Settings → Account. Everything stays on your Mac.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
         .padding(20).card()
@@ -649,6 +654,7 @@ struct ProjectionCard: View {
             }
         }
         .padding(18).card()
+        .accessibilityElement(children: .contain).accessibilityLabel("Limit forecast chart")
     }
 
     private func points(_ l: Limit, resets: Date, now: Date) -> [Pt] {
@@ -709,6 +715,7 @@ struct UsageView: View {
                     Text("Input + output + cache-write tokens from Claude Code on this Mac.").font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(18).card()
+        .accessibilityElement(children: .contain).accessibilityLabel("Daily tokens chart")
 
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -723,6 +730,7 @@ struct UsageView: View {
                         .frame(height: 180)
                     }
                     .padding(18).frame(maxWidth: .infinity).card()
+        .accessibilityElement(children: .contain).accessibilityLabel("Today by hour chart")
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -746,6 +754,7 @@ struct UsageView: View {
                         }
                     }
                     .padding(18).frame(maxWidth: .infinity).card()
+        .accessibilityElement(children: .contain).accessibilityLabel("Tokens by model chart")
                 }
 
                 let projects = s.byProjectWeek.map { ($0.key, $0.value.billable) }.filter { $0.1 > 0 }.sorted { $0.1 > $1.1 }.prefix(8)
@@ -765,6 +774,7 @@ struct UsageView: View {
                     }
                 }
                 .padding(18).frame(maxWidth: .infinity, alignment: .leading).card()
+        .accessibilityElement(children: .contain).accessibilityLabel("Tokens by project chart")
 
                 let busyHour = s.hourOfDay30.enumerated().max { $0.element < $1.element }
                 let busyDay = s.weekday30.enumerated().max { $0.element < $1.element }
@@ -1078,9 +1088,9 @@ struct SettingsPage: View {
     /// Optional ChatGPT usage, read through OpenAI's Codex CLI sign-in (works with free and paid ChatGPT accounts).
     @ViewBuilder private var chatgptGroup: some View {
         let g = store.chatgpt
-        SGroup(title: "ChatGPT", footer: "Shows your Codex usage limits for a paid ChatGPT plan, using the sign-in saved by OpenAI’s Codex CLI (install with “brew install codex”). Claude Usage only reads it to ask ChatGPT for your limits – it never changes, copies or stores your ChatGPT login.") {
+        SGroup(title: "ChatGPT (experimental)", footer: "Experimental: the paid-plan limits have so far only been checked with sample data, so numbers may be missing or off. Shows your Codex usage limits for a paid ChatGPT plan, using the sign-in saved by OpenAI’s Codex CLI (install with “brew install codex”). Claude Usage only reads it to ask ChatGPT for your limits – it never changes, copies or stores your ChatGPT login.") {
             if !settings.chatgptEnabled {
-                SRow(title: "Show ChatGPT usage", subtitle: "See your ChatGPT (Codex) limits next to Claude’s. Needs a paid ChatGPT plan. Nothing is read until you connect.") {
+                SRow(title: "Show ChatGPT usage (experimental)", subtitle: "See your ChatGPT (Codex) limits next to Claude’s. Needs a paid ChatGPT plan. Nothing is read until you connect.") {
                     Button("Connect…") { store.actions.connectChatGPT() }.buttonStyle(.borderedProminent)
                 }
             } else if store.chatgptBusy {
@@ -1225,7 +1235,7 @@ struct SettingsPage: View {
                 SDivider()
                 SRow(title: "Weekly limit", subtitle: "How much of the weekly limit you’ve used.") { Toggle("", isOn: $settings.menuShowWeekly).labelsHidden().toggleStyle(.switch) }
                 SDivider()
-                SRow(title: "ChatGPT usage", subtitle: settings.chatgptEnabled ? "Your ChatGPT limit, shown as G 12%." : "Connect ChatGPT in Settings → Account first.") {
+                SRow(title: "ChatGPT usage (experimental)", subtitle: settings.chatgptEnabled ? "Your ChatGPT limit, shown as G 12%." : "Connect ChatGPT in Settings → Account first.") {
                     Toggle("", isOn: $settings.menuShowChatGPT).labelsHidden().toggleStyle(.switch).disabled(!settings.chatgptEnabled)
                 }
                 SDivider()
@@ -1367,7 +1377,7 @@ struct SettingsPage: View {
             }
             updatesGroup
             changelogGroup
-            Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
+            Text("Beta – there may still be rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
             HStack(spacing: 14) {
                 Button("Terms & Legal") { store.settingsCategory = .support }

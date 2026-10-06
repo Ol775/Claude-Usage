@@ -6,7 +6,7 @@ import SwiftUI
 enum AppInfo {
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0" }
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1" }
-    static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "alpha" }
+    static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "beta" }
     static let repoURL = URL(string: "https://github.com/Ol775/Claude-Usage")!
     static let coffeeURL = URL(string: "https://buymeacoffee.com/ol775")!
     static var display: String { "v\(version) \(stage)" }

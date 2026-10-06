@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.10.0 – beta (2026-10-06)
+- Claude Usage is now beta. ChatGPT usage is labelled experimental; charts have spoken descriptions for VoiceOver and ⌘1–⌘5 switch tabs, ⌘R refreshes; fixed an alert that could repeat in the same window when the server's reset time wobbled; the app builds on older Swift compilers (found by new CI); CI now builds and tests on macOS 14, 15 and latest; the roadmap to 1.0 is published
+
 ## 0.9.14 – alpha (2026-10-06)
 - Fixes a build error on older Swift compilers found by the new CI (a variable shadowed a function name); no behaviour change
 

@@ -169,6 +169,12 @@ func runSelfTests() -> Int32 {
     // The shipped app ignores developer overrides
     if Dev.production { check(Dev.env("PATH") == nil && !Dev.flag("--selftest"), "production build ignores CUB_* variables and dev flags") }
 
+    // Alerts fire once per window even if the server's reset time wobbles
+    check(stableWindow(previous: nil, new: 1000) == 1000, "first reading starts a window")
+    check(stableWindow(previous: 1000, new: 1001) == 1000 && stableWindow(previous: 1000, new: 999) == 1000, "a minute of wobble is the same window")
+    check(stableWindow(previous: 1000, new: 1000 + 300) == 1300, "a new session window (hours later) is a new id")
+    check(stableWindow(previous: 1000, new: 1000 + 7 * 24 * 60) == 1000 + 7 * 24 * 60, "a new weekly window is a new id")
+
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")
     check(plural(1, "response") == "1 response" && plural(2, "response") == "2 responses", "plural")

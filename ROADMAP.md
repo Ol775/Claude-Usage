@@ -1,54 +1,80 @@
-# Roadmap: alpha to beta
+# Roadmap
 
-Claude Usage is currently **alpha** (v0.9.13). This is the plan for reaching **beta**, in order of what blocks it. Nothing here needs a paid account. Legend: ✅ done, 🚧 in progress, ⏳ waiting.
+Claude Usage reached **beta** in v0.10.0. This page records what the alpha delivered and lays out the road from beta to a **1.0 production release**. Nothing here needs a paid account unless a section says so. Legend: ✅ done, 🚧 in progress, ⏳ planned.
 
-## Phase 1: Reliability (blocks beta)
+## Alpha → beta: complete ✅
 
-1. ✅ **Release-based updater** (0.9.2, hardened in 0.9.10 and 0.9.13). Updates download the release DMG, verify an offline Ed25519 signature bound to the version plus the SHA-256, and swap the app in, with no developer tools needed. There is no source-build fallback.
-2. ⏳ **Test the paid ChatGPT (Codex) path** (deliberately last). The 5-hour and weekly windows are only verified with demo data. Verify with a paid account, or label the feature experimental until then.
-3. ✅ **Resilience to API changes** (0.9.3). Parsing skips unknown fields, and if a response changes shape the app keeps the last reading and says so instead of going blank.
-4. 🚧 **Automated tests and CI.** 66 built-in checks (`--selftest`) cover versions, update signatures and URL rules, the Claude and ChatGPT parsers, Claude Code log parsing, pricing, the forecaster, diagnostics and the event log. The GitHub Actions workflow that runs them on every push is written (`.pending/ci.yml`) and waits for the `workflow` scope on the GitHub login.
-5. ✅ **Performance check** (0.9.4). On 100 MB of logs a first scan takes about 1.2 s (cached afterwards), peak memory is about 155 MB, and the running app idles at 0% CPU. Possible later improvement: parse only the new part of a growing log.
+| # | Item | Result |
+|---|------|--------|
+| 1 | Release-based updater | Downloads the release DMG, verifies an offline Ed25519 signature bound to the version plus the SHA-256, no developer tools needed, no source-build fallback. |
+| 2 | ChatGPT (Codex) usage | Shipped as **experimental**: the paid-plan limits are only verified with sample data. Free plans are unsupported and hidden. |
+| 3 | Resilience to API changes | Tolerant parsing; if a response changes shape the app keeps the last reading and says so. |
+| 4 | Automated tests and CI | 67 built-in checks (`--selftest`) run by GitHub Actions on every push, on macOS 14, 15 and the latest. |
+| 5 | Performance | 100 MB of logs scans in about 1.2 s (cached afterwards), ~155 MB peak memory, 0% CPU idle. |
+| 6 | Install without Apple signing | Homebrew tap, checksum-verified terminal installer, checksum and signature on every release. |
+| 7 | Universal build | Apple silicon and Intel in one DMG. |
+| 8 | Onboarding | First-run welcome card for Claude Code setup and sign-in. |
+| 9 | Pricing updates | `pricing.json`, checked daily, validated, cached. |
+| 10 | Compatibility | Builds and self-tests on macOS 14, 15 and latest in CI; compiled against a macOS 13 target (not run on 13 itself, GitHub no longer offers a 13 runner). |
+| 11 | Accessibility | VoiceOver labels on cards, tiles, charts, tabs and the update bar; WCAG contrast check of every theme; ⌘1–⌘5 switch tabs and ⌘R refreshes. |
+| 12 | Notifications and launch at login | Launch at login built in; alert review fixed a bug where a wobbling server reset time could repeat an alert in the same window. |
+| 13–16 | Export, What's new, diagnostics, update progress | CSV export; one-time What's new notice; allow-list diagnostics with a Preview; progress bar and a download-only mode for copies that can't self-install. |
+| — | Security | Five independent read-only reviews, no secrets and no remote exploits found; all findings fixed. See [SECURITY.md](SECURITY.md). |
 
-## Security (done, repeat after risky changes)
+## Beta → 1.0: the road to production
 
-Five independent read-only reviews so far, all with no secrets found and no remote exploits:
+Phases can overlap; the order is by what most reduces risk for real users.
 
-- **0.9.10:** updater and supply chain, credentials and data handling, repository and history. Fixes: offline-signed updates, no source-build fallback, validated and re-checked downloads, safer program lookup, private data folders, developer overrides ignored in the shipped app, `SECURITY.md`, commit history rewritten to use the GitHub noreply email.
-- **0.9.13:** diagnostics privacy and the new update code. Fixes: signatures bound to the version, download time and size limits, redirects only to GitHub's hosts, plain `x.y.z` versions only, an installer saved to Downloads that never overwrites files, and a smaller, safer diagnostics report.
+### B1. Real-world confidence ⏳
+The biggest gap is that most testing happened on one Mac.
+- Clean-install and update test on a **second Mac** that has never had developer tools (DMG, Homebrew and terminal installers; update from every earlier beta).
+- Run on **macOS 13** hardware or a VM, and on an **Intel** Mac.
+- A hands-on **VoiceOver and keyboard-only pass** by a person (the automated labels exist; the experience is untested), plus Reduce Motion, Increase Contrast and larger text.
+- **Paid ChatGPT**: verify with a real paid account. If it can't be verified, remove the feature before 1.0 rather than ship it unproven.
+- Collect real bug reports from beta users and triage them in GitHub issues with labels and a "known issues" list in the README.
 
-See [SECURITY.md](SECURITY.md) for the trust model and how to report a problem privately.
+### B2. Quality and maintainability ⏳
+- Test with **real captured response samples** (sanitised) for the Claude and ChatGPT usage endpoints, and keep fixtures when formats change.
+- **Screenshot regression tests** in CI for the main screens in light, dark and OLED.
+- Split the very large `Dashboard.swift` into per-screen files; keep every file reviewable.
+- Parse only the new part of a growing log file (lower CPU on huge histories).
+- Pin GitHub Actions by commit SHA and enable Dependabot for the workflow file.
+- A build that works on the Swift versions in common use (CI already caught one portability bug).
 
-## Phase 2: Trust and first run
+### B3. Trust, security and distribution ⏳
+- **Decide on a paid Apple Developer ID and notarisation** at 1.0 (removes the first-launch prompt; costs $99/yr). Until then the free path stays: Homebrew tap, checksums, offline signature.
+- Document a **signing-key rotation and recovery procedure**, with the second backup tested (restore the key from iCloud/Proton and sign a test file).
+- Keep the legacy `.sig` for a few more releases, then remove it.
+- A **third security review** before 1.0, including a fresh look at install scripts and the Homebrew cask. Re-run it after any change to the updater, diagnostics or install scripts.
+- An opt-in **beta/stable update channel** so testers can get betas while everyone else stays on stable.
+- Publish a short privacy statement (`PRIVACY.md`) matching the in-app one, and a software bill of materials (the app has no third-party dependencies).
 
-6. ✅ **Low-friction install without Apple signing** (0.9.5). A Homebrew tap (`brew install --cask Ol775/tap/claude-usage`) clears the quarantine flag, the terminal installer requires a matching checksum, every release ships checksum and signature files, and the README explains the first-launch prompt. The source build stays as the fully transparent route.
-7. ✅ **Universal build** (0.9.5). Releases ship Apple silicon and Intel in one DMG.
-8. ✅ **Onboarding** (0.9.6). A first-run welcome card shows what's needed (Claude Code installed, signed in) with the next click.
-9. ✅ **Pricing table updates** (0.9.6). Prices live in `ClaudeUsage/pricing.json`; the app checks it once a day, validates it, caches it and merges it over the built-in table. The "no price known" note remains for unknown models.
-10. 🚧 **Compatibility.** The app compiles against a macOS 13 target (newer-only APIs are caught at build time), but it has only been run on the newest macOS. Still to do: run it on macOS 13, 14 and 15 (a CI job on those runners would do it).
+### B4. Product polish ⏳
+- Localisation (starting with the strings in Settings and the menu).
+- Data controls: a "delete all my data" button, retention settings and settings export/import.
+- Notification actions (snooze, open dashboard) and quiet hours.
+- ChatGPT graduates from experimental if verified (B1), with a screenshot refresh.
+- Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).
 
-## Phase 3: Polish
+### B5. Community and project hygiene ⏳
+- `CONTRIBUTING.md`, issue and pull-request templates, and a `CODE_OF_CONDUCT.md`.
+- Release notes written for people, generated from the change log, and a support policy (latest release only, how fast security fixes ship).
+- A short "how updates are verified" explainer in the README linking to `SECURITY.md`.
 
-11. 🚧 **Accessibility** (0.9.8). VoiceOver reads limit cards, stat tiles, the update progress bar and the menu bar item in plain words, and every theme's colours were checked against the WCAG contrast formula. Still to do: chart descriptions and a full keyboard-navigation pass.
-12. 🚧 **Launch at login** is built in (Settings). Still to do: a review of the notification settings and repeat-alert behaviour.
-13. ✅ **Data export** to CSV is built in (Settings → Data & Export).
-14. ✅ **What's new** (0.9.8). A one-time notice after an update, plus the full change log in Settings → About.
-15. ✅ **Diagnostics** (0.9.8, trimmed in 0.9.13). A short allow-list of facts (app version, macOS version, chip, a few yes/no states and a local event log) with a **Preview** in Settings → Help & Legal showing exactly what Copy and Report a Bug include. No account details, paths, tokens or usage numbers.
-16. ✅ **Update progress** (0.9.11). A progress bar for download, verification and install (Settings → About, above every page and in the menu). Copies that can't replace themselves get a **Download Update** button that saves the verified installer to Downloads.
+## 1.0 production gates
 
-## Later (not blocking beta)
+Version 1.0 ships (stage switches to stable, README and in-app wording drop "beta") when all of these hold:
+- ⏳ Updates, installs and the first-run experience are verified on a second clean Mac, macOS 13 and an Intel Mac.
+- ⏳ CI is green on macOS 14, 15 and latest, and the self-tests plus screenshot tests cover the parsers, forecaster, updater and main screens.
+- ⏳ No open high-severity bugs; every known issue is listed.
+- ⏳ A third security review finds nothing medium or above outstanding, and the key-rotation procedure has been rehearsed.
+- ⏳ ChatGPT is either verified on a paid plan or removed.
+- ⏳ The Apple Developer ID decision is made and documented.
+- ⏳ README, SECURITY, PRIVACY, CONTRIBUTING and the in-app legal text are current and agree with each other.
 
+## Later (not blocking 1.0)
 - Independent sign-in, blocked until Anthropic offers a public OAuth client for third-party apps.
-- iCloud folder sync and a WidgetKit widget (widgets need Xcode).
-- Localisation.
-- Drop the legacy `.sig` release file once installs older than 0.9.13 have updated.
-
-## Beta exit criteria
-
-- ✅ The updater is tested end to end from a release, without developer tools. Tested in throwaway copies, including an old 0.9.10 build; still to confirm on a clean second Mac.
-- ⏳ CI is green, with tests covering the parsers and the predictor (the tests exist; CI is waiting on the workflow scope).
-- ⏳ No open crash or data-loss bugs for two weeks.
-- ⏳ Paid ChatGPT is verified, or clearly marked experimental.
-- ⏳ A bug has been reported and fixed through the in-app Report a Bug flow.
+- iCloud folder sync (per-Mac activity files summed together) if there is demand.
+- Multiple Claude accounts.
 
 Ideas or bugs? [Open an issue](https://github.com/Ol775/Claude-Usage/issues/new).

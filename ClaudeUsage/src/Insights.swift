@@ -349,5 +349,6 @@ struct InsightsView: View {
             content()
         }
         .padding(18).frame(maxWidth: .infinity, alignment: .leading).card()
+        .accessibilityElement(children: .contain).accessibilityLabel(subtitle.map { "\(title), \($0)" } ?? title)
     }
 }

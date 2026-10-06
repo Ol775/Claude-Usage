@@ -548,8 +548,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             let important = settings.importance == .all || (settings.importance == .critical && critical)
             seen.append(key); notify(title, body, important: important)
         }
+        var windows = UserDefaults.standard.dictionary(forKey: "alertWindows") as? [String: Int] ?? [:]
+        defer { UserDefaults.standard.set(windows, forKey: "alertWindows") }
         for l in store.limits where l.kind != .other {
-            let reset = l.resets.map { Int($0.timeIntervalSince1970 / 60) } ?? 0
+            // The server's reset time can wobble by seconds between fetches; keep one stable id per limit window so an alert fires once.
+            let reset = stableWindow(previous: windows[l.name], new: l.resets.map { Int($0.timeIntervalSince1970 / 60) } ?? 0)
+            windows[l.name] = reset
             let pct = Int(l.percent)
             for t in Array(Set([settings.warnThreshold, settings.criticalThreshold, 100])).sorted() where pct >= t {
                 let when = untilText(l.resets).replacingOccurrences(of: "Resets", with: "resets")

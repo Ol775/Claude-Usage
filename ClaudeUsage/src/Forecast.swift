@@ -137,3 +137,11 @@ enum Predictor {
         }
     }
 }
+
+
+/// Identifies a limit window by its reset time (in minutes since 1970). A new reading within 10 minutes of the previous one is the
+/// same window (the server's timestamp wobbles), so the previous id is kept; a bigger jump is a new window.
+func stableWindow(previous: Int?, new: Int) -> Int {
+    guard let p = previous, abs(new - p) <= 10 else { return new }
+    return p
+}
