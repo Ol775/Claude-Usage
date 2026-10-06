@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.5.0 – alpha
+- In-app updates: Update Now downloads the new version from GitHub, builds it, swaps it in (keeping a backup) and relaunches; the update notification has an Update Now button
+
 ## 0.4.0 – alpha
 - Notifies when a newer version is available on GitHub (Settings → About shows what's new; ../update.sh installs it); robot-themed stock avatars for the account picture
 

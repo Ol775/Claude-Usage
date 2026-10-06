@@ -29,4 +29,5 @@ s = open(p).read()
 s = re.sub(r"## ClaudeUsage  \(v[^)]*\)", f"## ClaudeUsage  (v{sys.argv[1]} alpha)", s, count=1)
 open(p, "w").write(s)
 PY
+echo $(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + 1 )) > BUILD_NUMBER    # the build number this change will have once committed
 echo "Version is now $new"

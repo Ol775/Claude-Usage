@@ -41,6 +41,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             checkUpdates: { [weak self] in self?.checkForUpdates(manual: true) },
             copyUpdateCommand: { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("cd ~/Projects/MacApps && ./update.sh", forType: .string); Toast.show("Update command copied", "Paste it into Terminal to update Claude Usage.") },
             openChangelog: { NSWorkspace.shared.open(URL(string: AppInfo.repoURL.absoluteString + "/blob/main/ClaudeUsage/CHANGELOG.md")!) },
+            installUpdate: { [weak self] in self?.installUpdate() },
             openNotificationSettings: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
             },
@@ -48,7 +49,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             exportData: { [weak self] in self?.exportData() },
             copySummary: { [weak self] in self?.copySummary() })
         installMainMenu()
-        if App.notificationsEnabled { UNUserNotificationCenter.current().delegate = self }
+        if App.notificationsEnabled {
+            let center = UNUserNotificationCenter.current()
+            center.delegate = self
+            center.setNotificationCategories([UNNotificationCategory(identifier: "UPDATE", actions: [UNNotificationAction(identifier: "update.now", title: "Update Now", options: [.foreground])], intentIdentifiers: [], options: [])])
+            DispatchQueue.global(qos: .background).async { Updater.cleanupOldDownloads() }
+        }
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
         item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
         item.button?.attributedTitle = NSAttributedString(string: " …")
@@ -67,6 +73,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         refresh()
         scheduleTimer()
         scheduleUpdateChecks()
+        if CommandLine.arguments.contains("--auto-install") { DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self.checkForUpdates(manual: true) } }   // dev aid: test Update Now end to end
         if settings.autoCheckUpdates { DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.checkForUpdates(manual: false) } }
     }
 
@@ -190,7 +197,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             DispatchQueue.main.async {
                 if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
                     let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
-                    if openAbout { c.userInfo = ["open": "about"] }
+                    if openAbout { c.userInfo = ["open": "about"]; c.categoryIdentifier = "UPDATE" }
                     if important { c.interruptionLevel = .timeSensitive; c.relevanceScore = 1; c.subtitle = "Important"; c.threadIdentifier = "claude-usage-important" }
                     center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
                 } else {
@@ -248,6 +255,20 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     }
                 }
                 self.build(self.store.snapshot)
+                if CommandLine.arguments.contains("--auto-install") { self.installUpdate() }
+            }
+        }
+    }
+
+    /// Downloads the new version from GitHub, builds it, then quits so the helper can swap it in and relaunch.
+    func installUpdate() {
+        guard case .available(let info) = store.update, !store.installing else { return }
+        store.installing = true; store.installMessage = "Starting…"; store.installError = nil
+        DispatchQueue.global(qos: .userInitiated).async {
+            let error = Updater.install(info) { message in DispatchQueue.main.async { self.store.installMessage = message } }
+            DispatchQueue.main.async {
+                if let error = error { self.store.installing = false; self.store.installError = error }
+                else { self.store.installMessage = "Restarting…"; NSApp.terminate(nil) }
             }
         }
     }
@@ -256,7 +277,13 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     @objc func openUpdate() { store.settingsCategory = .about; showDashboard(.settings) }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        if response.notification.request.content.userInfo["open"] as? String == "about" {
+        if response.actionIdentifier == "update.now" {
+            DispatchQueue.main.async {
+                self.store.settingsCategory = .about; self.showDashboard(.settings)
+                if case .available = self.store.update { self.installUpdate() }
+                else { self.checkForUpdates(manual: true) }      // app was restarted: look again; the About page then offers Update Now
+            }
+        } else if response.notification.request.content.userInfo["open"] as? String == "about" {
             DispatchQueue.main.async { self.store.settingsCategory = .about; self.showDashboard(.settings) }
         } else { DispatchQueue.main.async { self.showDashboard(.overview) } }
         completionHandler()
@@ -541,6 +568,15 @@ if CommandLine.arguments.contains("--snapshot") {
         host.cacheDisplay(in: host.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/menu_snapshot_\(name).png"))
     }
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--install-update") {
+    // Dev aid: runs the whole download -> build -> install flow into CUB_INSTALL_DEST (never the installed app) and exits.
+    guard case .available(let info) = Updater.check() else { print("no update available"); exit(0) }
+    let dest = URL(fileURLWithPath: ProcessInfo.processInfo.environment["CUB_INSTALL_DEST"] ?? "/tmp/ClaudeUsageUpdateTest.app")
+    if let err = Updater.install(info, dest: dest, relaunch: false, progress: { print("…", $0) }) { print("FAILED:", err); exit(1) }
+    print("hand-off started for", info.version, "->", dest.path)
     exit(0)
 }
 

@@ -4,7 +4,8 @@ set -e
 cd "$(dirname "$0")"
 VERSION=$(cat VERSION)
 STAGE="alpha"
-BUILD="${BUILD:-$(git rev-list --count HEAD 2>/dev/null || echo 1)}"   # build number = commit count, so it rises with every commit
+# build number = commit count (rises with every commit); source downloads have no .git, so they use the BUILD_NUMBER file bump.sh writes
+BUILD="${BUILD:-$( [ -d ../.git ] && git rev-list --count HEAD 2>/dev/null || cat BUILD_NUMBER 2>/dev/null || echo 1 )}"
 APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
 swiftc -O -target "$(uname -m)-apple-macos13.0" \

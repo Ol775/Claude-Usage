@@ -17,6 +17,7 @@ struct Actions {
     var checkUpdates: () -> Void = {}
     var copyUpdateCommand: () -> Void = {}
     var openChangelog: () -> Void = {}
+    var installUpdate: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
     var requestNotifications: () -> Void = {}
     var exportData: () -> Void = {}
@@ -55,6 +56,9 @@ final class Store: ObservableObject {
     @Published var notifBlocked = false
     @Published var stockIndex: Int? = stockAvatarIndex
     @Published var update: UpdateStatus = .idle
+    @Published var installing = false
+    @Published var installMessage = ""
+    @Published var installError: String?
     var actions = Actions()
 }
 
@@ -984,11 +988,18 @@ struct SettingsPage: View {
                     ForEach(Array(u.notes.prefix(6).enumerated()), id: \.offset) { _, n in
                         HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(.callout).foregroundStyle(.secondary)
                     }
-                    HStack {
-                        Button("View on GitHub") { store.actions.openChangelog() }
-                        Button("Copy update command") { store.actions.copyUpdateCommand() }
-                    }.padding(.top, 4)
-                    Text("Paste the command into Terminal – it pulls the new version, rebuilds, installs and relaunches the app.").font(.caption).foregroundStyle(.secondary)
+                    if store.installing {
+                        HStack(spacing: 10) { ProgressView().controlSize(.small); Text(store.installMessage).font(.callout) }.padding(.top, 4)
+                    } else {
+                        HStack {
+                            Button { store.actions.installUpdate() } label: { Text("Update Now") }.buttonStyle(.borderedProminent)
+                            Button("View on GitHub") { store.actions.openChangelog() }
+                            Button("Copy command") { store.actions.copyUpdateCommand() }
+                        }.padding(.top, 4)
+                        Text("Update Now downloads version \(u.version) from GitHub, builds it (about a minute), swaps it in and relaunches. Your current version is kept as a backup.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let e = store.installError { Text(e).font(.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
                 }
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             }

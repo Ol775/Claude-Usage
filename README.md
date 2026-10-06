@@ -2,7 +2,7 @@
 
 Small native macOS apps.
 
-## ClaudeUsage  (v0.4.0 alpha)
+## ClaudeUsage  (v0.5.0 alpha)
 
 A menu bar + desktop app for your Claude usage.
 
@@ -14,6 +14,7 @@ A menu bar + desktop app for your Claude usage.
 - Light / Dark / **OLED black** / Follow system, six colour themes (Claude orange by default)
 - Menu bar display options, configurable alert thresholds, CSV export, copy-summary, optional local profile photo
 - Sign in/out through Claude's official login (via Claude Code)
+- **Updates**: notifies when a newer version is on GitHub, and **Update Now** downloads it, builds it, swaps it in (keeping a backup) and relaunches – no Terminal needed. `./update.sh` does the same from the command line
 
 Build: `cd ClaudeUsage && ./build.sh`, then copy `Claude Usage.app` to `/Applications`.
 Requires macOS 13+ and the Xcode command line tools. The version lives in `ClaudeUsage/VERSION`.
