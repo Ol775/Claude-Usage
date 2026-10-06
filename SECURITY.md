@@ -16,7 +16,7 @@ Only the latest release is supported while the app is in alpha/beta.
 
 ## How updates are trusted
 
-Every release DMG is signed with an Ed25519 key whose private half is kept offline on the maintainer's Mac, never on GitHub. The app has the public key built in and installs an update only if all of these pass: the download is from this repo's GitHub releases over HTTPS, the signature verifies, the SHA-256 matches, the app's bundle id and version are right, and its code signature is intact. An update that fails any check is discarded. The app never builds or runs code from the repository when updating.
+Every release DMG is signed, together with its version number, with an Ed25519 key whose private half is kept offline on the maintainer's Mac, never on GitHub. The app has the public key built in and installs an update only if all of these pass: the download is from this repo's GitHub releases over HTTPS, the signature verifies for exactly that version (so an older signed image can't pass as a newer release), the SHA-256 matches, the app's bundle id and version are right, and its code signature is intact. Downloads have a time and size limit and may only redirect to GitHub's own hosts. An update that fails any check is discarded. The app never builds or runs code from the repository when updating.
 
 The app is ad-hoc signed (no paid Apple Developer ID), so macOS Gatekeeper treats it as unidentified on first launch. The terminal and Homebrew installs verify the SHA-256 of the DMG; the Homebrew cask pins it. If the signing key is ever lost or exposed, a new key will be announced in the releases and the README.
 
@@ -25,3 +25,7 @@ The app is ad-hoc signed (no paid Apple Developer ID), so macOS Gatekeeper treat
 - Programs the app runs (`claude`, `codex`) must be owned by you or root and not writable by others, and system folders are searched first.
 - Developer overrides (`CUB_*` variables and test flags) are ignored in the shipped app.
 - The self-test suite (`ClaudeUsage --selftest`) covers signature checks, URL validation and executable checks.
+
+## Diagnostics
+
+Settings → Help & Legal shows exactly what "Copy" and "Report a Bug" include before you use them: app version, macOS version, chip, a few yes/no states (Claude Code found/signed in, update state, notifications, ChatGPT on/off) and a short local event log. No account details, file paths, tokens or usage numbers. Nothing is sent automatically.
