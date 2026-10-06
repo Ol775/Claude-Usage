@@ -44,6 +44,9 @@ Unofficial – not affiliated with Anthropic.
 <td width="50%"><img src="docs/screenshots/5-light.png" alt="Light mode in Claude orange"></td>
 <td width="50%"><img src="docs/screenshots/6-oled.png" alt="OLED black mode: usage by day, hour, model and project"></td>
 </tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/7-chatgpt.png" alt="ChatGPT (Codex) limits next to Claude on the Overview, with a combined forecast chart"></td>
+</tr>
 </table>
 
 
@@ -84,6 +87,12 @@ The app checks GitHub for new versions, downloads and builds them in the backgro
 ## Reporting bugs
 
 Use **Settings → Help & Legal → Report a Bug** in the app (it fills in your version and macOS), or [open an issue](https://github.com/Ol775/Claude-Usage/issues/new) here. Please don't paste tokens or private logs.
+
+## Support the project
+
+Claude Usage is free and open source. If it's useful, you can [buy me a coffee](https://buymeacoffee.com/ol775) – entirely optional, and always appreciated.
+
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/ol775)
 
 ## FAQ
 
