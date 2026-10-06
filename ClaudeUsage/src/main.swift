@@ -212,7 +212,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard !refreshing else { pendingRefresh = true; return }
         if Demo.enabled {            // screenshots: made-up data, nothing read from or saved to the real history
             let s = Demo.snapshot()
-            if ProcessInfo.processInfo.environment["CUB_DEMO_SIGNEDOUT"] != nil {      // dev aid: preview the first-run screen
+            if Dev.env("CUB_DEMO_SIGNEDOUT") != nil {      // dev aid: preview the first-run screen
                 store.account = Account(); store.limits = []; store.limitError = nil; store.snapshot = s; store.lastUpdated = Date(); build(s); return
             }
             store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
@@ -335,7 +335,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                 switch status {
                 case .available(let info):
                     if let rv = readyVersion, !isNewer(info.version, than: rv) {                 // that version is already downloaded
-                        if CommandLine.arguments.contains("--auto-apply") { self.applyReadyUpdate() }
+                        if Dev.flag("--auto-apply") { self.applyReadyUpdate() }
                         break
                     }
                     if readyVersion != nil { Updater.clearPrepared() }                           // an even newer one exists
@@ -347,7 +347,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     if readyVersion == nil { self.store.update = status }
                 }
                 self.build(self.store.snapshot)
-                if CommandLine.arguments.contains("--auto-install") { self.installUpdate() }
+                if Dev.flag("--auto-install") { self.installUpdate() }
             }
         }
     }
@@ -376,7 +376,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     Updater.savePrepared(info, app: app)
                     self.store.update = .ready(info, app); self.store.bannerHidden = false
                     self.notifyReadyOnce(info); self.promptRestart(info)
-                    if CommandLine.arguments.contains("--auto-apply") { self.applyReadyUpdate() }
+                    if Dev.flag("--auto-apply") { self.applyReadyUpdate() }
                 } else {
                     self.store.installError = r.error
                     AppLog.write("Update download: \(r.error ?? "failed")")
@@ -401,7 +401,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     func applyReadyUpdate() {
         guard case .ready(_, let app) = store.update else { return }
         store.installMessage = "Restarting…"
-        if let error = Updater.apply(app, relaunch: ProcessInfo.processInfo.environment["CUB_NO_RELAUNCH"] == nil) { store.installError = error }
+        if let error = Updater.apply(app, relaunch: Dev.env("CUB_NO_RELAUNCH") == nil) { store.installError = error }
         else { Updater.clearPrepared(); NSApp.terminate(nil) }
     }
 
@@ -512,7 +512,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard loginProcess == nil else { return }
         let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = ["auth", "login"]
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "\(NSHomeDirectory())/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"      // fixed order: your own folder last
         p.environment = env; p.standardOutput = Pipe(); p.standardError = Pipe()
         p.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async {
@@ -555,7 +555,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         guard chatgptProcess == nil else { return }
         let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = ["login"]
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(NSHomeDirectory())/.local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"
         p.environment = env; p.standardOutput = Pipe(); p.standardError = Pipe()
         p.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async {
@@ -716,7 +716,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         Settings.persist = false
         App.notificationsEnabled = false
         App.isTour = true
-        if ProcessInfo.processInfo.environment["CUB_FAKE_READY"] != nil { store.update = .ready(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence.", "A fix, described in one sentence."]), URL(fileURLWithPath: "/tmp")) }   // dev aid: preview the restart banner
+        if Dev.env("CUB_FAKE_READY") != nil { store.update = .ready(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence.", "A fix, described in one sentence."]), URL(fileURLWithPath: "/tmp")) }   // dev aid: preview the restart banner
         showDashboard(.overview)
         checkForUpdates(manual: true)
         refresh()
@@ -733,8 +733,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             let (mode, name) = shots[idx]
             settings.appearance = mode
             let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 1020, height: 3700), styleMask: [.borderless], backing: .buffered, defer: false)
-            store.settingsCategory = SettingsCategory(rawValue: ProcessInfo.processInfo.environment["CUB_TALL_CAT"] ?? "") ?? .about    // dev aid: pick the settings pane to render
-            let pageName = ProcessInfo.processInfo.environment["CUB_TALL_PAGE"] ?? ""      // dev aid: overview | reports | insights | (settings)
+            store.settingsCategory = SettingsCategory(rawValue: Dev.env("CUB_TALL_CAT") ?? "") ?? .about    // dev aid: pick the settings pane to render
+            let pageName = Dev.env("CUB_TALL_PAGE") ?? ""      // dev aid: overview | reports | insights | (settings)
             let page: AnyView = pageName == "overview" ? AnyView(OverviewView(store: store)) : (pageName == "reports" ? AnyView(ReportsView(store: store))
                 : (pageName == "insights" ? AnyView(InsightsView(store: store)) : AnyView(SettingsPage(store: store, settings: settings))))
             w.contentView = NSHostingView(rootView: page.frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
@@ -797,10 +797,10 @@ if CommandLine.arguments.contains("--refresh-pricing") {      // dev aid: fetche
     exit(0)
 }
 
-if CommandLine.arguments.contains("--install-update") {
+if Dev.flag("--install-update") {
     // Dev aid: runs the whole download -> build -> install flow into CUB_INSTALL_DEST (never the installed app) and exits.
     guard case .available(let info) = Updater.check() else { print("no update available"); exit(0) }
-    let dest = URL(fileURLWithPath: ProcessInfo.processInfo.environment["CUB_INSTALL_DEST"] ?? "/tmp/ClaudeUsageUpdateTest.app")
+    let dest = URL(fileURLWithPath: Dev.env("CUB_INSTALL_DEST") ?? "/tmp/ClaudeUsageUpdateTest.app")
     if let err = Updater.install(info, dest: dest, relaunch: false, progress: { print("…", $0) }) { print("FAILED:", err); exit(1) }
     print("hand-off started for", info.version, "->", dest.path)
     exit(0)

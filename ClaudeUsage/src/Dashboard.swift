@@ -108,7 +108,7 @@ extension View {
 struct DashboardView: View {
     @ObservedObject var store: Store
     @ObservedObject var settings = Settings.shared
-    @StateObject private var collapsed = Box(UserDefaults.standard.bool(forKey: "sidebarCollapsed") || ProcessInfo.processInfo.environment["CUB_COLLAPSED"] == "1")
+    @StateObject private var collapsed = Box(UserDefaults.standard.bool(forKey: "sidebarCollapsed") || Dev.env("CUB_COLLAPSED") == "1")
 
     var body: some View {
         HStack(spacing: 0) {

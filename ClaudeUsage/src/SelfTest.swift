@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 // Built-in checks for the logic that must not silently break: version compare, response parsing, pricing, forecasting.
 // Run with `ClaudeUsage --selftest` (CI does this after every build). Exits non-zero if anything fails.
@@ -90,7 +91,7 @@ func runSelfTests() -> Int32 {
     // Diagnostics never carry the home folder path
     check(!Legal.diagnostics.contains(NSHomeDirectory()), "diagnostics hide the home folder")
 
-    if ProcessInfo.processInfo.environment["CUB_SUPPORT_DIR"] != nil {          // only against a throwaway folder, never the real log
+    if Dev.env("CUB_SUPPORT_DIR") != nil {          // only against a throwaway folder, never the real log
         AppLog.write("Test: \(NSHomeDirectory())/x"); AppLog.write("Test: \(NSHomeDirectory())/x")
         let r = AppLog.recent()
         check(r.contains("Test: ~/x") && !r.contains(NSHomeDirectory()), "log shortens the home folder")
@@ -118,6 +119,36 @@ func runSelfTests() -> Int32 {
     check(recs.first { !$0.key.isEmpty }?.u.cacheRead == 400 && recs.first { !$0.key.isEmpty }?.u.output == 20, "token counts read")
     check(recs.first { !$0.key.isEmpty }?.model == "claude-opus-5-5", "model read")
     check(recs.first?.project == "Projects-Demo", "project name from folder (got \(recs.first?.project ?? "nil"))")
+
+    // Update authenticity
+    let key = Curve25519.Signing.PrivateKey()
+    let pubB64 = key.publicKey.rawRepresentation.base64EncodedString()
+    let payload = Data("pretend this is a disk image".utf8)
+    let goodSig = (try? key.signature(for: payload))?.base64EncodedString() ?? ""
+    check(Updater.verifySignature(payload, base64Signature: goodSig, publicKey: pubB64), "a valid release signature verifies")
+    check(!Updater.verifySignature(Data("tampered".utf8), base64Signature: goodSig, publicKey: pubB64), "a changed file fails verification")
+    check(!Updater.verifySignature(payload, base64Signature: goodSig, publicKey: Curve25519.Signing.PrivateKey().publicKey.rawRepresentation.base64EncodedString()), "a different key fails verification")
+    check(!Updater.verifySignature(payload, base64Signature: "", publicKey: pubB64) && !Updater.verifySignature(payload, base64Signature: "not base64!!", publicKey: pubB64), "missing or garbage signature fails")
+    check(!Updater.verifySignature(payload, base64Signature: goodSig), "a signature from another key doesn't pass the built-in key")
+    check(Updater.isTrustedAsset(URL(string: "https://github.com/Ol775/Claude-Usage/releases/download/v1/x.dmg")!), "release asset URL accepted")
+    check(!Updater.isTrustedAsset(URL(string: "https://evil.example/Ol775/Claude-Usage/releases/download/v1/x.dmg")!)
+          && !Updater.isTrustedAsset(URL(string: "http://github.com/Ol775/Claude-Usage/releases/download/v1/x.dmg")!)
+          && !Updater.isTrustedAsset(URL(string: "https://github.com/Other/Repo/releases/download/v1/x.dmg")!), "other hosts, http and other repos are refused")
+
+    // Programs we will run must not be writable by others
+    let tdir = FileManager.default.temporaryDirectory.appendingPathComponent("cub-exec-\(ProcessInfo.processInfo.processIdentifier)")
+    try? FileManager.default.createDirectory(at: tdir, withIntermediateDirectories: true)
+    let okBin = tdir.appendingPathComponent("ok"), badBin = tdir.appendingPathComponent("bad")
+    for u in [okBin, badBin] { FileManager.default.createFile(atPath: u.path, contents: Data("#!/bin/sh\n".utf8)) }
+    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: okBin.path)
+    try? FileManager.default.setAttributes([.posixPermissions: 0o777], ofItemAtPath: badBin.path)
+    check(trustedExecutable([okBin.path]) == okBin.path, "an executable only you can write is accepted")
+    check(trustedExecutable([badBin.path]) == nil, "a world-writable executable is refused")
+    check(trustedExecutable([badBin.path, okBin.path]) == okBin.path, "a refused one is skipped in favour of a safe one")
+    try? FileManager.default.removeItem(at: tdir)
+
+    // The shipped app ignores developer overrides
+    if Dev.production { check(Dev.env("PATH") == nil && !Dev.flag("--selftest"), "production build ignores CUB_* variables and dev flags") }
 
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")

@@ -2,7 +2,7 @@ import Foundation
 
 /// Made-up data for screenshots (`CUB_DEMO=1`). Nothing here is read from, or written to, the user's real history.
 enum Demo {
-    static var enabled: Bool { ProcessInfo.processInfo.environment["CUB_DEMO"] == "1" }
+    static var enabled: Bool { Dev.env("CUB_DEMO") == "1" }
 
     static let account: Account = { var a = Account(); a.loggedIn = true; a.email = "alex.morgan@example.com"; a.plan = "Max"; return a }()
 

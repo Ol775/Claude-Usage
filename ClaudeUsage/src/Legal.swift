@@ -103,7 +103,7 @@ enum AppLog {
 
     static func write(_ message: String) {
         lock.lock(); defer { lock.unlock() }
-        let clean = message.replacingOccurrences(of: NSHomeDirectory(), with: "~").replacingOccurrences(of: "\n", with: " ")
+        let clean = message.replacingOccurrences(of: NSHomeDirectory(), with: "~").replacingOccurrences(of: NSUserName(), with: "<user>").replacingOccurrences(of: "\n", with: " ")
         guard clean != last else { return }                          // don't repeat the same problem every minute
         last = clean
         let line = "\(ISO8601DateFormatter().string(from: Date())) \(clean)\n"

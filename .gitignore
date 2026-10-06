@@ -2,3 +2,11 @@
 build/
 *.app/
 dist/
+.env
+*.log
+*.dmg
+*.key
+avatar.png
+history.json
+activity.json
+auth.json

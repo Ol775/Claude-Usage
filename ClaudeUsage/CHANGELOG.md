@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.10 – alpha (2026-10-06)
+- Security hardening from an independent review: updates must carry a valid offline Ed25519 signature plus checksum (a hijacked GitHub account can no longer push an update), the source-build fallback and GitHub CLI use are gone, update downloads are validated and re-checked before install, only safely-owned claude/codex programs are run, app data folders are private, developer overrides are ignored in the shipped app. Added SECURITY.md
+
 ## 0.9.9 – alpha (2026-10-06)
 - Self-tests now also cover Claude Code log parsing (44 checks)
 

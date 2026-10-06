@@ -71,8 +71,21 @@ struct Account { var loggedIn = false; var email = ""; var plan = ""
 
 func claudeBinary() -> String? {
     let home = NSHomeDirectory()
-    return ["\(home)/.local/bin/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude", "\(home)/.claude/local/claude"]
-        .first { FileManager.default.isExecutableFile(atPath: $0) }
+    return trustedExecutable(["/opt/homebrew/bin/claude", "/usr/local/bin/claude", "\(home)/.local/bin/claude", "\(home)/.claude/local/claude"])
+}
+
+/// The first of `paths` that is an executable we are willing to run. Package-manager and system folders come first; a
+/// program in your own folders is only used if you own it and nobody else can write to it (or the folder it links to),
+/// so another program can't just drop a fake `claude` there.
+func trustedExecutable(_ paths: [String]) -> String? {
+    let fm = FileManager.default, me = getuid()
+    for p in paths where fm.isExecutableFile(atPath: p) {
+        let real = URL(fileURLWithPath: p).resolvingSymlinksInPath().path
+        guard let a = try? fm.attributesOfItem(atPath: real), let owner = (a[.ownerAccountID] as? NSNumber)?.uint32Value,
+              let mode = (a[.posixPermissions] as? NSNumber)?.intValue else { continue }
+        if (owner == me || owner == 0), mode & 0o022 == 0 { return p }          // owned by you or root, not group/world-writable
+    }
+    return nil
 }
 
 @discardableResult
@@ -80,7 +93,7 @@ func runClaude(_ args: [String]) -> (ok: Bool, out: Data) {
     guard let bin = claudeBinary() else { return (false, Data()) }
     let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = args
     var env = ProcessInfo.processInfo.environment
-    env["PATH"] = "\(NSHomeDirectory())/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+    env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"      // fixed order: your own folder last
     p.environment = env
     let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
     do { try p.run() } catch { return (false, Data()) }

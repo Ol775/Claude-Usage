@@ -37,7 +37,7 @@ struct Pricing {
         guard let models = json["models"] as? [[String: Any]], !models.isEmpty else { return nil }
         var out: [(String, Pricing)] = []
         for m in models {
-            guard let prefix = m["prefix"] as? String, prefix.hasPrefix("claude-"),
+            guard let prefix = m["prefix"] as? String, prefix.hasPrefix("claude-"), prefix.filter({ $0 == "-" }).count >= 2,     // e.g. "claude-opus-5", never a bare "claude-"
                   let i = (m["input"] as? NSNumber)?.doubleValue, let o = (m["output"] as? NSNumber)?.doubleValue,
                   let c = (m["cacheRead"] as? NSNumber)?.doubleValue,
                   [i, o, c].allSatisfy({ $0 >= 0 && $0 <= 1000 }), i > 0, o > 0 else { return nil }

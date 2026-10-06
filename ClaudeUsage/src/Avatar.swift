@@ -2,15 +2,25 @@ import AppKit
 
 // MARK: - Profile photo (stored locally, never uploaded)
 
+/// Developer overrides (CUB_* environment variables and the install/auto-update flags) only work in test copies
+/// (any bundle id other than the shipped "local.claudeusage"), so something that controls the launch environment
+/// can't redirect the real app's data folders or trigger installs.
+enum Dev {
+    static let production = Bundle.main.bundleIdentifier == "local.claudeusage"
+    static func env(_ key: String) -> String? { production ? nil : ProcessInfo.processInfo.environment[key] }
+    static func flag(_ name: String) -> Bool { !production && CommandLine.arguments.contains(name) }
+}
+
 func supportDir() -> URL {
-    let base = ProcessInfo.processInfo.environment["CUB_SUPPORT_DIR"].map { URL(fileURLWithPath: $0) }
+    let base = Dev.env("CUB_SUPPORT_DIR").map { URL(fileURLWithPath: $0) }
         ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")
     // Migrate data from the app's previous name ("Claude Usage Bar") so history and photo carry over.
     let old = base.deletingLastPathComponent().appendingPathComponent("ClaudeUsage" + "Bar")
     if base.lastPathComponent == "ClaudeUsage", !FileManager.default.fileExists(atPath: base.path), FileManager.default.fileExists(atPath: old.path) {
         try? FileManager.default.moveItem(at: old, to: base)
     }
-    try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])   // private to you: it holds usage history
+    try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: base.path)
     return base
 }
 func avatarURL() -> URL { supportDir().appendingPathComponent("avatar.png") }

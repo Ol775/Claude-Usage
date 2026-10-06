@@ -20,8 +20,7 @@ enum ChatGPT {
 
     static func codexBinary() -> String? {
         let home = NSHomeDirectory()
-        return ["/opt/homebrew/bin/codex", "/usr/local/bin/codex", "\(home)/.local/bin/codex", "\(home)/.npm-global/bin/codex", "\(home)/.bun/bin/codex"]
-            .first { FileManager.default.isExecutableFile(atPath: $0) }
+        return trustedExecutable(["/opt/homebrew/bin/codex", "/usr/local/bin/codex", "\(home)/.local/bin/codex", "\(home)/.npm-global/bin/codex", "\(home)/.bun/bin/codex"])
     }
 
     /// True when Codex has a ChatGPT sign-in saved (the file is only checked for its shape here, never copied).
@@ -36,7 +35,7 @@ enum ChatGPT {
         guard let bin = codexBinary() else { return (false, Data()) }
         let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = args
         var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(NSHomeDirectory())/.local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:\(NSHomeDirectory())/.local/bin"
         p.environment = env
         let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
         do { try p.run() } catch { return (false, Data()) }

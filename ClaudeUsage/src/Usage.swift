@@ -49,7 +49,7 @@ final class LogCache {
     var files: [String: (mtime: Date, size: Int, recs: [Rec])] = [:]
 }
 
-/// "-Users-me-Projects-MacApps" -> "Projects-MacApps"; the home folder itself -> "Home".
+/// "-Users-me-Projects-MyApp" -> "Projects-MyApp"; the home folder itself -> "Home".
 func projectName(for url: URL) -> String {
     var name = url.deletingLastPathComponent().lastPathComponent
     let home = "-Users-" + NSUserName().replacingOccurrences(of: ".", with: "-")
