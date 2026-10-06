@@ -97,6 +97,28 @@ func runSelfTests() -> Int32 {
         check(r.components(separatedBy: "Test:").count == 2, "identical consecutive messages are written once")
     }
 
+    // Claude Code log parsing, from a small fixture file
+    let fixture = """
+    {"type":"user","uuid":"u1","timestamp":"2026-10-06T10:00:00.000Z","sessionId":"s1","message":{"role":"user","content":"hello"}}
+    {"type":"user","uuid":"u2","timestamp":"2026-10-06T10:00:01.000Z","sessionId":"s1","message":{"role":"user","content":[{"type":"tool_result","content":"x"}]}}
+    {"type":"user","uuid":"u3","isMeta":true,"timestamp":"2026-10-06T10:00:02.000Z","sessionId":"s1","message":{"role":"user","content":"meta"}}
+    {"type":"assistant","requestId":"r1","timestamp":"2026-10-06T10:00:05.000Z","sessionId":"s1","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":10,"output_tokens":20,"cache_creation_input_tokens":30,"cache_read_input_tokens":400}}}
+    {"type":"assistant","requestId":"r1","timestamp":"2026-10-06T10:00:06.000Z","sessionId":"s1","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"tool_use","id":"t1","name":"Bash"}],"usage":{"input_tokens":10,"output_tokens":20,"cache_creation_input_tokens":30,"cache_read_input_tokens":400}}}
+    this line is not json but mentions "usage"
+    {"type":"system","timestamp":"2026-10-06T10:00:07.000Z"}
+    """
+    let fx = FileManager.default.temporaryDirectory.appendingPathComponent("cub-selftest-\(ProcessInfo.processInfo.processIdentifier)/-Users-\(NSUserName().replacingOccurrences(of: ".", with: "-"))-Projects-Demo/log.jsonl")
+    try? FileManager.default.createDirectory(at: fx.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try? fixture.write(to: fx, atomically: true, encoding: .utf8)
+    let recs = parseLog(fx, oldest: Date(timeIntervalSince1970: 0))
+    try? FileManager.default.removeItem(at: fx.deletingLastPathComponent())
+    check(recs.filter { $0.promptId != nil }.count == 1, "only the real prompt counts (not tool results or meta) – got \(recs.filter { $0.promptId != nil }.count)")
+    check(recs.filter { !$0.key.isEmpty }.count == 2 && Set(recs.filter { !$0.key.isEmpty }.map { $0.key }).count == 1, "split assistant lines share one message key, so tokens count once")
+    check(recs.flatMap { $0.toolIds } == ["t1"], "tool call found")
+    check(recs.first { !$0.key.isEmpty }?.u.cacheRead == 400 && recs.first { !$0.key.isEmpty }?.u.output == 20, "token counts read")
+    check(recs.first { !$0.key.isEmpty }?.model == "claude-opus-5-5", "model read")
+    check(recs.first?.project == "Projects-Demo", "project name from folder (got \(recs.first?.project ?? "nil"))")
+
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")
     check(plural(1, "response") == "1 response" && plural(2, "response") == "2 responses", "plural")

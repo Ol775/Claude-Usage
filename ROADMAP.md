@@ -7,7 +7,7 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 1. ✅ **Release-based updater** (done in 0.9.2). Updates download the release DMG, verify its SHA-256 checksum and swap the app in, with no developer tools needed. It falls back to a source build if the download fails.
 2. **Test the paid ChatGPT (Codex) path.** The 5-hour and weekly windows are only verified with demo data. Verify with a paid account, or label the feature experimental until then.
 3. ✅ **Resilience to API changes** (done in 0.9.3). Parsing skips unknown fields, and if a response changes shape the app keeps the last reading and says so instead of going blank.
-4. 🚧 **Automated tests and CI** (started in 0.9.3). 31 built-in checks (`--selftest`) cover versions, the Claude and ChatGPT parsers, pricing and the forecaster, and a GitHub Actions job builds and runs them on every push. Still to add: log-parser tests with fixture files.
+4. 🚧 **Automated tests and CI.** 44 built-in checks (`--selftest`) cover versions, the Claude and ChatGPT parsers, Claude Code log parsing, pricing and the forecaster. The GitHub Actions workflow that runs them on every push is written (`.pending/ci.yml`) but needs the `workflow` scope on the GitHub login to be pushed.
 5. ✅ **Performance check** (done in 0.9.4). On 100 MB of logs a first scan takes about 1.2 s (cached afterwards), peak memory is about 155 MB (down from 187 MB), and the running app idles at 0% CPU. Possible later improvement: parse only the new part of a growing log.
 
 ## Phase 2: Trust and first run
@@ -21,7 +21,7 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 ## Phase 3: Polish
 
 11. 🚧 **Accessibility** (started in 0.9.8). VoiceOver reads limit cards, stat tiles and the menu bar item in plain words, and every theme's colours were checked against the WCAG contrast formula (light-mode colours deepened). Still to do: chart descriptions and a full keyboard-navigation pass.
-12. ✅ **Launch at login** is built in (Settings), alerts fire once per event.
+12. 🚧 **Launch at login** is built in (Settings). Still to do: a review of the notification settings and repeat-alert behaviour.
 13. ✅ **Data export** to CSV is built in (Settings → Data & Export).
 14. ✅ **What's new** (done in 0.9.8). A one-time notice after an update, plus the full change log in Settings → About.
 15. ✅ **Diagnostics log** (done in 0.9.8). A small local event log (no tokens, emails or usage numbers) is included when you copy diagnostics or report a bug.
