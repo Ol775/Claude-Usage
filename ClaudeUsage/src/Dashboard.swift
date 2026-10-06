@@ -23,6 +23,9 @@ struct Actions {
     var openChangelog: () -> Void = {}
     var installUpdate: () -> Void = {}
     var applyUpdate: () -> Void = {}
+    var downloadInstaller: () -> Void = {}
+    var showInstaller: () -> Void = {}
+    var openInstaller: () -> Void = {}
     var postponeUpdate: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
     var requestNotifications: () -> Void = {}
@@ -68,6 +71,10 @@ final class Store: ObservableObject {
     @Published var update: UpdateStatus = .idle
     @Published var installing = false
     @Published var installMessage = ""
+    @Published var installProgress = 0.0                // 0...1 while an update downloads, verifies and installs
+    @Published var downloadOnly = false                 // this copy can't replace itself, so the update is saved to Downloads instead
+    @Published var downloadedInstaller: URL?
+    @Published var canInstall = true
     @Published var installError: String?
     @Published var bannerHidden = false
     var actions = Actions()
@@ -185,11 +192,43 @@ struct SidebarView: View {
     }
 }
 
-/// Shown above every page once an update has been downloaded: asks for a restart to finish installing it.
+/// A hand-drawn progress bar (the system one ignores our accent colour in dark mode) with the step and percentage.
+struct UpdateProgressBar: View {
+    @ObservedObject var store: Store
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(store.installMessage).font(.callout)
+                Spacer()
+                Text("\(Int((store.installProgress * 100).rounded()))%").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.12))
+                    Capsule().fill(Color.brand).frame(width: max(8, g.size.width * CGFloat(min(max(store.installProgress, 0), 1))))
+                        .animation(.easeOut(duration: 0.25), value: store.installProgress)
+                }
+            }.frame(height: 8)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(store.downloadOnly ? "Downloading update" : "Updating Claude Usage")
+        .accessibilityValue("\(store.installMessage), \(Int((store.installProgress * 100).rounded())) percent")
+    }
+}
+
+/// Shown above every page while an update downloads/installs, and once it is ready: asks for a restart to finish installing it.
 struct UpdateBanner: View {
     @ObservedObject var store: Store
     var body: some View {
-        if case .ready(let u, _) = store.update, !store.bannerHidden {
+        if store.installing {
+            HStack(spacing: 12) {
+                Image(systemName: store.downloadOnly ? "arrow.down.circle.fill" : "arrow.triangle.2.circlepath.circle.fill").font(.title3).foregroundStyle(Color.brand)
+                UpdateProgressBar(store: store)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(Color.brand.opacity(0.14))
+            .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
+        } else if case .ready(let u, _) = store.update, !store.bannerHidden {
             HStack(spacing: 12) {
                 Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(.title3).foregroundStyle(Color.brand)
                 VStack(alignment: .leading, spacing: 1) {
@@ -1395,9 +1434,11 @@ struct SettingsPage: View {
             SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and notifies you.") {
                 Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
             }
-            SDivider()
-            SRow(title: "Download updates in the background", subtitle: "Builds new versions quietly, then asks you to restart to finish.") {
-                Toggle("", isOn: $settings.autoDownloadUpdates).labelsHidden().toggleStyle(.switch)
+            if store.canInstall {
+                SDivider()
+                SRow(title: "Download updates in the background", subtitle: "Downloads new versions quietly, then asks you to restart to finish.") {
+                    Toggle("", isOn: $settings.autoDownloadUpdates).labelsHidden().toggleStyle(.switch)
+                }
             }
             if case .ready(let u, _) = store.update {
                 SDivider()
@@ -1416,14 +1457,30 @@ struct SettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     notesList(u)
                     if store.installing {
-                        HStack(spacing: 10) { ProgressView().controlSize(.small); Text(store.installMessage).font(.callout) }.padding(.top, 4)
+                        UpdateProgressBar(store: store).padding(.top, 4)
+                    } else if !store.canInstall {
+                        if let f = store.downloadedInstaller {
+                            Label("Saved \(f.lastPathComponent) to your Downloads folder", systemImage: "checkmark.circle.fill").font(.callout).padding(.top, 4)
+                            HStack {
+                                Button("Open Installer") { store.actions.openInstaller() }.buttonStyle(.borderedProminent)
+                                Button("Show in Finder") { store.actions.showInstaller() }
+                            }
+                            Text("Drag Claude Usage onto Applications to finish updating.").font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            HStack {
+                                Button("Download Update") { store.actions.downloadInstaller() }.buttonStyle(.borderedProminent)
+                                Button("View on GitHub") { store.actions.openChangelog() }
+                            }.padding(.top, 4)
+                            Text("This copy can’t replace itself (it isn’t in a folder it can write to, such as Applications), so it downloads the verified installer for version \(u.version) to your Downloads folder instead.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     } else {
                         HStack {
                             Button("Update Now") { store.actions.installUpdate() }.buttonStyle(.borderedProminent)
                             Button("View on GitHub") { store.actions.openChangelog() }
                             Button("Copy command") { store.actions.copyUpdateCommand() }
                         }.padding(.top, 4)
-                        Text("Update Now downloads version \(u.version) from GitHub, builds it (about a minute), swaps it in and relaunches. Your current version is kept as a backup.")
+                        Text("Update Now downloads version \(u.version) from GitHub, checks its signature, swaps it in and relaunches. Your current version is kept as a backup.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     if let e = store.installError { Text(e).font(.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }

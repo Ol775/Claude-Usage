@@ -29,6 +29,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     // MARK: lifecycle
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        store.canInstall = canSelfUpdate
         Pricing.loadCached()          // prices fetched earlier (see Pricing.refreshIfStale) apply from the first scan
         let lastRun = UserDefaults.standard.string(forKey: "lastRunVersion")
         UserDefaults.standard.set(AppInfo.version, forKey: "lastRunVersion")
@@ -64,6 +65,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             openChangelog: { NSWorkspace.shared.open(URL(string: AppInfo.repoURL.absoluteString + "/blob/main/ClaudeUsage/CHANGELOG.md")!) },
             installUpdate: { [weak self] in self?.installUpdate() },
             applyUpdate: { [weak self] in self?.applyReadyUpdate() },
+            downloadInstaller: { [weak self] in self?.downloadInstaller() },
+            showInstaller: { [weak self] in if let f = self?.store.downloadedInstaller { NSWorkspace.shared.activateFileViewerSelecting([f]) } },
+            openInstaller: { [weak self] in if let f = self?.store.downloadedInstaller { NSWorkspace.shared.open(f) } },
             postponeUpdate: { [weak self] in self?.store.bannerHidden = true },
             openNotificationSettings: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
@@ -367,9 +371,10 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     /// Downloads and builds the new version quietly (low priority), then asks for a restart to install it.
     func prepareInBackground(_ info: UpdateInfo) {
         guard !store.installing else { return }
-        store.installing = true; store.installMessage = "Downloading version \(info.version) in the background…"; store.installError = nil
+        store.installing = true; store.downloadOnly = false; store.installProgress = 0
+        store.installMessage = "Downloading version \(info.version) in the background…"; store.installError = nil
         DispatchQueue.global(qos: .background).async {
-            let r = Updater.prepare(info, lowPriority: true) { m in DispatchQueue.main.async { self.store.installMessage = m } }
+            let r = Updater.prepare(info, lowPriority: true, progress: { m in DispatchQueue.main.async { self.store.installMessage = m } }, fraction: self.reportProgress)
             DispatchQueue.main.async {
                 self.store.installing = false
                 if let app = r.app {
@@ -409,13 +414,38 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     func installUpdate() {
         if case .ready = store.update { applyReadyUpdate(); return }
         guard case .available(let info) = store.update, !store.installing else { return }
-        store.installing = true; store.installMessage = "Starting…"; store.installError = nil
+        if !canSelfUpdate { downloadInstaller(); return }                    // can't replace ourselves: save the installer instead
+        store.installing = true; store.downloadOnly = false; store.installProgress = 0
+        store.installMessage = "Starting…"; store.installError = nil
         DispatchQueue.global(qos: .userInitiated).async {
-            let error = Updater.install(info) { message in DispatchQueue.main.async { self.store.installMessage = message } }
+            let error = Updater.install(info, progress: { message in DispatchQueue.main.async { self.store.installMessage = message } }, fraction: self.reportProgress)
             DispatchQueue.main.async {
                 if let error = error { self.store.installing = false; self.store.installError = error }
-                else { self.store.installMessage = "Restarting…"; NSApp.terminate(nil) }
+                else { self.store.installMessage = "Restarting…"; self.store.installProgress = 1; NSApp.terminate(nil) }
             }
+        }
+    }
+
+    /// Download only (this copy can't install itself): saves the verified installer to Downloads, with a progress bar.
+    func downloadInstaller() {
+        guard case .available(let info) = store.update, !store.installing else { return }
+        store.installing = true; store.downloadOnly = true; store.installProgress = 0
+        store.installMessage = "Downloading version \(info.version)…"; store.installError = nil; store.downloadedInstaller = nil
+        DispatchQueue.global(qos: .userInitiated).async {
+            let r = Updater.downloadOnly(info, progress: { m in DispatchQueue.main.async { self.store.installMessage = m } }, fraction: self.reportProgress)
+            DispatchQueue.main.async {
+                self.store.installing = false
+                if let f = r.file { self.store.downloadedInstaller = f; NSWorkspace.shared.activateFileViewerSelecting([f]) }
+                else { self.store.installError = r.error; AppLog.write("Installer download: \(r.error ?? "failed")") }
+                self.build(self.store.snapshot)
+            }
+        }
+    }
+
+    /// Passes download/install progress to the UI, a few times a second at most so the window isn't flooded.
+    private func reportProgress(_ f: Double) {
+        DispatchQueue.main.async {
+            if abs(f - self.store.installProgress) >= 0.01 || f >= 1 { self.store.installProgress = f }
         }
     }
 
@@ -642,7 +672,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             m.addItem(up)
         } else if case .available(let u) = store.update {
             let up = NSMenuItem(title: "", action: store.installing ? nil : #selector(openUpdate), keyEquivalent: ""); up.target = self
-            up.attributedTitle = NSAttributedString(string: store.installing ? "⬇︎  Downloading v\(u.version) in the background…" : "⬆︎  Update available – v\(u.version)",
+            up.attributedTitle = NSAttributedString(string: store.installing ? "⬇︎  \(store.downloadOnly ? "Downloading" : "Updating to") v\(u.version)… \(Int((store.installProgress * 100).rounded()))%" : "⬆︎  Update available – v\(u.version)",
                                                     attributes: [.foregroundColor: store.installing ? NSColor.secondaryLabelColor : claudeOrange, .font: NSFont.boldSystemFont(ofSize: 13)])
             m.addItem(up)
         }
@@ -716,6 +746,13 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         Settings.persist = false
         App.notificationsEnabled = false
         App.isTour = true
+        if let v = Dev.env("CUB_FAKE_PROGRESS").flatMap(Double.init) {      // dev aid: freeze the UI mid-download (CUB_FAKE_NOINSTALL=1 for the download-only flavour)
+            store.update = .available(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence."]))
+            store.installing = true; store.installProgress = v; store.installMessage = "Downloading version 9.9.9…"
+            if Dev.env("CUB_FAKE_NOINSTALL") != nil { store.downloadOnly = true; store.canInstall = false }
+        } else if Dev.env("CUB_FAKE_NOINSTALL") != nil {                      // dev aid: the 'can't replace itself' About pane
+            store.update = .available(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence."])); store.canInstall = false
+        }
         if Dev.env("CUB_FAKE_READY") != nil { store.update = .ready(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence.", "A fix, described in one sentence."]), URL(fileURLWithPath: "/tmp")) }   // dev aid: preview the restart banner
         showDashboard(.overview)
         checkForUpdates(manual: true)
@@ -797,11 +834,19 @@ if CommandLine.arguments.contains("--refresh-pricing") {      // dev aid: fetche
     exit(0)
 }
 
+if Dev.flag("--download-update") {
+    // Dev aid: runs the download-only flow (verified installer saved to Downloads) and exits.
+    guard case .available(let info) = Updater.check() else { print("no update available"); exit(0) }
+    let r = Updater.downloadOnly(info, progress: { print("…", $0) }, fraction: { _ in })
+    print(r.file.map { "saved \($0.path)" } ?? "FAILED: \(r.error ?? "?")"); exit(r.file == nil ? 1 : 0)
+}
+
 if Dev.flag("--install-update") {
     // Dev aid: runs the whole download -> build -> install flow into CUB_INSTALL_DEST (never the installed app) and exits.
     guard case .available(let info) = Updater.check() else { print("no update available"); exit(0) }
     let dest = URL(fileURLWithPath: Dev.env("CUB_INSTALL_DEST") ?? "/tmp/ClaudeUsageUpdateTest.app")
-    if let err = Updater.install(info, dest: dest, relaunch: false, progress: { print("…", $0) }) { print("FAILED:", err); exit(1) }
+    var lastShown = -1
+    if let err = Updater.install(info, dest: dest, relaunch: false, progress: { print("…", $0) }, fraction: { f in let pct = Int(f * 100); if pct / 10 != lastShown / 10 { print("   progress \(pct)%"); lastShown = pct } }) { print("FAILED:", err); exit(1) }
     print("hand-off started for", info.version, "->", dest.path)
     exit(0)
 }

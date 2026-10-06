@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.11 – alpha (2026-10-06)
+- Updates now show a progress bar for download, verification and install (in Settings → About, above every page and in the menu); copies that can't replace themselves (run from a disk image or a read-only folder) get a Download Update button that saves the verified installer to Downloads, with its own progress bar
+
 ## 0.9.10 – alpha (2026-10-06)
 - Security hardening from an independent review: updates must carry a valid offline Ed25519 signature plus checksum (a hijacked GitHub account can no longer push an update), the source-build fallback and GitHub CLI use are gone, update downloads are validated and re-checked before install, only safely-owned claude/codex programs are run, app data folders are private, developer overrides are ignored in the shipped app. Added SECURITY.md
 

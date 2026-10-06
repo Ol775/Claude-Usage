@@ -156,6 +156,68 @@ extension Updater {
     }
 
 
+    /// Reports download progress and hands back the finished file.
+    private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+        let onProgress: (Double) -> Void
+        var location: URL?, status = 0
+        let done = DispatchSemaphore(value: 0)
+        init(_ onProgress: @escaping (Double) -> Void) { self.onProgress = onProgress }
+        func urlSession(_ s: URLSession, downloadTask t: URLSessionDownloadTask, didWriteData _: Int64, totalBytesWritten w: Int64, totalBytesExpectedToWrite e: Int64) {
+            if e > 0 { onProgress(min(1, Double(w) / Double(e))) }
+        }
+        func urlSession(_ s: URLSession, downloadTask t: URLSessionDownloadTask, didFinishDownloadingTo loc: URL) {
+            status = (t.response as? HTTPURLResponse)?.statusCode ?? 0
+            let keep = FileManager.default.temporaryDirectory.appendingPathComponent("cub-\(UUID().uuidString)")      // the system deletes `loc` when this returns
+            if (try? FileManager.default.moveItem(at: loc, to: keep)) != nil { location = keep }
+        }
+        func urlSession(_ s: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) { done.signal() }
+    }
+
+    /// Downloads `url` to `dest`, calling `onProgress` (0...1) as bytes arrive. Blocking.
+    private static func downloadFile(_ url: URL, to dest: URL, onProgress: @escaping (Double) -> Void) -> Bool {
+        let d = DownloadDelegate(onProgress)
+        let session = URLSession(configuration: .ephemeral, delegate: d, delegateQueue: nil)
+        session.downloadTask(with: URLRequest(url: url, timeoutInterval: 60)).resume()
+        d.done.wait(); session.finishTasksAndInvalidate()
+        guard d.status == 200, let loc = d.location else { return false }
+        try? FileManager.default.removeItem(at: dest)
+        return (try? FileManager.default.moveItem(at: loc, to: dest)) != nil
+    }
+
+    /// Checks the downloaded disk image against the release signature and checksum. Returns an error message, or nil if it's genuine.
+    private static func verify(_ dmg: URL, _ info: UpdateInfo) -> String? {
+        guard let want = info.sha256, !want.isEmpty, let sigURL = info.sigURL else {
+            return "This release isn’t signed, so it won’t be installed automatically. Download it from the releases page instead."
+        }
+        guard let dmgData = try? Data(contentsOf: dmg, options: .alwaysMapped),
+              let sigData = fetchData(sigURL, timeout: 20), let sig = String(data: sigData, encoding: .utf8),
+              verifySignature(dmgData, base64Signature: sig) else { return "The download’s signature didn’t check out, so it was discarded." }
+        guard SHA256.hash(data: dmgData).map({ String(format: "%02x", $0) }).joined() == want.lowercased() else {
+            return "The download didn’t match its checksum, so it was discarded."
+        }
+        return nil
+    }
+
+    /// For copies that can't replace themselves (run from a disk image, or in a folder we can't write to): downloads the
+    /// verified installer into Downloads so it can be opened by hand. `fraction` reports 0...1.
+    static func downloadOnly(_ info: UpdateInfo, progress: @escaping (String) -> Void, fraction: @escaping (Double) -> Void) -> (file: URL?, error: String?) {
+        let fm = FileManager.default
+        guard let dmgURL = info.dmgURL, isTrustedAsset(dmgURL) else { return (nil, "This release has no download. Try again later or get it from the releases page.") }
+        let root = cachesDir.appendingPathComponent("download-\(Int(Date().timeIntervalSince1970))")
+        try? fm.createDirectory(at: root, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? fm.removeItem(at: root) }
+        progress("Downloading version \(info.version)…")
+        let tmp = root.appendingPathComponent("update.dmg")
+        guard downloadFile(dmgURL, to: tmp, onProgress: { fraction($0 * 0.9) }) else { return (nil, "Couldn’t download the update.") }
+        progress("Verifying…"); fraction(0.95)
+        if let e = verify(tmp, info) { return (nil, e) }
+        let dest = (fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? fm.homeDirectoryForCurrentUser).appendingPathComponent("Claude-Usage-\(info.version).dmg")
+        try? fm.removeItem(at: dest)
+        guard (try? fm.moveItem(at: tmp, to: dest)) != nil else { return (nil, "Couldn’t save the installer to your Downloads folder.") }
+        fraction(1)
+        return (dest, nil)
+    }
+
     private static func sha256Hex(of url: URL) -> String? {
         guard let d = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
         return SHA256.hash(data: d).map { String(format: "%02x", $0) }.joined()
@@ -177,10 +239,11 @@ extension Updater {
 
     /// Downloads the release disk image and installs nothing until it passes every check: the release signature
     /// (Ed25519, made offline), its SHA-256, the app's bundle id and version, and its code signature.
-    static func prepare(_ info: UpdateInfo, lowPriority: Bool = false, progress: @escaping (String) -> Void) -> (app: URL?, error: String?) {
+    /// `fraction` reports overall progress 0...1 (download 0–0.8, then checks and unpacking).
+    static func prepare(_ info: UpdateInfo, lowPriority: Bool = false, progress: @escaping (String) -> Void, fraction: @escaping (Double) -> Void = { _ in }) -> (app: URL?, error: String?) {
         let fm = FileManager.default
         guard let dmgURL = info.dmgURL, isTrustedAsset(dmgURL) else { return (nil, "This release has no download. Try again later or reinstall from the releases page.") }
-        guard let want = info.sha256, !want.isEmpty, let sigURL = info.sigURL else {
+        guard info.sha256 != nil, info.sigURL != nil else {
             return (nil, "This release isn’t signed, so it won’t be installed automatically. Download it from the releases page instead.")
         }
         let root = cachesDir.appendingPathComponent("update-\(Int(Date().timeIntervalSince1970))")
@@ -188,28 +251,12 @@ extension Updater {
 
         progress("Downloading version \(info.version)…")
         let dmg = root.appendingPathComponent("update.dmg")
-        let sem = DispatchSemaphore(value: 0)
-        var ok = false
-        URLSession.shared.downloadTask(with: URLRequest(url: dmgURL, timeoutInterval: 180)) { tmp, resp, _ in
-            if (resp as? HTTPURLResponse)?.statusCode == 200, let tmp = tmp { ok = (try? fm.moveItem(at: tmp, to: dmg)) != nil }
-            sem.signal()
-        }.resume()
-        sem.wait()
-        guard ok else { return (nil, "Couldn’t download the update.") }
+        guard downloadFile(dmgURL, to: dmg, onProgress: { fraction($0 * 0.8) }) else { return (nil, "Couldn’t download the update.") }
 
-        progress("Verifying…")
-        guard let dmgData = try? Data(contentsOf: dmg, options: .alwaysMapped),
-              let sigData = fetchData(sigURL, timeout: 20), let sig = String(data: sigData, encoding: .utf8),
-              verifySignature(dmgData, base64Signature: sig) else {
-            try? fm.removeItem(at: root)
-            return (nil, "The download’s signature didn’t check out, so it was discarded.")
-        }
-        guard SHA256.hash(data: dmgData).map({ String(format: "%02x", $0) }).joined() == want.lowercased() else {
-            try? fm.removeItem(at: root)
-            return (nil, "The download didn’t match its checksum, so it was discarded.")
-        }
+        progress("Verifying…"); fraction(0.85)
+        if let e = verify(dmg, info) { try? fm.removeItem(at: root); return (nil, e) }
 
-        progress("Unpacking…")
+        progress("Unpacking…"); fraction(0.9)
         let mount = root.appendingPathComponent("mnt")
         try? fm.createDirectory(at: mount, withIntermediateDirectories: true)
         guard run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly", "-noverify", "-mountpoint", mount.path]) == 0 else {
@@ -220,6 +267,7 @@ extension Updater {
         guard run("/usr/bin/ditto", [mount.appendingPathComponent("Claude Usage.app").path, app.path]) == 0 else {
             return (nil, "The disk image didn’t contain the app.")
         }
+        fraction(0.96)
         let plist = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
         guard plist?["CFBundleIdentifier"] as? String == "local.claudeusage" else { return (nil, "The download isn’t Claude Usage.") }
         guard plist?["CFBundleShortVersionString"] as? String == info.version else {
@@ -227,6 +275,7 @@ extension Updater {
         }
         guard run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path]) == 0 else { return (nil, "The app’s signature didn’t check out.") }
         try? fm.removeItem(at: dmg)                                  // the verified app is all that's kept
+        fraction(1)
         return (app, nil)
     }
 
@@ -264,11 +313,13 @@ extension Updater {
     }
 
     /// Prepare and apply in one go (used by the Update Now button and the command-line test).
-    static func install(_ info: UpdateInfo, dest: URL = Bundle.main.bundleURL, relaunch: Bool = true, progress: @escaping (String) -> Void) -> String? {
-        let r = prepare(info, progress: progress)
+    static func install(_ info: UpdateInfo, dest: URL = Bundle.main.bundleURL, relaunch: Bool = true, progress: @escaping (String) -> Void, fraction: @escaping (Double) -> Void = { _ in }) -> String? {
+        let r = prepare(info, progress: progress, fraction: { fraction($0 * 0.95) })
         guard let app = r.app else { return r.error }
-        progress("Installing…")
-        return apply(app, dest: dest, relaunch: relaunch)
+        progress("Installing…"); fraction(0.97)
+        let err = apply(app, dest: dest, relaunch: relaunch)
+        if err == nil { fraction(1) }
+        return err
     }
 
 
