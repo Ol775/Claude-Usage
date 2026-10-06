@@ -65,4 +65,4 @@ Use **Settings → Help & Legal → Report a Bug** in the app (it fills in your 
 
 Everything stays on your Mac. The app only talks to Anthropic (for your usage limits) and GitHub (for updates); there are no analytics. Limits come from Claude Code's login in your own keychain, and nothing is stored in this repo. API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way. The full terms are in the app under Settings → Help & Legal.
 
-**Unofficial – not affiliated with or endorsed by Anthropic.** "Claude" and "Anthropic" are trademarks of Anthropic, PBC. Provided as is, with no warranty. This repository doesn't yet include an open-source licence, so all rights are reserved until one is added.
+**Unofficial – not affiliated with or endorsed by Anthropic.** "Claude" and "Anthropic" are trademarks of Anthropic, PBC. Provided as is, with no warranty. The code is released under the [MIT licence](LICENSE).
