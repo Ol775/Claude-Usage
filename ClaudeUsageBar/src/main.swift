@@ -1,6 +1,7 @@
 import AppKit
 import UserNotifications
 import ServiceManagement
+import UniformTypeIdentifiers
 
 let menuWidth: CGFloat = 340
 let claudeOrange = NSColor(name: nil) { a in
@@ -217,13 +218,7 @@ final class AccountView: NSView {
     init(_ a: Account) { account = a; super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 68)) }
     required init?(coder: NSCoder) { fatalError() }
     override func draw(_ r: NSRect) {
-        let d: CGFloat = 40, circle = NSRect(x: 16, y: 14, width: d, height: d)
-        let path = NSBezierPath(ovalIn: circle)
-        if account.loggedIn {
-            NSGradient(starting: NSColor(srgbRed: 1.0, green: 0.62, blue: 0.40, alpha: 1), ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
-        } else { NSColor.labelColor.withAlphaComponent(0.18).setFill(); path.fill() }
-        let ini = NSAttributedString(string: account.loggedIn ? account.initials : "?", attributes: [.font: NSFont.systemFont(ofSize: 16, weight: .semibold), .foregroundColor: account.loggedIn ? NSColor.white : NSColor.secondaryLabelColor])
-        ini.draw(at: NSPoint(x: circle.midX - ini.size().width/2, y: circle.midY - ini.size().height/2))
+        drawAvatar(in: NSRect(x: 16, y: 14, width: 40, height: 40), account: account)
         let title = account.loggedIn ? account.name : "Not signed in"
         NSAttributedString(string: title, attributes: [.font: NSFont.boldSystemFont(ofSize: 14), .foregroundColor: NSColor.labelColor]).draw(at: NSPoint(x: 66, y: 34))
         let sub = account.loggedIn ? [account.email, account.plan.isEmpty ? "" : "\(account.plan) plan"].filter { !$0.isEmpty }.joined(separator: " · ") : "Choose “Sign in with Claude…” below"
@@ -237,16 +232,55 @@ final class AccountView: NSView {
     }
 }
 
+// MARK: profile photo (stored locally, never uploaded)
+func avatarURL() -> URL {
+    let base = ProcessInfo.processInfo.environment["CUB_SUPPORT_DIR"].map { URL(fileURLWithPath: $0) }
+        ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsageBar")
+    try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    return base.appendingPathComponent("avatar.png")
+}
+var avatarImage: NSImage? = NSImage(contentsOf: avatarURL())
+
+/// Centre-crops to a square, scales to 256px and saves. Returns false if the file isn't a usable image.
+func saveAvatar(from url: URL) -> Bool {
+    guard let src = NSImage(contentsOf: url), src.size.width > 0, src.size.height > 0 else { return false }
+    let side = min(src.size.width, src.size.height)
+    let crop = NSRect(x: (src.size.width - side)/2, y: (src.size.height - side)/2, width: side, height: side)
+    let out = NSImage(size: NSSize(width: 256, height: 256))
+    out.lockFocus()
+    NSGraphicsContext.current?.imageInterpolation = .high
+    src.draw(in: NSRect(x: 0, y: 0, width: 256, height: 256), from: crop, operation: .copy, fraction: 1)
+    out.unlockFocus()
+    guard let tiff = out.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
+          (try? png.write(to: avatarURL())) != nil else { return false }
+    avatarImage = NSImage(data: png)
+    return true
+}
+func removeAvatar() { try? FileManager.default.removeItem(at: avatarURL()); avatarImage = nil }
+
+/// Draws the circular avatar: photo if there is one, otherwise orange initials, or a grey "?" when signed out.
+func drawAvatar(in rect: NSRect, account: Account) {
+    let path = NSBezierPath(ovalIn: rect)
+    if account.loggedIn, let img = avatarImage {
+        NSGraphicsContext.saveGraphicsState(); path.addClip()
+        img.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        NSColor.labelColor.withAlphaComponent(0.2).setStroke(); path.lineWidth = 1; path.stroke()
+        return
+    }
+    if account.loggedIn {
+        NSGradient(starting: NSColor(srgbRed: 1.0, green: 0.62, blue: 0.40, alpha: 1), ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
+    } else { NSColor.labelColor.withAlphaComponent(0.15).setFill(); path.fill() }
+    let t = NSAttributedString(string: account.loggedIn ? account.initials : "?", attributes: [.font: NSFont.systemFont(ofSize: rect.height * 0.38, weight: .semibold), .foregroundColor: account.loggedIn ? NSColor.white : NSColor.secondaryLabelColor])
+    t.draw(at: NSPoint(x: rect.midX - t.size().width/2, y: rect.midY - t.size().height/2))
+}
+
 final class AvatarView: NSView {
     var account = Account() { didSet { needsDisplay = true } }
-    override func draw(_ r: NSRect) {
-        let path = NSBezierPath(ovalIn: bounds)
-        if account.loggedIn {
-            NSGradient(starting: NSColor(srgbRed: 1.0, green: 0.62, blue: 0.40, alpha: 1), ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
-        } else { NSColor.labelColor.withAlphaComponent(0.15).setFill(); path.fill() }
-        let t = NSAttributedString(string: account.loggedIn ? account.initials : "?", attributes: [.font: NSFont.systemFont(ofSize: bounds.height * 0.38, weight: .semibold), .foregroundColor: account.loggedIn ? NSColor.white : NSColor.secondaryLabelColor])
-        t.draw(at: NSPoint(x: bounds.midX - t.size().width/2, y: bounds.midY - t.size().height/2))
-    }
+    var onClick: () -> Void = {}
+    override func draw(_ r: NSRect) { drawAvatar(in: bounds, account: account) }
+    override func mouseDown(with event: NSEvent) { if account.loggedIn { onClick() } }
+    override func resetCursorRects() { if account.loggedIn { addCursorRect(bounds, cursor: .pointingHand) } }
 }
 
 final class AccountWindow: NSObject {
@@ -254,6 +288,8 @@ final class AccountWindow: NSObject {
     let avatar = AvatarView(), title = NSTextField(labelWithString: ""), detail = NSTextField(wrappingLabelWithString: "")
     let primary = NSButton(title: "", target: nil, action: nil), secondary = NSButton(title: "", target: nil, action: nil)
     let hint = NSTextField(labelWithString: "")
+    let photoButton = NSButton(title: "", target: nil, action: nil), removeButton = NSButton(title: "", target: nil, action: nil)
+    var onPhoto: () -> Void = {}, onRemovePhoto: () -> Void = {}
     var onSignIn: () -> Void = {}, onSignOut: () -> Void = {}, onCancel: () -> Void = {}
     var account = Account(), busy = false
 
@@ -275,11 +311,20 @@ final class AccountWindow: NSObject {
         secondary.bezelStyle = .inline; secondary.isBordered = false; secondary.frame = NSRect(x: 110, y: 30, width: 160, height: 24)
         secondary.target = self; secondary.action = #selector(secondaryTap)
         hint.font = .systemFont(ofSize: 11); hint.textColor = .secondaryLabelColor; hint.alignment = .center; hint.frame = NSRect(x: 20, y: 8, width: 340, height: 16)
-        [avatar, title, detail, primary, secondary, hint].forEach { fx.addSubview($0) }
+        for (b, y) in [(photoButton, CGFloat(98)), (removeButton, CGFloat(74))] {
+            b.bezelStyle = .inline; b.isBordered = false; b.frame = NSRect(x: 110, y: y, width: 160, height: 22); b.target = self
+        }
+        photoButton.action = #selector(photoTap); removeButton.action = #selector(removeTap)
+        avatar.onClick = { [weak self] in self?.onPhoto() }
+        [avatar, title, detail, primary, secondary, hint, photoButton, removeButton].forEach { fx.addSubview($0) }
         update(account, busy: false)
     }
     func update(_ a: Account, busy b: Bool) {
         account = a; busy = b; avatar.account = a
+        window.invalidateCursorRects(for: avatar)
+        photoButton.isHidden = !a.loggedIn; removeButton.isHidden = !(a.loggedIn && avatarImage != nil)
+        photoButton.attributedTitle = NSAttributedString(string: avatarImage == nil ? "Choose photo…" : "Change photo…", attributes: [.foregroundColor: claudeOrange, .font: NSFont.systemFont(ofSize: 12, weight: .medium)])
+        removeButton.attributedTitle = NSAttributedString(string: "Remove photo", attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.systemFont(ofSize: 11)])
         if a.loggedIn {
             title.stringValue = a.name
             detail.stringValue = [a.email, a.plan.isEmpty ? "" : "Claude \(a.plan) plan"].filter { !$0.isEmpty }.joined(separator: "\n")
@@ -300,6 +345,8 @@ final class AccountWindow: NSObject {
         secondary.attributedTitle = NSAttributedString(string: t, attributes: [.foregroundColor: color, .font: NSFont.systemFont(ofSize: 12)])
     }
     func show() { window.center(); NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
+    @objc func photoTap() { onPhoto() }
+    @objc func removeTap() { onRemovePhoto() }
     @objc func primaryTap() { onSignIn() }
     @objc func secondaryTap() { account.loggedIn ? onSignOut() : onCancel() }
 }
@@ -343,6 +390,8 @@ final class App: NSObject, NSApplicationDelegate {
         accountWindow.onSignIn = { [weak self] in self?.signIn() }
         accountWindow.onSignOut = { [weak self] in self?.signOut() }
         accountWindow.onCancel = { [weak self] in self?.cancelSignIn() }
+        accountWindow.onPhoto = { [weak self] in self?.choosePhoto() }
+        accountWindow.onRemovePhoto = { [weak self] in removeAvatar(); self?.photoChanged() }
         build(Snapshot())
         if CommandLine.arguments.contains("--test-notify") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.testNotification() }
@@ -398,6 +447,17 @@ final class App: NSObject, NSApplicationDelegate {
             }
         }
         notified = seen
+    }
+    func photoChanged() { accountWindow.update(account, busy: loginProcess != nil); build(lastSnapshot) }
+    func choosePhoto() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose a profile photo"; panel.message = "The photo stays on this Mac."
+        panel.allowedContentTypes = [.image]; panel.allowsMultipleSelection = false; panel.canChooseDirectories = false
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if saveAvatar(from: url) { photoChanged() } else {
+            let a = NSAlert(); a.messageText = "Couldn’t use that image"; a.informativeText = "Pick a JPEG, PNG or HEIC photo."; a.runModal()
+        }
     }
     @objc func showAccount() { accountWindow.update(account, busy: loginProcess != nil); accountWindow.show() }
     @objc func signIn() {
