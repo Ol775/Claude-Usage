@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.5 – alpha (2026-10-06)
+- Releases are now universal (Apple silicon and Intel); Homebrew install (brew install --cask Ol775/tap/claude-usage); the terminal installer verifies the checksum
+
 ## 0.9.4 – alpha (2026-10-06)
 - Scanning large Claude Code histories uses less memory (log files are memory-mapped; peak down about 17% on 100 MB of logs)
 

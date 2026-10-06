@@ -7,7 +7,7 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download is built for Apple silicon; Intel Macs can build from source), with Light, Dark and OLED black themes. Current version: <!--v-->v0.9.4 alpha<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.9.5 alpha<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -62,7 +62,13 @@ Requires macOS 13 or later and [Claude Code](https://claude.com/claude-code) sig
 curl -fsSL https://raw.githubusercontent.com/Ol775/Claude-Usage/main/install.sh | zsh
 ```
 
-**Option 3 – Build from source** (needs the Xcode command line tools):
+**Option 3 – Homebrew.** Installs the same DMG and clears the macOS quarantine flag, so there's no first-launch prompt:
+
+```sh
+brew install --cask Ol775/tap/claude-usage
+```
+
+**Option 4 – Build from source** (needs the Xcode command line tools):
 
 ```sh
 git clone https://github.com/Ol775/Claude-Usage.git
@@ -78,7 +84,7 @@ The app is ad-hoc signed (there's no paid Apple developer certificate), so macOS
 xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"
 ```
 
-The terminal install does this for you.
+The terminal and Homebrew installs do this for you. Every release also ships a `.sha256` file if you want to check the download (`shasum -a 256 Claude-Usage-<version>.dmg`); the terminal install checks it automatically.
 
 ### Updating
 

@@ -2,7 +2,7 @@
 # Builds the app and packs it into dist/Claude-Usage-<version>.dmg (drag-to-Applications installer).
 set -e
 cd "$(dirname "$0")"
-./build.sh >/dev/null
+UNIVERSAL=1 ./build.sh >/dev/null
 ver=$(cat VERSION)
 out="dist/Claude-Usage-$ver.dmg"
 stage=$(mktemp -d)

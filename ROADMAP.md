@@ -12,13 +12,8 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 
 ## Phase 2: Trust and first run
 
-6. **Low-friction install without Apple signing.**
-   - A free Homebrew cask tap (`brew install --cask claude-usage`).
-   - `install.sh` clears the quarantine flag.
-   - An illustrated Gatekeeper walkthrough in the README.
-   - A SHA-256 checksum on every release.
-   - The source build stays as the fully transparent route.
-7. **Universal build.** Ship arm64 and x86_64 in one DMG.
+6. ✅ **Low-friction install without Apple signing** (done in 0.9.5). A Homebrew tap (`brew install --cask Ol775/tap/claude-usage`) clears the quarantine flag, the terminal installer verifies the checksum, every release ships a `.sha256` file, and the README explains the first-launch prompt. The source build stays as the fully transparent route.
+7. ✅ **Universal build** (done in 0.9.5). Releases ship Apple silicon and Intel in one DMG.
 8. **Onboarding.** A first-run flow that detects whether Claude Code is installed and signed in, with empty states for new users.
 9. **Pricing table updates.** Update model prices without a new release, and show a clear "unpriced model" note.
 10. **Compatibility.** Test on macOS 13, 14 and 15.

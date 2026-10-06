@@ -8,9 +8,14 @@ STAGE="alpha"
 BUILD="${BUILD:-$( [ -d ../.git ] && git rev-list --count HEAD 2>/dev/null || cat BUILD_NUMBER 2>/dev/null || echo 1 )}"
 APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
-swiftc -O -target "$(uname -m)-apple-macos13.0" \
-  src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/SelfTest.swift src/Updater.swift src/Dashboard.swift src/Reports.swift src/Insights.swift \
-  -o "$APP/Contents/MacOS/ClaudeUsage"
+# UNIVERSAL=1 builds Apple silicon + Intel (used for releases); the default builds only for this Mac, which is faster.
+SRC="src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/SelfTest.swift src/Updater.swift src/Dashboard.swift src/Reports.swift src/Insights.swift"
+if [ "${UNIVERSAL:-0}" = "1" ]; then
+  for arch in arm64 x86_64; do swiftc -O -target "$arch-apple-macos13.0" ${=SRC} -o "build/ClaudeUsage-$arch"; done
+  lipo -create build/ClaudeUsage-arm64 build/ClaudeUsage-x86_64 -output "$APP/Contents/MacOS/ClaudeUsage"
+else
+  swiftc -O -target "$(uname -m)-apple-macos13.0" ${=SRC} -o "$APP/Contents/MacOS/ClaudeUsage"
+fi
 rm -rf build/AppIcon.iconset && mkdir -p build/AppIcon.iconset
 mkdir -p build/iconsrc && cp src/makeicon.swift build/iconsrc/main.swift
 swiftc build/iconsrc/main.swift src/BotArt.swift -o build/makeicon
