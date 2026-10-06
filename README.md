@@ -22,3 +22,17 @@ Requires macOS 13+ and the Xcode command line tools. The version lives in `Claud
 Limits come from Claude Code's login in your own keychain; nothing is stored in this repo.
 API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way.
 Unofficial – not affiliated with Anthropic.
+
+### Install
+
+**DMG:** download `Claude-Usage-<version>.dmg` from the [latest release](https://github.com/Ol775/Claude-Usage/releases/latest), open it and drag *Claude Usage* to *Applications*. The app is ad-hoc signed, so on first launch right-click it and choose Open (or run `xattr -dr com.apple.quarantine "/Applications/Claude Usage.app"`).
+
+**Terminal** (repo is private, so this needs `gh auth login` first):
+
+```sh
+gh api repos/Ol775/Claude-Usage/contents/install.sh -q .content | base64 -d | zsh
+```
+
+Once the repo is public: `curl -fsSL https://raw.githubusercontent.com/Ol775/Claude-Usage/main/install.sh | zsh`
+
+**Build a DMG yourself:** `cd ClaudeUsage && ./make-dmg.sh` (writes `dist/Claude-Usage-<version>.dmg`).
