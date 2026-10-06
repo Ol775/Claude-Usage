@@ -56,6 +56,21 @@ enum Updater {
         return out
     }
 
+    /// "1.2.3" – digits and dots only, so a hostile tag can't smuggle odd characters into file names or messages.
+    static func isPlainVersion(_ v: String) -> Bool {
+        v.range(of: #"^\d{1,4}\.\d{1,4}\.\d{1,4}$"#, options: .regularExpression) != nil
+    }
+
+    /// What the release key signs: a label, the version, and the disk image bytes – so a validly signed older image can't be
+    /// passed off as a newer release.
+    static func signedMessage(version: String, dmg: Data) -> Data { Data("claude-usage-update\nv\(version)\n".utf8) + dmg }
+
+    /// Only these hosts may serve a release download (GitHub and its asset CDN), also after redirects.
+    static func isAllowedRedirectHost(_ host: String?) -> Bool {
+        guard let h = host?.lowercased() else { return false }
+        return h == "github.com" || h.hasSuffix(".githubusercontent.com")
+    }
+
     /// Release downloads must come from this repo's GitHub releases.
     static func isTrustedAsset(_ u: URL) -> Bool {
         u.scheme == "https" && u.host == "github.com" && u.path.hasPrefix("/\(repo)/releases/download/")
@@ -95,10 +110,11 @@ enum Updater {
         guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tag = json["tag_name"] as? String else { return nil }
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        guard isPlainVersion(version) else { return nil }              // only digits and dots: it ends up in file names and UI text
         let assets = json["assets"] as? [[String: Any]] ?? []
         let dmg = assets.first { ($0["name"] as? String)?.hasSuffix(".dmg") == true }
         let dmgURL = (dmg?["browser_download_url"] as? String).flatMap(URL.init(string:)).flatMap { isTrustedAsset($0) ? $0 : nil }
-        let sigURL = (assets.first { $0["name"] as? String == (dmg?["name"] as? String ?? "") + ".sig" }?["browser_download_url"] as? String).flatMap(URL.init(string:)).flatMap { isTrustedAsset($0) ? $0 : nil }
+        let sigURL = (assets.first { $0["name"] as? String == (dmg?["name"] as? String ?? "") + ".sig2" }?["browser_download_url"] as? String).flatMap(URL.init(string:)).flatMap { isTrustedAsset($0) ? $0 : nil }
         var sha = (dmg?["digest"] as? String).flatMap { $0.hasPrefix("sha256:") ? String($0.dropFirst(7)) : nil }
         if sha == nil, let name = dmg?["name"] as? String,
            let sumURL = (assets.first { $0["name"] as? String == name + ".sha256" }?["browser_download_url"] as? String).flatMap(URL.init(string:)).flatMap({ isTrustedAsset($0) ? $0 : nil }),
@@ -112,7 +128,7 @@ enum Updater {
     static func check() -> UpdateStatus {
         guard let r = latestRelease() else { return .failed("Couldn’t reach GitHub. Check your internet connection and try again.") }
         let latest = r.version
-        guard !latest.isEmpty, latest.first?.isNumber == true else { return .failed("Unexpected version number on GitHub.") }
+        guard isPlainVersion(latest) else { return .failed("Unexpected version number on GitHub.") }
         guard isNewer(latest, than: installed) else { return .upToDate(Date()) }
         let notes = fetch("ClaudeUsage/CHANGELOG.md").map { notes(from: $0, newerThan: installed) } ?? []
         return .available(UpdateInfo(version: latest, notes: notes, dmgURL: r.dmg, sha256: r.sha, sigURL: r.sig))
@@ -158,12 +174,17 @@ extension Updater {
 
     /// Reports download progress and hands back the finished file.
     private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
+        static let maxBytes: Int64 = 100_000_000                       // a release is ~2.5 MB; anything near this is wrong
         let onProgress: (Double) -> Void
         var location: URL?, status = 0
         let done = DispatchSemaphore(value: 0)
         init(_ onProgress: @escaping (Double) -> Void) { self.onProgress = onProgress }
         func urlSession(_ s: URLSession, downloadTask t: URLSessionDownloadTask, didWriteData _: Int64, totalBytesWritten w: Int64, totalBytesExpectedToWrite e: Int64) {
+            if w > Self.maxBytes || e > Self.maxBytes { t.cancel(); return }                 // size cap
             if e > 0 { onProgress(min(1, Double(w) / Double(e))) }
+        }
+        func urlSession(_ s: URLSession, task: URLSessionTask, willPerformHTTPRedirection r: HTTPURLResponse, newRequest req: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+            completionHandler(req.url?.scheme == "https" && Updater.isAllowedRedirectHost(req.url?.host) ? req : nil)      // only GitHub's own hosts
         }
         func urlSession(_ s: URLSession, downloadTask t: URLSessionDownloadTask, didFinishDownloadingTo loc: URL) {
             status = (t.response as? HTTPURLResponse)?.statusCode ?? 0
@@ -176,7 +197,9 @@ extension Updater {
     /// Downloads `url` to `dest`, calling `onProgress` (0...1) as bytes arrive. Blocking.
     private static func downloadFile(_ url: URL, to dest: URL, onProgress: @escaping (Double) -> Void) -> Bool {
         let d = DownloadDelegate(onProgress)
-        let session = URLSession(configuration: .ephemeral, delegate: d, delegateQueue: nil)
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForResource = 600; config.waitsForConnectivity = false        // never hang for days on a slow drip
+        let session = URLSession(configuration: config, delegate: d, delegateQueue: nil)
         session.downloadTask(with: URLRequest(url: url, timeoutInterval: 60)).resume()
         d.done.wait(); session.finishTasksAndInvalidate()
         guard d.status == 200, let loc = d.location else { return false }
@@ -191,7 +214,7 @@ extension Updater {
         }
         guard let dmgData = try? Data(contentsOf: dmg, options: .alwaysMapped),
               let sigData = fetchData(sigURL, timeout: 20), let sig = String(data: sigData, encoding: .utf8),
-              verifySignature(dmgData, base64Signature: sig) else { return "The download’s signature didn’t check out, so it was discarded." }
+              verifySignature(signedMessage(version: info.version, dmg: dmgData), base64Signature: sig) else { return "The download’s signature didn’t check out, so it was discarded." }
         guard SHA256.hash(data: dmgData).map({ String(format: "%02x", $0) }).joined() == want.lowercased() else {
             return "The download didn’t match its checksum, so it was discarded."
         }
@@ -211,8 +234,10 @@ extension Updater {
         guard downloadFile(dmgURL, to: tmp, onProgress: { fraction($0 * 0.9) }) else { return (nil, "Couldn’t download the update.") }
         progress("Verifying…"); fraction(0.95)
         if let e = verify(tmp, info) { return (nil, e) }
-        let dest = (fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? fm.homeDirectoryForCurrentUser).appendingPathComponent("Claude-Usage-\(info.version).dmg")
-        try? fm.removeItem(at: dest)
+        let folder = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? fm.homeDirectoryForCurrentUser
+        var dest = folder.appendingPathComponent("Claude-Usage-\(info.version).dmg")
+        var n = 1
+        while fm.fileExists(atPath: dest.path) { dest = folder.appendingPathComponent("Claude-Usage-\(info.version)-\(n).dmg"); n += 1 }      // never overwrite or delete your files
         guard (try? fm.moveItem(at: tmp, to: dest)) != nil else { return (nil, "Couldn’t save the installer to your Downloads folder.") }
         fraction(1)
         return (dest, nil)
@@ -226,14 +251,23 @@ extension Updater {
     /// Fingerprint of the app's executable, stored when an update is prepared and re-checked before it is installed.
     static func executableHash(_ app: URL) -> String? { sha256Hex(of: app.appendingPathComponent("Contents/MacOS/ClaudeUsage")) }
 
+    private final class RedirectGuard: NSObject, URLSessionTaskDelegate {
+        func urlSession(_ s: URLSession, task: URLSessionTask, willPerformHTTPRedirection r: HTTPURLResponse, newRequest req: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+            completionHandler(req.url?.scheme == "https" && Updater.isAllowedRedirectHost(req.url?.host) ? req : nil)
+        }
+    }
+
     private static func fetchData(_ url: URL, timeout: TimeInterval) -> Data? {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForResource = timeout
+        let session = URLSession(configuration: config, delegate: RedirectGuard(), delegateQueue: nil)
         let sem = DispatchSemaphore(value: 0)
         var out: Data?
-        URLSession.shared.dataTask(with: URLRequest(url: url, timeoutInterval: timeout)) { d, r, _ in
-            if (r as? HTTPURLResponse)?.statusCode == 200 { out = d }
+        session.dataTask(with: URLRequest(url: url, timeoutInterval: timeout)) { d, r, _ in
+            if (r as? HTTPURLResponse)?.statusCode == 200, let d = d, d.count < 10_000 { out = d }        // a signature is ~90 bytes
             sem.signal()
         }.resume()
-        sem.wait()
+        sem.wait(); session.finishTasksAndInvalidate()
         return out
     }
 
@@ -257,6 +291,7 @@ extension Updater {
         if let e = verify(dmg, info) { try? fm.removeItem(at: root); return (nil, e) }
 
         progress("Unpacking…"); fraction(0.9)
+        guard let again = sha256Hex(of: dmg), again == info.sha256?.lowercased() else { try? fm.removeItem(at: root); return (nil, "The download changed after it was checked, so it was discarded.") }    // closes the gap between checking and mounting
         let mount = root.appendingPathComponent("mnt")
         try? fm.createDirectory(at: mount, withIntermediateDirectories: true)
         guard run("/usr/bin/hdiutil", ["attach", dmg.path, "-nobrowse", "-readonly", "-noverify", "-mountpoint", mount.path]) == 0 else {
@@ -271,7 +306,7 @@ extension Updater {
         let plist = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
         guard plist?["CFBundleIdentifier"] as? String == "local.claudeusage" else { return (nil, "The download isn’t Claude Usage.") }
         guard plist?["CFBundleShortVersionString"] as? String == info.version else {
-            return (nil, "The download held version \(plist?["CFBundleShortVersionString"] as? String ?? "?") instead of \(info.version).")
+            return (nil, "The download held a different version than the release says.")
         }
         guard run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path]) == 0 else { return (nil, "The app’s signature didn’t check out.") }
         try? fm.removeItem(at: dmg)                                  // the verified app is all that's kept

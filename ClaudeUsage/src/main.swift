@@ -327,8 +327,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     /// The short, fixed-vocabulary state lines that go into diagnostics: yes/no flags, counts and enum words only.
     /// Nothing here may include the account, a path, a token or a usage number.
     func diagnosticState() -> [String] {
-        let known: Set<String> = ["Current session", "Weekly – all models", "Weekly – Opus", "Weekly – Sonnet"]
-        let read = store.limits.map { $0.name }.filter { known.contains($0) }
+        let hasSession = store.limits.contains { $0.name == "Current session" }, hasWeekly = store.limits.contains { $0.name == "Weekly – all models" }
+        let extra = store.limits.filter { $0.kind == .other }.count
         let fetch: String = {
             guard let e = store.limitError else { return store.stale ? "kept last reading" : "ok" }
             if e.hasPrefix("Usage unavailable") { return "network or server error" }
@@ -346,12 +346,11 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             case .failed: return "last check failed"
             }
         }()
-        let since = store.lastUpdated.map { "\(max(0, Int(Date().timeIntervalSince($0) / 60))) min ago" } ?? "never"
         return [
             "Claude Code: \(claudeBinary() != nil ? "found" : "not found"), \(store.account.loggedIn ? "signed in" : "signed out")",
-            "Limits read: \(read.isEmpty ? "none" : read.joined(separator: ", ")) (fetch: \(fetch), last refresh \(since))",
+            "Limits: session \(hasSession ? "yes" : "no"), weekly \(hasWeekly ? "yes" : "no"), extra \(extra) (fetch: \(fetch))",
             "Updates: \(update); can self-update: \(store.canInstall ? "yes" : "no"); in Applications: \(Bundle.main.bundleURL.path.hasPrefix("/Applications/") ? "yes" : "no")",
-            "ChatGPT: \(!settings.chatgptEnabled ? "off" : "on, \(store.chatgpt.signedIn ? "signed in, \(store.chatgpt.isFree ? "free" : "paid") plan" : "signed out")")",
+            "ChatGPT: \(!settings.chatgptEnabled ? "off" : "on, \(store.chatgpt.signedIn ? "signed in" : "signed out")")",
             "Notifications: \(store.notifStatus)",
         ]
     }

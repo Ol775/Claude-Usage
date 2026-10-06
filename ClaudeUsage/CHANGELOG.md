@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.13 – alpha (2026-10-06)
+- Second security review fixes: update signatures are now bound to the version (an older signed image can't pass as a newer release), downloads have a time and size limit and only follow redirects to GitHub's hosts, versions must be plain x.y.z, the installer saved to Downloads never overwrites a file and is re-checked before it is opened. Diagnostics trimmed further (OS version only, no plan tier, no refresh time), the event log is mode 600 with hourly de-duplication, and the bug-report link is fully encoded
+
 ## 0.9.12 – alpha (2026-10-06)
 - Diagnostics now include a few yes/no states (Claude Code found/signed in, which limits were read and why a fetch failed, update state, notifications, ChatGPT on/off and paid/free) and Settings → Help & Legal can preview exactly what is included before you copy it or report a bug. Nothing includes account details, file paths or usage numbers
 

@@ -93,6 +93,10 @@ func runSelfTests() -> Int32 {
     check(!diagText.contains("@") && !diagText.lowercased().contains("token") && !diagText.contains("/Users/"), "diagnostics hold no email, token or user path")
     check(diagText.split(separator: "\n").count < 40, "diagnostics stay short")
 
+    let issue = Legal.newIssueURL.absoluteString
+    check(!issue.contains("+") && !issue.contains(" ") && !issue.contains("\n") && issue.count < 8000, "the bug-report link is fully encoded and short")
+    check(Legal.issueTemplate.components(separatedBy: "```").count == 3, "diagnostics can't break out of the issue's code block")
+
     // Diagnostics never carry the home folder path
     check(!Legal.diagnostics.contains(NSHomeDirectory()), "diagnostics hide the home folder")
 
@@ -101,6 +105,9 @@ func runSelfTests() -> Int32 {
         let r = AppLog.recent()
         check(r.contains("Test: ~/x") && !r.contains(NSHomeDirectory()), "log shortens the home folder")
         check(r.components(separatedBy: "Test:").count == 2, "identical consecutive messages are written once")
+        AppLog.write("Other: a"); AppLog.write("Test: \(NSHomeDirectory())/x"); AppLog.write("Other: a")
+        check(AppLog.recent(50).components(separatedBy: "Other:").count == 2 && AppLog.recent(50).components(separatedBy: "Test:").count == 2, "alternating repeats are written once too")
+        check(((try? FileManager.default.attributesOfItem(atPath: AppLog.url.path))?[.posixPermissions] as? NSNumber)?.intValue == 0o600, "the log file is private (mode 600)")
     }
 
     // Claude Code log parsing, from a small fixture file
@@ -139,6 +146,13 @@ func runSelfTests() -> Int32 {
     check(!Updater.isTrustedAsset(URL(string: "https://evil.example/Ol775/Claude-Usage/releases/download/v1/x.dmg")!)
           && !Updater.isTrustedAsset(URL(string: "http://github.com/Ol775/Claude-Usage/releases/download/v1/x.dmg")!)
           && !Updater.isTrustedAsset(URL(string: "https://github.com/Other/Repo/releases/download/v1/x.dmg")!), "other hosts, http and other repos are refused")
+
+    // The signature is bound to the version: an older signed image can't pass as a newer release
+    let signedOld = (try? key.signature(for: Updater.signedMessage(version: "1.0.0", dmg: payload)))?.base64EncodedString() ?? ""
+    check(Updater.verifySignature(Updater.signedMessage(version: "1.0.0", dmg: payload), base64Signature: signedOld, publicKey: pubB64), "version-bound signature verifies for its own version")
+    check(!Updater.verifySignature(Updater.signedMessage(version: "1.0.1", dmg: payload), base64Signature: signedOld, publicKey: pubB64), "the same image under a different version fails")
+    check(Updater.isPlainVersion("0.9.13") && !Updater.isPlainVersion("9.9/../x") && !Updater.isPlainVersion("1.2.3\u{202E}") && !Updater.isPlainVersion("1.2") && !Updater.isPlainVersion(""), "only plain x.y.z versions are accepted")
+    check(Updater.isAllowedRedirectHost("github.com") && Updater.isAllowedRedirectHost("objects.githubusercontent.com") && !Updater.isAllowedRedirectHost("evil.example") && !Updater.isAllowedRedirectHost("githubusercontent.com.evil.example") && !Updater.isAllowedRedirectHost(nil), "redirects only to GitHub's hosts")
 
     // Programs we will run must not be writable by others
     let tdir = FileManager.default.temporaryDirectory.appendingPathComponent("cub-exec-\(ProcessInfo.processInfo.processIdentifier)")

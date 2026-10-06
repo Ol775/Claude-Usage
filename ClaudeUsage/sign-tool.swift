@@ -5,6 +5,7 @@ import CryptoKit
 // the matching public key is built into the app (Updater.publicKey), so a hijacked GitHub account can't push a trusted update.
 //   sign-tool keygen <private-key-file>      creates a key (mode 600) and prints the public key
 //   sign-tool sign <private-key-file> <file> prints the base64 signature of the file
+//   sign-tool sign-update <key> <file> <ver> prints the version-bound signature the app requires (label + version + file bytes)
 //   sign-tool public <private-key-file>      prints the public key
 let a = CommandLine.arguments
 func fail(_ m: String) -> Never { FileHandle.standardError.write(Data((m + "\n").utf8)); exit(1) }
@@ -25,6 +26,10 @@ case "keygen":
 case "public": print(loadKey().publicKey.rawRepresentation.base64EncodedString())
 case "sign":
     guard a.count >= 4, let d = try? Data(contentsOf: URL(fileURLWithPath: a[3]), options: .mappedIfSafe), let s = try? loadKey().signature(for: d) else { fail("couldn't sign") }
+    print(s.base64EncodedString())
+case "sign-update":
+    guard a.count >= 5, let d = try? Data(contentsOf: URL(fileURLWithPath: a[3]), options: .mappedIfSafe),
+          let s = try? loadKey().signature(for: Data("claude-usage-update\nv\(a[4])\n".utf8) + d) else { fail("couldn't sign") }
     print(s.base64EncodedString())
 default: fail("unknown command")
 }

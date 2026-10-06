@@ -1312,7 +1312,7 @@ struct SettingsPage: View {
                     Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }.buttonStyle(.borderedProminent)
                 }
                 SDivider()
-                SRow(title: "Diagnostics", subtitle: "Version, macOS, chip and a few yes/no states. No account details, file paths or usage numbers.") {
+                SRow(title: "Diagnostics", subtitle: "App version, macOS version, chip and a few yes/no states. No account details, file paths or usage numbers.") {
                     Button(showDiagnostics.value ? "Hide" : "Preview") { showDiagnostics.value.toggle() }
                     Button("Copy") { Legal.copyDiagnostics() }
                 }
@@ -1321,7 +1321,7 @@ struct SettingsPage: View {
                         .frame(maxWidth: .infinity, alignment: .leading).padding(12)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))
                         .padding(.horizontal, 14).padding(.bottom, 10)
-                    Text("This is exactly what “Copy” and “Report a Bug” include. It never leaves your Mac unless you paste or submit it.")
+                    Text("This is exactly what “Copy” and “Report a Bug” include. It isn’t sent anywhere unless you paste or submit it yourself.")
                         .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 10)
                 }
                 SDivider()

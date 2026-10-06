@@ -46,7 +46,8 @@ enum Legal {
     /// Facts that help diagnose a bug. No account details, file paths or usage numbers.
     /// (Recent events are short status messages such as "Usage unavailable (HTTP 500)", with the home folder shortened to ~.)
     static var diagnostics: String {
-        let os = ProcessInfo.processInfo.operatingSystemVersionString
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        let os = "\(v.majorVersion).\(v.minorVersion)"            // version only: the build string adds little and is more identifying
         return """
         App: Claude Usage \(AppInfo.version) \(AppInfo.stage) (build \(AppInfo.build))
         macOS: \(os)
@@ -79,14 +80,15 @@ enum Legal {
 
         ## Details (added by the app, edit freely)
         ```
-        \(diagnostics)
+        \(diagnostics.replacingOccurrences(of: "```", with: "\u{27}\u{27}\u{27}"))
         ```
         """
     }
 
     static var newIssueURL: URL {
         var c = URLComponents(string: AppInfo.repoURL.absoluteString + "/issues/new")!
-        c.queryItems = [URLQueryItem(name: "title", value: "Bug: "), URLQueryItem(name: "body", value: issueTemplate)]
+        let enc: (String) -> String = { $0.addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")) ?? "" }   // encodes + & # and newlines
+        c.percentEncodedQuery = "title=\(enc("Bug: "))&body=\(enc(issueTemplate))"
         return c.url ?? AppInfo.repoURL
     }
 
@@ -103,19 +105,23 @@ enum Legal {
 /// usage numbers, and it is only shared if you paste the diagnostics into a bug report.
 enum AppLog {
     static var url: URL { supportDir().appendingPathComponent("app.log") }
-    private static var last = ""
+    private static var lastWritten: [String: Date] = [:]
     private static let lock = NSLock()
 
     static func write(_ message: String) {
         lock.lock(); defer { lock.unlock() }
-        let clean = message.replacingOccurrences(of: NSHomeDirectory(), with: "~").replacingOccurrences(of: NSUserName(), with: "<user>").replacingOccurrences(of: "\n", with: " ")
-        guard clean != last else { return }                          // don't repeat the same problem every minute
-        last = clean
+        var clean = message.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+        if NSUserName().count >= 4 { clean = clean.replacingOccurrences(of: NSUserName(), with: "<user>", options: .caseInsensitive) }     // very short names would mangle ordinary words
+        clean = String(clean.unicodeScalars.map { $0.properties.isWhitespace ? " " : $0 }.map(Character.init))        // no line breaks or control layout
+        guard !clean.isEmpty else { return }
+        if let t = lastWritten[clean], Date().timeIntervalSince(t) < 3600 { return }      // the same problem is logged at most once an hour, even when two alternate
+        lastWritten[clean] = Date()
         let line = "\(ISO8601DateFormatter().string(from: Date())) \(clean)\n"
         var text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         text += line
         if text.utf8.count > 100_000 { text = String(text.split(separator: "\n", omittingEmptySubsequences: true).suffix(300).joined(separator: "\n")) + "\n" }
         try? text.write(to: url, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     static func recent(_ n: Int = 15) -> String {

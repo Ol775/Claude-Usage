@@ -16,8 +16,9 @@ mkdir -p build && swiftc -O sign-tool.swift -o build/sign-tool 2>/dev/null
 [ "$(build/sign-tool public "$key")" = "$(grep -o 'publicKey = "[^"]*"' src/Updater.swift | cut -d'"' -f2)" ] || { echo "The signing key doesn't match the public key built into the app."; exit 1; }
 ./make-dmg.sh >/dev/null 2>&1
 dmg="dist/Claude-Usage-$ver.dmg"
-build/sign-tool sign "$key" "$dmg" > "$dmg.sig"
-gh release create "v$ver" "$dmg" "$dmg.sha256" "$dmg.sig" --repo Ol775/Claude-Usage --title "v$ver" --notes "$note" --latest
+build/sign-tool sign "$key" "$dmg" > "$dmg.sig"                      # legacy (DMG bytes only): installs from 0.9.10-0.9.12 still need it
+build/sign-tool sign-update "$key" "$dmg" "$ver" > "$dmg.sig2"      # version-bound: required by 0.9.13 and later
+gh release create "v$ver" "$dmg" "$dmg.sha256" "$dmg.sig" "$dmg.sig2" --repo Ol775/Claude-Usage --title "v$ver" --notes "$note" --latest
 sha=$(cut -d' ' -f1 "$dmg.sha256")
 if [ -d "$tap/.git" ]; then
   sed -i '' -e "s/^  version \".*\"/  version \"$ver\"/" -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" "$tap/Casks/claude-usage.rb"
