@@ -87,6 +87,16 @@ func runSelfTests() -> Int32 {
     let calm = Limit(name: "Weekly – all models", percent: 20, resets: now.addingTimeInterval(86400))
     if case .hits = Predictor.forecast(calm, samples: [], now: now) { check(false, "20% with 6 days elapsed must not predict a limit hit") }
 
+    // Diagnostics never carry the home folder path
+    check(!Legal.diagnostics.contains(NSHomeDirectory()), "diagnostics hide the home folder")
+
+    if ProcessInfo.processInfo.environment["CUB_SUPPORT_DIR"] != nil {          // only against a throwaway folder, never the real log
+        AppLog.write("Test: \(NSHomeDirectory())/x"); AppLog.write("Test: \(NSHomeDirectory())/x")
+        let r = AppLog.recent()
+        check(r.contains("Test: ~/x") && !r.contains(NSHomeDirectory()), "log shortens the home folder")
+        check(r.components(separatedBy: "Test:").count == 2, "identical consecutive messages are written once")
+    }
+
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")
     check(plural(1, "response") == "1 response" && plural(2, "response") == "2 responses", "plural")

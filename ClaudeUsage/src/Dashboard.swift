@@ -82,7 +82,12 @@ final class Box<T>: ObservableObject {
 extension Color {
     static var brand: Color { Color(nsColor: claudeOrange) }
     static var danger: Color { Color(nsColor: alertRed) }
-    static var gpt: Color { Color(red: 0.063, green: 0.639, blue: 0.498) }       // ChatGPT green, used for its lines in the charts
+    /// ChatGPT green for its chart lines; deeper in light mode so it stays readable on white.
+    static var gpt: Color {
+        Color(nsColor: NSColor(name: nil) { a in
+            a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(srgbRed: 0.063, green: 0.639, blue: 0.498, alpha: 1) : NSColor(srgbRed: 0.03, green: 0.50, blue: 0.38, alpha: 1)
+        })
+    }
 }
 
 struct CardStyle: ViewModifier {
@@ -348,6 +353,9 @@ struct PlainLimitCard: View {
             Spacer(minLength: 0)
         }
         .padding(18).frame(maxWidth: .infinity).card()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(limit.name), \(Int(limit.percent.rounded())) percent used")
+        .accessibilityValue("\(untilText(limit.resets)). \(limit.percent >= 95 ? "Almost at the limit" : "\(Int((100 - limit.percent).rounded())) percent left")")
     }
 }
 
@@ -384,6 +392,9 @@ struct LimitCard: View {
             Spacer(minLength: 0)
         }
         .padding(18).frame(maxWidth: .infinity).card()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(limit.name), \(Int(limit.percent.rounded())) percent used")
+        .accessibilityValue("\(untilText(limit.resets)). \(Predictor.describe(forecast))")
     }
 }
 
@@ -396,6 +407,7 @@ struct StatTile: View {
             Text(sub).font(.caption).foregroundStyle(.secondary)
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading).card()
+        .accessibilityElement(children: .combine)
     }
 }
 

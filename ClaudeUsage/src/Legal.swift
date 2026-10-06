@@ -40,12 +40,15 @@ enum Legal {
     ]
 
     /// Facts that help diagnose a bug. No account details, file paths or usage numbers.
+    /// (Recent events are short status messages such as "Usage unavailable (HTTP 500)", with the home folder shortened to ~.)
     static var diagnostics: String {
         let os = ProcessInfo.processInfo.operatingSystemVersionString
         return """
         App: Claude Usage \(AppInfo.version) \(AppInfo.stage) (build \(AppInfo.build))
         macOS: \(os)
         Chip: \(chip)
+        Recent events:
+        \(AppLog.recent())
         """
     }
 
@@ -87,5 +90,31 @@ enum Legal {
     static func copyDiagnostics() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(diagnostics, forType: .string)
+    }
+}
+
+
+/// A small rolling log of problems (failed fetches, update errors) kept on this Mac only. It never holds tokens, emails or
+/// usage numbers, and it is only shared if you paste the diagnostics into a bug report.
+enum AppLog {
+    static var url: URL { supportDir().appendingPathComponent("app.log") }
+    private static var last = ""
+    private static let lock = NSLock()
+
+    static func write(_ message: String) {
+        lock.lock(); defer { lock.unlock() }
+        let clean = message.replacingOccurrences(of: NSHomeDirectory(), with: "~").replacingOccurrences(of: "\n", with: " ")
+        guard clean != last else { return }                          // don't repeat the same problem every minute
+        last = clean
+        let line = "\(ISO8601DateFormatter().string(from: Date())) \(clean)\n"
+        var text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        text += line
+        if text.utf8.count > 100_000 { text = String(text.split(separator: "\n", omittingEmptySubsequences: true).suffix(300).joined(separator: "\n")) + "\n" }
+        try? text.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    static func recent(_ n: Int = 15) -> String {
+        let lines = ((try? String(contentsOf: url, encoding: .utf8)) ?? "").split(separator: "\n").suffix(n)
+        return lines.isEmpty ? "(none)" : lines.joined(separator: "\n")
     }
 }

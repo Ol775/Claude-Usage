@@ -28,14 +28,15 @@ enum AccentTheme: String, CaseIterable, Identifiable {
         }
     }
     /// (dark-mode colour, light-mode colour) – dark is brighter, light is deeper, so both stand out from the glass background.
+    /// Every light colour is at least 4.5:1 on a white card (3:1 minimum elsewhere); checked with the WCAG contrast formula.
     var colors: (NSColor, NSColor) {
         func c(_ r: Double, _ g: Double, _ b: Double) -> NSColor { NSColor(srgbRed: r, green: g, blue: b, alpha: 1) }
         switch self {
-        case .claude: return (c(1.00, 0.55, 0.33), c(0.80, 0.31, 0.10))
+        case .claude: return (c(1.00, 0.55, 0.33), c(0.75, 0.29, 0.09))
         case .blue: return (c(0.36, 0.67, 1.00), c(0.00, 0.37, 0.80))
-        case .green: return (c(0.30, 0.85, 0.52), c(0.07, 0.50, 0.25))
+        case .green: return (c(0.30, 0.85, 0.52), c(0.07, 0.48, 0.24))
         case .purple: return (c(0.72, 0.58, 1.00), c(0.46, 0.22, 0.80))
-        case .pink: return (c(1.00, 0.45, 0.65), c(0.80, 0.14, 0.40))
+        case .pink: return (c(1.00, 0.45, 0.65), c(0.77, 0.13, 0.38))
         case .graphite: return (c(0.78, 0.80, 0.84), c(0.30, 0.32, 0.36))
         }
     }

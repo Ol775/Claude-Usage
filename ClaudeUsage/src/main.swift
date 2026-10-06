@@ -30,6 +30,14 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     func applicationDidFinishLaunching(_ n: Notification) {
         Pricing.loadCached()          // prices fetched earlier (see Pricing.refreshIfStale) apply from the first scan
+        let lastRun = UserDefaults.standard.string(forKey: "lastRunVersion")
+        UserDefaults.standard.set(AppInfo.version, forKey: "lastRunVersion")
+        if let lastRun = lastRun, isNewer(AppInfo.version, than: lastRun) {          // first launch after an update: say what changed, once
+            let first = Changelog.load().first { isNewer($0.version, than: lastRun) }?.items.first
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                self.notify("Updated to Claude Usage \(AppInfo.version)", first ?? "See what’s new in Settings → About.", openAbout: true, system: true)
+            }
+        }
         // Only one copy should run (a second one would add a second menu bar icon). Test flags (--tour etc.) are exempt.
         if CommandLine.arguments.contains("--quiet") { App.notificationsEnabled = false }
         if !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("--") && $0 != "--quiet" }), let id = Bundle.main.bundleIdentifier {
@@ -230,6 +238,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     self.lastFetch = Date()
                     self.store.account = a
                     if a.loggedIn { ActivityStore.shared.markSignedIn() }
+                    if let e = f.error { AppLog.write("Claude limits: \(e)") }
                     if f.error == nil {
                         self.store.limits = f.limits; self.store.limitError = nil; self.store.stale = false; self.store.staleReason = nil
                         History.shared.record(f.limits); self.store.samples = History.shared.samples
@@ -240,6 +249,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.store.settingsCategory = .account; self.showDashboard(.settings) }
                 }
                 if let g = gpt {
+                    if let e = g.error, !g.isFree { AppLog.write("ChatGPT limits: \(e)") }
                     if g.limits.isEmpty, g.signedIn, g.error?.hasPrefix("ChatGPT usage") == true, !self.store.chatgpt.limits.isEmpty {
                         self.store.chatgpt.error = g.error          // network blip: keep the last good numbers
                     } else {
@@ -333,6 +343,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     if self.settings.autoDownloadUpdates && self.canSelfUpdate && !App.isTour { self.prepareInBackground(info) }
                     else { self.notifyAvailableOnce(info) }
                 default:
+                    if case .failed(let m) = status { AppLog.write("Update check: \(m)") }
                     if readyVersion == nil { self.store.update = status }
                 }
                 self.build(self.store.snapshot)
@@ -368,6 +379,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     if CommandLine.arguments.contains("--auto-apply") { self.applyReadyUpdate() }
                 } else {
                     self.store.installError = r.error
+                    AppLog.write("Update download: \(r.error ?? "failed")")
                     self.notifyAvailableOnce(info)               // couldn’t get it quietly – at least say that one exists
                 }
                 self.build(self.store.snapshot)
@@ -616,6 +628,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         item.button?.imagePosition = .imageLeft
         item.button?.toolTip = settings.menuLabelStyle == .letters ? "Claude Usage – D = current session, W = weekly limit" : "Claude Usage"
         item.button?.attributedTitle = t
+        item.button?.setAccessibilityLabel("Claude Usage")          // VoiceOver reads the limits in words, not the D/W letters
+        item.button?.setAccessibilityValue(store.limits.filter { $0.kind != .other }.map { "\($0.name) \(Int($0.percent.rounded())) percent used" }.joined(separator: ", "))
 
         if menuOpen { pendingBuild = true; return }        // don't swap the menu out from under you while it's open
 

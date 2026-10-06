@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.8 – alpha (2026-10-06)
+- Accessibility: VoiceOver reads limit cards, stat tiles and the menu bar item in words; deeper light-mode colours for better contrast. A one-time What's new notice after an update. A small local event log (no tokens or usage numbers) is included in Copy diagnostics and bug reports
+
 ## 0.9.7 – alpha (2026-10-06)
 - Dev flag --refresh-pricing
 

@@ -16,15 +16,15 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 7. ✅ **Universal build** (done in 0.9.5). Releases ship Apple silicon and Intel in one DMG.
 8. ✅ **Onboarding** (done in 0.9.6). A first-run welcome card shows what's needed (Claude Code installed, signed in) with the next click; signed-in accounts with no data yet see the normal empty charts.
 9. ✅ **Pricing table updates** (done in 0.9.6). Prices live in `ClaudeUsage/pricing.json`; the app checks it once a day, validates it, caches it and merges it over the built-in table. The "no price known" note remains for unknown models.
-10. **Compatibility.** Test on macOS 13, 14 and 15.
+10. 🚧 **Compatibility.** The app compiles against a macOS 13 target (newer-only APIs are caught at build time), but I've only run it on the newest macOS. Still to do: run it on macOS 13, 14 and 15 (a CI job on those runners would do it).
 
 ## Phase 3: Polish
 
-11. **Accessibility.** VoiceOver labels, contrast checks in every theme, keyboard navigation.
-12. **Launch at login** and a notification settings review, so alerts don't repeat.
-13. **Data export** as CSV or JSON from Reports.
-14. **In-app "What's new"** after an update, fed from `CHANGELOG.md`.
-15. **Opt-in diagnostics log** the user can attach to a bug report.
+11. 🚧 **Accessibility** (started in 0.9.8). VoiceOver reads limit cards, stat tiles and the menu bar item in plain words, and every theme's colours were checked against the WCAG contrast formula (light-mode colours deepened). Still to do: chart descriptions and a full keyboard-navigation pass.
+12. ✅ **Launch at login** is built in (Settings), alerts fire once per event.
+13. ✅ **Data export** to CSV is built in (Settings → Data & Export).
+14. ✅ **What's new** (done in 0.9.8). A one-time notice after an update, plus the full change log in Settings → About.
+15. ✅ **Diagnostics log** (done in 0.9.8). A small local event log (no tokens, emails or usage numbers) is included when you copy diagnostics or report a bug.
 
 ## Later (not blocking beta)
 
