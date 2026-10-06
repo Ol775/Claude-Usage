@@ -170,6 +170,73 @@ func untilText(_ d: Date?) -> String {
     return "Resets in \(rel) · \(f.string(from: d))"
 }
 
+struct Account { var loggedIn = false; var email = ""; var plan = "" 
+    var name: String {
+        let local = email.split(separator: "@").first.map(String.init) ?? ""
+        let parts = local.split(whereSeparator: { ".-_".contains($0) }).map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+        return parts.isEmpty ? "Claude account" : parts.joined(separator: " ")
+    }
+    var initials: String {
+        let w = name.split(separator: " ")
+        return w.isEmpty ? "?" : w.prefix(2).compactMap { $0.first }.map(String.init).joined().uppercased()
+    }
+}
+
+func claudeBinary() -> String? {
+    let home = NSHomeDirectory()
+    return ["\(home)/.local/bin/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude", "\(home)/.claude/local/claude"]
+        .first { FileManager.default.isExecutableFile(atPath: $0) }
+}
+
+@discardableResult
+func runClaude(_ args: [String]) -> (ok: Bool, out: Data) {
+    guard let bin = claudeBinary() else { return (false, Data()) }
+    let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = args
+    var env = ProcessInfo.processInfo.environment
+    env["PATH"] = "\(NSHomeDirectory())/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+    p.environment = env
+    let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
+    do { try p.run() } catch { return (false, Data()) }
+    let out = pipe.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
+    return (p.terminationStatus == 0, out)
+}
+
+/// Account info from Claude Code's own `claude auth status` (no token handling here).
+func fetchAccount() -> Account {
+    let r = runClaude(["auth", "status", "--json"])
+    guard let d = try? JSONSerialization.jsonObject(with: r.out) as? [String: Any] else { return Account() }
+    var a = Account()
+    a.loggedIn = d["loggedIn"] as? Bool ?? false
+    a.email = d["email"] as? String ?? ""
+    a.plan = (d["subscriptionType"] as? String)?.capitalized ?? ""
+    return a
+}
+
+final class AccountView: NSView {
+    let account: Account
+    init(_ a: Account) { account = a; super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 68)) }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ r: NSRect) {
+        let d: CGFloat = 40, circle = NSRect(x: 16, y: 14, width: d, height: d)
+        let path = NSBezierPath(ovalIn: circle)
+        if account.loggedIn {
+            NSGradient(starting: NSColor(srgbRed: 1.0, green: 0.62, blue: 0.40, alpha: 1), ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
+        } else { NSColor.labelColor.withAlphaComponent(0.18).setFill(); path.fill() }
+        let ini = NSAttributedString(string: account.loggedIn ? account.initials : "?", attributes: [.font: NSFont.systemFont(ofSize: 16, weight: .semibold), .foregroundColor: account.loggedIn ? NSColor.white : NSColor.secondaryLabelColor])
+        ini.draw(at: NSPoint(x: circle.midX - ini.size().width/2, y: circle.midY - ini.size().height/2))
+        let title = account.loggedIn ? account.name : "Not signed in"
+        NSAttributedString(string: title, attributes: [.font: NSFont.boldSystemFont(ofSize: 14), .foregroundColor: NSColor.labelColor]).draw(at: NSPoint(x: 66, y: 34))
+        let sub = account.loggedIn ? [account.email, account.plan.isEmpty ? "" : "\(account.plan) plan"].filter { !$0.isEmpty }.joined(separator: " · ") : "Choose “Sign in with Claude…” below"
+        NSAttributedString(string: sub, attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]).draw(at: NSPoint(x: 66, y: 16))
+        if account.loggedIn && !account.plan.isEmpty {
+            let b = NSAttributedString(string: account.plan.uppercased(), attributes: [.font: NSFont.boldSystemFont(ofSize: 9), .foregroundColor: claudeOrange])
+            let w = b.size().width + 14, rect = NSRect(x: menuWidth - 16 - w, y: 38, width: w, height: 17)
+            claudeOrange.withAlphaComponent(0.18).setFill(); NSBezierPath(roundedRect: rect, xRadius: 8.5, yRadius: 8.5).fill()
+            b.draw(at: NSPoint(x: rect.minX + 7, y: rect.minY + 3))
+        }
+    }
+}
+
 final class UsageBarView: NSView {
     let limit: Limit
     init(_ limit: Limit) { self.limit = limit; super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 62)) }
@@ -191,6 +258,7 @@ final class UsageBarView: NSView {
 final class App: NSObject, NSApplicationDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     var timer: Timer?
+    var account = Account()
     var limits: [Limit] = []
     var limitError: String?
     var lastFetch = Date.distantPast
@@ -215,9 +283,13 @@ final class App: NSObject, NSApplicationDelegate {
         DispatchQueue.global(qos: .utility).async {
             let s = scan()
             var fetched: (limits: [Limit], error: String?)?
-            if Date().timeIntervalSince(self.lastFetch) > 100 { fetched = fetchLimits() }
+            var acct: Account?
+            if Date().timeIntervalSince(self.lastFetch) > 100 {
+                acct = fetchAccount()
+                fetched = acct!.loggedIn ? fetchLimits() : ([], "Sign in to see your limits")
+            }
             DispatchQueue.main.async {
-                if let f = fetched { self.lastFetch = Date(); self.limits = f.limits; self.limitError = f.error }
+                if let f = fetched { self.lastFetch = Date(); self.limits = f.limits; self.limitError = f.error; self.account = acct ?? self.account }
                 self.build(s)
             }
         }
@@ -252,6 +324,28 @@ final class App: NSObject, NSApplicationDelegate {
         }
         notified = seen
     }
+    @objc func signIn() {
+        guard claudeBinary() != nil else {
+            let a = NSAlert(); a.messageText = "Claude Code not found"
+            a.informativeText = "Install Claude Code first (claude.com/claude-code), then try again."
+            NSApp.activate(ignoringOtherApps: true); a.runModal(); return
+        }
+        DispatchQueue.global().async {
+            runClaude(["auth", "login"])          // opens Claude's own browser sign-in
+            DispatchQueue.main.async { self.lastFetch = .distantPast; self.refresh() }
+        }
+    }
+    @objc func signOut() {
+        let a = NSAlert(); a.messageText = "Sign out of Claude?"
+        a.informativeText = "This signs out Claude Code too, since they share one login."
+        a.addButton(withTitle: "Sign out"); a.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        DispatchQueue.global().async {
+            runClaude(["auth", "logout"])
+            DispatchQueue.main.async { self.limits = []; self.lastFetch = .distantPast; self.refresh() }
+        }
+    }
     @objc func toggleLogin() {
         let svc = SMAppService.mainApp
         do { if svc.status == .enabled { try svc.unregister() } else { try svc.register() } } catch { NSSound.beep() }
@@ -280,7 +374,8 @@ final class App: NSObject, NSApplicationDelegate {
         }
         item.button?.attributedTitle = t
         let m = NSMenu()
-        add(m, NSView(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 8)))
+        add(m, AccountView(account))
+        m.addItem(.separator())
         if limits.isEmpty {
             add(m, RowView(left: limitError ?? "Loading limits…", leftBold: false, size: 12, tint: .secondaryLabelColor))
         } else {
@@ -310,6 +405,10 @@ final class App: NSObject, NSApplicationDelegate {
         m.addItem(.separator())
         let f = DateFormatter(); f.timeStyle = .medium
         add(m, RowView(left: "Updated \(f.string(from: s.updated)) · totals exclude cache reads", leftBold: false, size: 10, tint: .secondaryLabelColor))
+        let acc = account.loggedIn
+            ? NSMenuItem(title: "Sign out…", action: #selector(signOut), keyEquivalent: "")
+            : NSMenuItem(title: "Sign in with Claude…", action: #selector(signIn), keyEquivalent: "")
+        acc.target = self; m.addItem(acc)
         let ll = NSMenuItem(title: "Launch at login", action: #selector(toggleLogin), keyEquivalent: ""); ll.target = self
         ll.state = SMAppService.mainApp.status == .enabled ? .on : .off; m.addItem(ll)
         let tn = NSMenuItem(title: "Send test notification", action: #selector(testNotification), keyEquivalent: ""); tn.target = self; m.addItem(tn)
@@ -322,7 +421,7 @@ final class App: NSObject, NSApplicationDelegate {
 if CommandLine.arguments.contains("--snapshot") {
     _ = NSApplication.shared
     App.notificationsEnabled = false
-    let d = App(); let fl = fetchLimits(); d.limits = fl.limits; d.limitError = fl.error; d.build(scan())
+    let d = App(); d.account = fetchAccount(); let fl = fetchLimits(); d.limits = fl.limits; d.limitError = fl.error; d.build(scan())
     let views = (d.item.menu?.items ?? []).map { $0.view ?? NSView(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 9)) }
     let H = views.reduce(0) { $0 + $1.frame.height }
     let host = NSView(frame: NSRect(x: 0, y: 0, width: menuWidth, height: H))
