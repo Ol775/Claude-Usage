@@ -324,7 +324,8 @@ final class AccountWindow: NSObject {
         window.invalidateCursorRects(for: avatar)
         photoButton.isHidden = !a.loggedIn; removeButton.isHidden = !(a.loggedIn && avatarImage != nil)
         photoButton.attributedTitle = NSAttributedString(string: avatarImage == nil ? "Choose photo…" : "Change photo…", attributes: [.foregroundColor: claudeOrange, .font: NSFont.systemFont(ofSize: 12, weight: .medium)])
-        removeButton.attributedTitle = NSAttributedString(string: "Remove photo", attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.systemFont(ofSize: 11)])
+        removeButton.attributedTitle = NSAttributedString(string: "Remove photo", attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.systemFont(ofSize: 12)])
+        removeButton.contentTintColor = .secondaryLabelColor
         if a.loggedIn {
             title.stringValue = a.name
             detail.stringValue = [a.email, a.plan.isEmpty ? "" : "Claude \(a.plan) plan"].filter { !$0.isEmpty }.joined(separator: "\n")
@@ -398,6 +399,7 @@ final class App: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { exit(0) }
             return
         }
+        if CommandLine.arguments.contains("--show-account") { DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self.showAccount() } }
         refresh()
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refresh() }
     }
