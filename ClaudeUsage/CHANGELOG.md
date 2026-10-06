@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.14 – alpha (2026-10-06)
+- Fixes a build error on older Swift compilers found by the new CI (a variable shadowed a function name); no behaviour change
+
 ## 0.9.13 – alpha (2026-10-06)
 - Second security review fixes: update signatures are now bound to the version (an older signed image can't pass as a newer release), downloads have a time and size limit and only follow redirects to GitHub's hosts, versions must be plain x.y.z, the installer saved to Downloads never overwrites a file and is re-checked before it is opened. Diagnostics trimmed further (OS version only, no plan tier, no refresh time), the event log is mode 600 with hourly de-duplication, and the bug-report link is fully encoded
 

@@ -130,8 +130,8 @@ enum Updater {
         let latest = r.version
         guard isPlainVersion(latest) else { return .failed("Unexpected version number on GitHub.") }
         guard isNewer(latest, than: installed) else { return .upToDate(Date()) }
-        let notes = fetch("ClaudeUsage/CHANGELOG.md").map { notes(from: $0, newerThan: installed) } ?? []
-        return .available(UpdateInfo(version: latest, notes: notes, dmgURL: r.dmg, sha256: r.sha, sigURL: r.sig))
+        let releaseNotes = fetch("ClaudeUsage/CHANGELOG.md").map { Updater.notes(from: $0, newerThan: installed) } ?? []
+        return .available(UpdateInfo(version: latest, notes: releaseNotes, dmgURL: r.dmg, sha256: r.sha, sigURL: r.sig))
     }
 }
 
