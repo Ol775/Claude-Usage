@@ -7,6 +7,7 @@ enum AppInfo {
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0" }
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1" }
     static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "alpha" }
+    static let repoURL = URL(string: "https://github.com/Ol775/MacApps")!
     static var display: String { "v\(version) \(stage)" }
 }
 
@@ -44,6 +45,18 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self { case .system: return "Follow system"; case .light: return "Light"; case .dark: return "Dark"; case .oled: return "OLED black" }
+    }
+}
+
+enum NotifImportance: String, CaseIterable, Identifiable {
+    case normal, critical, all
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .normal: return "Normal"
+        case .critical: return "Important for critical alerts"
+        case .all: return "Important for all alerts"
+        }
     }
 }
 
@@ -86,6 +99,7 @@ final class Settings: ObservableObject {
     @Published var showInDock: Bool { didSet { if Settings.persist { d.set(showInDock, forKey: "showInDock") }; onChange() } }
     @Published var notificationsOn: Bool { didSet { if Settings.persist { d.set(notificationsOn, forKey: "notificationsOn") } } }
     @Published var menuBarStyle: MenuBarStyle { didSet { if Settings.persist { d.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }; onChange() } }
+    @Published var importance: NotifImportance { didSet { if Settings.persist { d.set(importance.rawValue, forKey: "importance") } } }
     @Published var warnThreshold: Int { didSet { if Settings.persist { d.set(warnThreshold, forKey: "warnThreshold") } } }
     @Published var criticalThreshold: Int { didSet { if Settings.persist { d.set(criticalThreshold, forKey: "criticalThreshold") } } }
     @Published var refreshMinutes: Int { didSet { if Settings.persist { d.set(refreshMinutes, forKey: "refreshMinutes") }; onChange() } }
@@ -98,6 +112,7 @@ final class Settings: ObservableObject {
         notificationsOn = d.object(forKey: "notificationsOn") as? Bool ?? true
         predictiveAlerts = d.object(forKey: "predictiveAlerts") as? Bool ?? true
         menuBarStyle = MenuBarStyle(rawValue: d.string(forKey: "menuBarStyle") ?? "") ?? .both
+        importance = NotifImportance(rawValue: d.string(forKey: "importance") ?? "") ?? .normal
         warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
         criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95
         refreshMinutes = d.object(forKey: "refreshMinutes") as? Int ?? 1

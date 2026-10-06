@@ -4,7 +4,7 @@ import AppKit
 final class Toast {
     private static var panels: [NSPanel] = []
 
-    static func show(_ title: String, _ body: String, onClick: @escaping () -> Void = {}) {
+    static func show(_ title: String, _ body: String, important: Bool = false, onClick: @escaping () -> Void = {}) {
         DispatchQueue.main.async {
             guard let screen = NSScreen.main else { return }
             let w: CGFloat = 390, h: CGFloat = 86
@@ -14,13 +14,13 @@ final class Toast {
                                 styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.level = .statusBar; panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]; panel.isReleasedWhenClosed = false
-            let view = ToastView(frame: NSRect(x: 0, y: 0, width: w, height: h), title: title, body: body)
+            let view = ToastView(frame: NSRect(x: 0, y: 0, width: w, height: h), title: title, body: body, important: important)
             view.onClick = { onClick(); dismiss(panel) }
             panel.contentView = view
             panels.append(panel)
             panel.alphaValue = 0; panel.orderFrontRegardless()
             NSAnimationContext.runAnimationGroup { $0.duration = 0.25; panel.animator().alphaValue = 1 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 7) { dismiss(panel) }
+            if !important { DispatchQueue.main.asyncAfter(deadline: .now() + 7) { dismiss(panel) } }     // important banners stay until clicked
         }
     }
 
@@ -34,17 +34,23 @@ final class Toast {
 final class ToastView: NSVisualEffectView {
     var onClick: () -> Void = {}
 
-    init(frame: NSRect, title: String, body: String) {
+    init(frame: NSRect, title: String, body: String, important: Bool = false) {
         super.init(frame: frame)
         material = .hudWindow; blendingMode = .behindWindow; state = .active
         wantsLayer = true; layer?.cornerRadius = 18; layer?.masksToBounds = true
+        if important { layer?.borderWidth = 2; layer?.borderColor = alertRed.cgColor }
         let icon = NSImageView(frame: NSRect(x: 16, y: (frame.height - 54) / 2, width: 54, height: 54))
         icon.image = NSApp.applicationIconImage; icon.imageScaling = .scaleProportionallyUpOrDown
         addSubview(icon)
         let t = NSTextField(labelWithString: title)
         t.font = .boldSystemFont(ofSize: 14); t.textColor = .labelColor; t.lineBreakMode = .byTruncatingTail
-        t.frame = NSRect(x: 82, y: frame.height - 34, width: frame.width - 98, height: 20)
+        t.frame = NSRect(x: 82, y: frame.height - 34, width: frame.width - 98 - (important ? 82 : 0), height: 20)
         addSubview(t)
+        if important {
+            let tag = NSTextField(labelWithString: "IMPORTANT")
+            tag.font = .boldSystemFont(ofSize: 10); tag.textColor = alertRed; tag.alignment = .right
+            tag.frame = NSRect(x: frame.width - 100, y: frame.height - 31, width: 84, height: 14); addSubview(tag)
+        }
         let b = NSTextField(wrappingLabelWithString: body)
         b.font = .systemFont(ofSize: 12.5); b.textColor = .secondaryLabelColor; b.maximumNumberOfLines = 2
         b.frame = NSRect(x: 82, y: 12, width: frame.width - 98, height: 38)

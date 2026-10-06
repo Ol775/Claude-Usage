@@ -33,6 +33,7 @@ final class App: NSObject, NSApplicationDelegate {
             choosePhoto: { [weak self] in self?.choosePhoto() }, removePhoto: { [weak self] in removeAvatar(); self?.photoChanged() },
             refresh: { [weak self] in self?.lastFetch = .distantPast; self?.refresh() },
             testNotify: { [weak self] in self?.notify("Claude Usage", "Notifications are working.") },
+            testImportant: { [weak self] in self?.notify("Claude Usage", "This is how an important alert looks.", important: true) },
             openNotificationSettings: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
             },
@@ -41,7 +42,8 @@ final class App: NSObject, NSApplicationDelegate {
             copySummary: { [weak self] in self?.copySummary() })
         installMainMenu()
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
-        item.button?.attributedTitle = NSAttributedString(string: "✻ …", attributes: [.foregroundColor: claudeOrange])
+        item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
+        item.button?.attributedTitle = NSAttributedString(string: " …")
         build(Snapshot())
 
         if CommandLine.arguments.contains("--test-notify") {
@@ -81,6 +83,7 @@ final class App: NSObject, NSApplicationDelegate {
     @objc func openDashboard() { showDashboard(.overview) }
     @objc func openSettings() { showDashboard(.settings) }
     @objc func openReports() { showDashboard(.reports) }
+    @objc func openRepo() { NSWorkspace.shared.open(AppInfo.repoURL) }
     @objc func copySummaryAction() { copySummary() }
     func showDashboard(_ tab: DashTab? = nil) {
         if let t = tab { store.tab = t }
@@ -104,7 +107,7 @@ final class App: NSObject, NSApplicationDelegate {
             .applicationName: "Claude Usage",
             .applicationVersion: "\(AppInfo.version) \(AppInfo.stage)",
             .version: AppInfo.build,
-            .credits: NSAttributedString(string: "Shows your Claude session and weekly limits, reset times and usage forecasts.\nAn unofficial app – not affiliated with Anthropic.",
+            .credits: NSAttributedString(string: "Shows your Claude session and weekly limits, reset times and usage forecasts.\nAn unofficial app – not affiliated with Anthropic.\n\(AppInfo.repoURL.absoluteString)",
                                          attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor])])
     }
 
@@ -164,17 +167,18 @@ final class App: NSObject, NSApplicationDelegate {
 
     // MARK: notifications
 
-    func notify(_ title: String, _ body: String) {
+    func notify(_ title: String, _ body: String, important: Bool = false) {
         guard App.notificationsEnabled, settings.notificationsOn || title == "Claude Usage" else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { st in
             DispatchQueue.main.async {
                 if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
                     let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
+                    if important { c.interruptionLevel = .timeSensitive; c.relevanceScore = 1; c.subtitle = "Important"; c.threadIdentifier = "claude-usage-important" }
                     center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
                 } else {
                     // macOS is blocking notifications for this app: show our own banner (with the icon) so the alert isn't lost.
-                    Toast.show(title, body) { [weak self] in self?.showDashboard(.settings) }
+                    Toast.show(title, body, important: important) { [weak self] in self?.showDashboard(.settings) }
                 }
             }
         }
@@ -242,20 +246,21 @@ final class App: NSObject, NSApplicationDelegate {
 
     func checkLimits() {
         var seen = notified
-        func once(_ key: String, _ title: String, _ body: String) {
+        func once(_ key: String, _ title: String, _ body: String, critical: Bool = false) {
             guard !seen.contains(key) else { return }
-            seen.append(key); notify(title, body)
+            let important = settings.importance == .all || (settings.importance == .critical && critical)
+            seen.append(key); notify(title, body, important: important)
         }
         for l in store.limits where l.kind != .other {
             let reset = l.resets.map { Int($0.timeIntervalSince1970 / 60) } ?? 0
             let pct = Int(l.percent)
             for t in Array(Set([settings.warnThreshold, settings.criticalThreshold, 100])).sorted() where pct >= t {
                 let when = untilText(l.resets).replacingOccurrences(of: "Resets", with: "resets")
-                once("\(l.name)|\(reset)|\(t)", t >= 100 ? "\(l.name) limit reached" : "\(l.name) at \(t)%", "Usage is \(pct)% – \(when)")
+                once("\(l.name)|\(reset)|\(t)", t >= 100 ? "\(l.name) limit reached" : "\(l.name) at \(t)%", "Usage is \(pct)% – \(when)", critical: t >= settings.criticalThreshold)
             }
             if settings.predictiveAlerts, case .hits(let at, _, _) = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days) {
                 let soon = at.timeIntervalSinceNow < (l.kind == .session ? 3600 : 86400)
-                if soon { once("\(l.name)|\(reset)|pace", "On pace to hit your \(l.kind == .session ? "session" : "weekly") limit", Predictor.describe(.hits(at: at, perHour: 0, recent: true))) }
+                if soon { once("\(l.name)|\(reset)|pace", "On pace to hit your \(l.kind == .session ? "session" : "weekly") limit", Predictor.describe(.hits(at: at, perHour: 0, recent: true)), critical: true) }
             }
         }
         notified = seen
@@ -326,23 +331,29 @@ final class App: NSObject, NSApplicationDelegate {
     func build(_ s: Snapshot) {
         checkLimits()
         let font = NSFont.menuBarFont(ofSize: 0)
-        let t = NSMutableAttributedString(string: "✻", attributes: [.foregroundColor: claudeOrange, .font: font])
-        func piece(_ l: Limit) -> NSAttributedString {
+        let t = NSMutableAttributedString()
+        func piece(_ label: String, _ l: Limit) -> NSAttributedString {
+            // "D 17%": the letter is a little bolder; the value turns red at the critical threshold, otherwise it follows the menu bar colour.
+            let out = NSMutableAttributedString(string: label + " ", attributes: [.font: NSFont.systemFont(ofSize: font.pointSize, weight: .semibold)])
             var attrs: [NSAttributedString.Key: Any] = [.font: font]
-            if l.percent >= Double(settings.criticalThreshold) { attrs[.foregroundColor] = alertRed }      // otherwise default colour, so it follows the menu bar
-            return NSAttributedString(string: "\(Int(l.percent.rounded()))%", attributes: attrs)
+            if l.percent >= Double(settings.criticalThreshold) { attrs[.foregroundColor] = alertRed }
+            out.append(NSAttributedString(string: "\(Int(l.percent.rounded()))%", attributes: attrs))
+            return out
         }
         func plain(_ x: String) -> NSAttributedString { NSAttributedString(string: x, attributes: [.font: font]) }
+        // D = the current session ("day"), W = the weekly limit
         let sess = store.limits.first(where: { $0.kind == .session }), week = store.limits.first(where: { $0.kind == .weekly })
         switch settings.menuBarStyle {
         case .iconOnly: break
         case .tokens: t.append(plain(" " + fmt(s.today.billable)))
-        case .session: if let x = sess { t.append(plain(" ")); t.append(piece(x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
-        case .weekly: if let x = week { t.append(plain(" ")); t.append(piece(x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
+        case .session: if let x = sess { t.append(plain(" ")); t.append(piece("D", x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
+        case .weekly: if let x = week { t.append(plain(" ")); t.append(piece("W", x)) } else { t.append(plain(" " + fmt(s.today.billable))) }
         case .both:
-            if let x = sess { t.append(plain(" ")); t.append(piece(x)); if let w = week { t.append(plain(" · ")); t.append(piece(w)) } }
+            if let x = sess { t.append(plain(" ")); t.append(piece("D", x)); if let w = week { t.append(plain("  ")); t.append(piece("W", w)) } }
             else { t.append(plain(" " + fmt(s.today.billable))) }
         }
+        item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
+        item.button?.toolTip = "Claude Usage – D = current session, W = weekly limit"
         item.button?.attributedTitle = t
 
         let m = NSMenu()
@@ -389,6 +400,7 @@ final class App: NSObject, NSApplicationDelegate {
         let rp = NSMenuItem(title: "Open Reports…", action: #selector(openReports), keyEquivalent: "e"); rp.target = self; m.addItem(rp)
         let cs = NSMenuItem(title: "Copy Usage Summary", action: #selector(copySummaryAction), keyEquivalent: "c"); cs.target = self; m.addItem(cs)
         let r = NSMenuItem(title: "Refresh", action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
+        let gh = NSMenuItem(title: "GitHub Repository", action: #selector(openRepo), keyEquivalent: ""); gh.target = self; m.addItem(gh)
         let ab = NSMenuItem(title: "About Claude Usage", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
         m.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = m
@@ -403,6 +415,7 @@ final class App: NSObject, NSApplicationDelegate {
         var steps: [(AppearanceMode, DashTab, AccentTheme)] = []
         for a in [AppearanceMode.dark, .light] { for t in DashTab.allCases { steps.append((a, t, .claude)) } }
         for t in [DashTab.overview, .reports, .usage, .settings] { steps.append((.oled, t, .claude)) }
+        if let n = CommandLine.arguments.first(where: { $0.hasPrefix("--steps=") }).flatMap({ Int($0.dropFirst(8)) }) { steps = Array(steps.prefix(n)) }
         var i = 0
         func finish() { try? "done".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8); DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) } }
         // Full-height renders of the long pages (a normal window only shows the top), captured from outside by the tour script.

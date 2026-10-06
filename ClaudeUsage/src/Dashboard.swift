@@ -12,6 +12,7 @@ struct Actions {
     var removePhoto: () -> Void = {}
     var refresh: () -> Void = {}
     var testNotify: () -> Void = {}
+    var testImportant: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
     var requestNotifications: () -> Void = {}
     var exportData: () -> Void = {}
@@ -80,23 +81,12 @@ extension View {
 struct DashboardView: View {
     @ObservedObject var store: Store
     @ObservedObject var settings = Settings.shared
+    @StateObject private var collapsed = Box(UserDefaults.standard.bool(forKey: "sidebarCollapsed") || ProcessInfo.processInfo.environment["CUB_COLLAPSED"] == "1")
 
     var body: some View {
-        NavigationSplitView {
-            List(DashTab.allCases, selection: Binding(get: { store.tab }, set: { if let v = $0 { store.tab = v } })) { tab in
-                Label { Text(tab.title) } icon: { Image(systemName: tab.icon).foregroundStyle(Color.brand) }.tag(tab)
-            }
-            .scrollContentBackground(.hidden)
-            .background(settings.isOLED ? Color.black : Color.clear)
-            .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 230)
-            .safeAreaInset(edge: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Claude Usage").font(.caption.weight(.semibold))
-                    Text("\(AppInfo.display) · build \(AppInfo.build)").font(.caption2).foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading).padding(12)
-            }
-        } detail: {
+        HStack(spacing: 0) {
+            SidebarView(store: store, collapsed: collapsed, settings: settings)
+            Divider()
             Group {
                 switch store.tab {
                 case .overview: OverviewView(store: store)
@@ -110,9 +100,58 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor))
         }
-        .background(settings.isOLED ? Color.black : Color.clear)
+        .background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor))
         .tint(.brand)
         .frame(minWidth: 860, minHeight: 600)
+    }
+}
+
+/// Sidebar that collapses to a slim icon rail instead of disappearing, so the sections stay one click away.
+struct SidebarView: View {
+    @ObservedObject var store: Store
+    @ObservedObject var collapsed: Box<Bool>
+    @ObservedObject var settings: Settings
+
+    var body: some View {
+        let narrow = collapsed.value
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { collapsed.value.toggle() }
+                UserDefaults.standard.set(collapsed.value, forKey: "sidebarCollapsed")
+            } label: {
+                Image(systemName: "sidebar.left").font(.system(size: 16)).foregroundStyle(.secondary).frame(width: 28, height: 28)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+            }
+            .buttonStyle(.plain).help(narrow ? "Show sidebar labels" : "Collapse to icons")
+            .padding(.bottom, 6)
+
+            ForEach(DashTab.allCases) { tab in
+                let selected = store.tab == tab
+                Button { store.tab = tab } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: tab.icon).font(.system(size: 17)).foregroundStyle(Color.brand).frame(width: 28)
+                        if !narrow { Text(tab.title).fontWeight(selected ? .semibold : .regular).foregroundStyle(.primary); Spacer(minLength: 0) }
+                    }
+                    .padding(.horizontal, 8).padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? (settings.isOLED ? Color(white: 0.16) : Color.brand.opacity(0.18)) : Color.clear))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).help(tab.title)
+            }
+            Spacer()
+            if narrow {
+                Text("v\(AppInfo.version)").font(.system(size: 9)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Claude Usage").font(.caption.weight(.semibold))
+                    Text("\(AppInfo.display) · build \(AppInfo.build)").font(.caption2).foregroundStyle(.secondary)
+                }.padding(.horizontal, 8).padding(.bottom, 4)
+            }
+        }
+        .padding(10)
+        .frame(width: narrow ? 66 : 204)
+        .frame(maxHeight: .infinity)
+        .background(settings.isOLED ? Color.black : Color(nsColor: .controlBackgroundColor).opacity(0.6))
     }
 }
 
@@ -601,11 +640,19 @@ struct SettingsPage: View {
                     if store.notifBlocked { Button("Allow…") { store.actions.requestNotifications() } }
                 }
                 Toggle("Alert when a limit gets close", isOn: $settings.notificationsOn)
+                Picker("Mark as important", selection: $settings.importance) {
+                    ForEach(NotifImportance.allCases) { Text($0.label).tag($0) }
+                }
+                if settings.importance != .normal {
+                    Text("Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Stepper("Warn at \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 50...95, step: 5)
                 Stepper("Critical at \(settings.criticalThreshold)%", value: $settings.criticalThreshold, in: 60...99, step: 1)
                 Toggle("Warn when on pace to hit a limit early", isOn: $settings.predictiveAlerts)
                 HStack {
                     Button("Send test notification") { store.actions.testNotify() }
+                    Button("Test as important") { store.actions.testImportant() }
                     Button("Open notification settings") { store.actions.openNotificationSettings() }
                 }
             }.listRowBackground(rowBG)
@@ -621,6 +668,7 @@ struct SettingsPage: View {
             Section("About") {
                 LabeledContent("Version", value: "\(AppInfo.version) \(AppInfo.stage)")
                 LabeledContent("Build", value: AppInfo.build)
+                LabeledContent("Source code") { Link("github.com/Ol775/MacApps", destination: AppInfo.repoURL) }
                 Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                     .font(.caption).foregroundStyle(.secondary)
             }.listRowBackground(rowBG)
