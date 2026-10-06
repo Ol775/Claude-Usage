@@ -10,6 +10,10 @@ Claude Usage is currently **alpha**. This is the plan for reaching **beta**. Ite
 4. 🚧 **Automated tests and CI.** 44 built-in checks (`--selftest`) cover versions, the Claude and ChatGPT parsers, Claude Code log parsing, pricing and the forecaster. The GitHub Actions workflow that runs them on every push is written (`.pending/ci.yml`) but needs the `workflow` scope on the GitHub login to be pushed.
 5. ✅ **Performance check** (done in 0.9.4). On 100 MB of logs a first scan takes about 1.2 s (cached afterwards), peak memory is about 155 MB (down from 187 MB), and the running app idles at 0% CPU. Possible later improvement: parse only the new part of a growing log.
 
+## Security review (done in 0.9.10)
+
+Three independent reviews (updater and supply chain, credentials and data handling, repository and history) found no secrets and no remote exploits. Fixes shipped: offline-signed updates, no source-build fallback, validated and re-checked downloads, safer program lookup, private data folders, dev overrides disabled in the shipped app, `SECURITY.md`. See [SECURITY.md](SECURITY.md).
+
 ## Phase 2: Trust and first run
 
 6. ✅ **Low-friction install without Apple signing** (done in 0.9.5). A Homebrew tap (`brew install --cask Ol775/tap/claude-usage`) clears the quarantine flag, the terminal installer verifies the checksum, every release ships a `.sha256` file, and the README explains the first-launch prompt. The source build stays as the fully transparent route.
