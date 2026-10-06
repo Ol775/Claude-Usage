@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.7.1 – alpha (2026-10-06)
+- Test release for trying the background update download and restart prompt (no functional changes)
+
 ## 0.7.0 – alpha (2026-10-06)
 - Updates download in the background and ask for a restart to finish (banner, menu item, notification with Restart Now)
 - Full menu bar customisation: choose the items, label style, percentage colour and icon style, with presets and a live preview
