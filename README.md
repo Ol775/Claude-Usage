@@ -88,6 +88,10 @@ The app checks GitHub for new versions, downloads and builds them in the backgro
 
 Use **Settings → Help & Legal → Report a Bug** in the app (it fills in your version and macOS), or [open an issue](https://github.com/Ol775/Claude-Usage/issues/new) here. Please don't paste tokens or private logs.
 
+## Roadmap
+
+Claude Usage is alpha. See the [roadmap to beta](ROADMAP.md) for what's planned.
+
 ## Support the project
 
 Claude Usage is free and open source. If it's useful, you can [buy me a coffee](https://buymeacoffee.com/ol775) – entirely optional, and always appreciated.
