@@ -27,7 +27,7 @@ python3 - "$new" <<'PY'
 import re, sys
 p = "../README.md"
 s = open(p).read()
-s = re.sub(r"## ClaudeUsage  \(v[^)]*\)", f"## ClaudeUsage  (v{sys.argv[1]} alpha)", s, count=1)
+s = re.sub(r"<!--v-->.*?<!--/v-->", f"<!--v-->v{sys.argv[1]} alpha<!--/v-->", s, count=1)
 open(p, "w").write(s)
 PY
 echo $(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + 1 )) > BUILD_NUMBER    # the build number this change will have once committed

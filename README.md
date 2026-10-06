@@ -1,12 +1,17 @@
 <p align="center"><img src="docs/banner.png" alt="Claude Usage – session and weekly limits in your Mac's menu bar" width="720"></p>
 
-# Claude Usage
+# Claude Usage – Claude Code usage tracker for the macOS menu bar
 
-A native macOS menu bar + desktop app for your Claude usage. The app lives in [`ClaudeUsage/`](ClaudeUsage).
+[![Latest release](https://img.shields.io/github/v/release/Ol775/Claude-Usage?color=e8734a)](https://github.com/Ol775/Claude-Usage/releases/latest)
+[![MIT licence](https://img.shields.io/github/license/Ol775/Claude-Usage?color=e8734a)](LICENSE)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
+![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-## ClaudeUsage  (v0.8.3 alpha)
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download is built for Apple silicon; Intel Macs can build from source), with Light, Dark and OLED black themes. Current version: <!--v-->v0.8.3 alpha<!--/v-->.
 
-A menu bar + desktop app for your Claude usage.
+Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
+
+## Features
 
 - Real **session** and **weekly** limits with reset times (same numbers as Claude Code's `/usage`)
 - **Forecasts** of when you'll hit a limit at your current pace – weekly forecasts also learn from your saved history – plus early-warning notifications
@@ -40,7 +45,6 @@ Unofficial – not affiliated with Anthropic.
 </tr>
 </table>
 
-<sub>Screenshots use made-up demo data (<code>CUB_DEMO=1</code>), not a real account. <code>docs/make-screenshots.swift</code> frames them.</sub>
 
 ## Install
 
@@ -79,6 +83,23 @@ The app checks GitHub for new versions, downloads and builds them in the backgro
 ## Reporting bugs
 
 Use **Settings → Help & Legal → Report a Bug** in the app (it fills in your version and macOS), or [open an issue](https://github.com/Ol775/Claude-Usage/issues/new) here. Please don't paste tokens or private logs.
+
+## FAQ
+
+**How do I check my Claude Code usage limits on a Mac?**
+Install Claude Usage and it shows your current session and weekly limits in the menu bar (for example `D 58%  W 46%`), using the same numbers as Claude Code's `/usage` command.
+
+**Does it work with Claude Pro and Max?**
+Yes. It reads the limits for whichever Claude account Claude Code is signed in to.
+
+**When will I hit my Claude usage limit?**
+The app forecasts it from your recent pace and warns you with a notification before you get there. Forecasts are estimates, not guarantees.
+
+**Is it official, and is it safe?**
+It's an unofficial, open-source app, not affiliated with Anthropic. It runs on your Mac, has no analytics, and only talks to Anthropic (for your limits) and GitHub (for updates). The code is all here to read.
+
+**How do I update it?**
+It checks for new versions, downloads them in the background and asks you to restart. See [Updating](#updating).
 
 ## Privacy and legal
 
