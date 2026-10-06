@@ -20,7 +20,7 @@ struct Actions {
 }
 
 enum DashTab: String, CaseIterable, Identifiable {
-    case overview, reports, insights, usage, account, settings
+    case overview, reports, insights, usage, settings
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
     var icon: String {
@@ -29,7 +29,6 @@ enum DashTab: String, CaseIterable, Identifiable {
         case .reports: return "chart.xyaxis.line"
         case .insights: return "lightbulb"
         case .usage: return "chart.bar.xaxis"
-        case .account: return "person.crop.circle"
         case .settings: return "gearshape"
         }
     }
@@ -38,6 +37,7 @@ enum DashTab: String, CaseIterable, Identifiable {
 final class Store: ObservableObject {
     static let shared = Store()
     @Published var tab: DashTab = .overview
+    @Published var settingsCategory: SettingsCategory = .general
     @Published var snapshot = Snapshot()
     @Published var limits: [Limit] = []
     @Published var limitError: String?
@@ -93,7 +93,6 @@ struct DashboardView: View {
                 case .reports: ReportsView(store: store)
                 case .insights: InsightsView(store: store)
                 case .usage: UsageView(store: store)
-                case .account: AccountPage(store: store)
                 case .settings: SettingsPage(store: store, settings: settings)
                 }
             }
@@ -184,7 +183,7 @@ struct OverviewView: View {
                         Text(store.limitError ?? "Loading limits…")
                         Spacer()
                         if !store.account.loggedIn {
-                            Button("Open Account") { store.tab = .account }.buttonStyle(.borderedProminent)
+                            Button("Sign In") { store.settingsCategory = .account; store.tab = .settings }.buttonStyle(.borderedProminent)
                         }
                     }
                     .padding(18).card()
@@ -529,152 +528,413 @@ struct AvatarCircle: View {
     }
 }
 
-struct AccountPage: View {
-    @ObservedObject var store: Store
-    var body: some View {
-        let a = store.account
-        VStack(spacing: 14) {
-            Spacer()
-            AvatarCircle(account: a, photo: store.photo, size: 110)
-                .onTapGesture { if a.loggedIn { store.actions.choosePhoto() } }
-            Text(a.loggedIn ? a.name : "Not signed in").font(.title.bold())
-            if a.loggedIn {
-                Text(a.email).foregroundStyle(.secondary)
-                if !a.plan.isEmpty {
-                    Text("Claude \(a.plan) plan").font(.caption.weight(.semibold)).foregroundStyle(Color.brand)
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Capsule().fill(Color.brand.opacity(0.15)))
-                }
-                HStack {
-                    Button(store.photo == nil ? "Choose photo…" : "Change photo…") { store.actions.choosePhoto() }
-                    if store.photo != nil { Button("Remove photo") { store.actions.removePhoto() } }
-                }.padding(.top, 6)
-                Button { store.actions.signOut() } label: { Text("Sign out").foregroundStyle(Color.danger) }
-            } else {
-                Text("Connect your Claude account to see your session and weekly limits, when they reset, and get alerts before you hit them.")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 380)
-                if store.loginBusy {
-                    ProgressView().controlSize(.small)
-                    Text("Finish signing in in your browser window").font(.callout).foregroundStyle(.secondary)
-                    Button("Cancel") { store.actions.cancelSignIn() }
-                } else {
-                    Button { store.actions.signIn() } label: { Text("Sign in with Claude").frame(width: 200) }
-                        .buttonStyle(.borderedProminent).controlSize(.large)
-                }
-            }
-            Text("Sign-in uses Claude’s official login (through Claude Code). Your photo stays on this Mac.")
-                .font(.caption).foregroundStyle(.secondary).padding(.top, 10)
-            Spacer()
+// MARK: - Settings (modelled on System Settings: a categories list on the left, grouped sections on the right)
+
+enum SettingsCategory: String, CaseIterable, Identifiable {
+    case account, general, appearance, menuBar, notifications, data, about
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .account: return "Account"
+        case .general: return "General"
+        case .appearance: return "Appearance"
+        case .menuBar: return "Menu Bar"
+        case .notifications: return "Notifications"
+        case .data: return "Data & Export"
+        case .about: return "About"
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
+    }
+    var icon: String {
+        switch self {
+        case .account: return "person.crop.circle.fill"
+        case .general: return "gearshape.fill"
+        case .appearance: return "paintbrush.fill"
+        case .menuBar: return "menubar.rectangle"
+        case .notifications: return "bell.badge.fill"
+        case .data: return "square.and.arrow.up.fill"
+        case .about: return "info.circle.fill"
+        }
+    }
+    var tint: Color {
+        switch self {
+        case .account: return .blue
+        case .general: return Color(white: 0.5)
+        case .appearance: return .indigo
+        case .menuBar: return .teal
+        case .notifications: return .red
+        case .data: return .green
+        case .about: return Color(white: 0.45)
+        }
+    }
+    var keywords: String {
+        switch self {
+        case .account: return "sign in sign out login profile photo avatar claude plan email"
+        case .general: return "dock launch login refresh startup"
+        case .appearance: return "theme dark light oled black colour color mode orange"
+        case .menuBar: return "menu bar icon session weekly percent"
+        case .notifications: return "alert warn critical important time sensitive banner threshold"
+        case .data: return "export csv copy summary history"
+        case .about: return "version build github source repository"
+        }
     }
 }
 
-// MARK: - Settings
+/// A rounded group of rows with an optional heading and footnote, like a System Settings section.
+struct SGroup<Content: View>: View {
+    var title: String? = nil
+    var footer: String? = nil
+    @ViewBuilder var content: () -> Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let t = title { Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8) }
+            VStack(spacing: 0) { content() }.frame(maxWidth: .infinity).card()
+            if let f = footer { Text(f).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8).fixedSize(horizontal: false, vertical: true) }
+        }
+    }
+}
+
+struct SRow<Trailing: View>: View {
+    let title: String
+    var subtitle: String? = nil
+    @ViewBuilder var trailing: () -> Trailing
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if let s = subtitle { Text(s).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            }
+            Spacer(minLength: 12)
+            trailing()
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+    }
+}
+
+struct SDivider: View {
+    var body: some View { Divider().padding(.leading, 14) }
+}
 
 struct SettingsPage: View {
     @ObservedObject var store: Store
     @ObservedObject var settings: Settings
     @StateObject private var loginBox = Box(SMAppService.mainApp.status == .enabled)
+    @StateObject private var searchBox = Box("")
 
-    private var rowBG: Color? { settings.isOLED ? Color(white: 0.07) : nil }
+    private var matches: [SettingsCategory] {
+        let q = searchBox.value.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return SettingsCategory.allCases.filter { $0 != .account } }
+        return SettingsCategory.allCases.filter { $0 != .account && ($0.title.lowercased().contains(q) || $0.keywords.contains(q)) }
+    }
 
     var body: some View {
-        Form {
-            Section("Appearance") {
-                Picker("Mode", selection: $settings.appearance) {
-                    ForEach(AppearanceMode.allCases) { Text($0.label).tag($0) }
-                }.pickerStyle(.segmented)
-                if settings.appearance == .oled {
-                    Text("Pure black backgrounds – saves power and looks deepest on OLED displays.").font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text(store.settingsCategory.title).font(.largeTitle.bold())
+                    detail(store.settingsCategory)
                 }
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Colour theme")
-                    HStack(spacing: 14) {
-                        ForEach(AccentTheme.allCases) { t in
-                            Button { settings.theme = t } label: {
-                                VStack(spacing: 5) {
-                                    Circle().fill(Color(nsColor: NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? t.colors.0 : t.colors.1 }))
-                                        .frame(width: 30, height: 30)
-                                        .overlay(Circle().stroke(Color.primary.opacity(settings.theme == t ? 0.9 : 0), lineWidth: 2).padding(-4))
-                                    Text(t.label).font(.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary)
-                                }
-                            }.buttonStyle(.plain)
-                        }
-                    }
-                }
-            }.listRowBackground(rowBG)
-
-            Section("Menu bar") {
-                Picker("Show", selection: $settings.menuBarStyle) {
-                    ForEach(MenuBarStyle.allCases) { Text($0.label).tag($0) }
-                }
-            }.listRowBackground(rowBG)
-
-            Section("General") {
-                Toggle("Show in Dock", isOn: $settings.showInDock)
-                Toggle("Launch at login", isOn: Binding(
-                    get: { loginBox.value },
-                    set: { on in
-                        do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
-                        catch { NSSound.beep() }
-                        loginBox.value = SMAppService.mainApp.status == .enabled
-                    }))
-                Picker("Refresh every", selection: $settings.refreshMinutes) {
-                    Text("1 minute").tag(1); Text("2 minutes").tag(2); Text("5 minutes").tag(5); Text("10 minutes").tag(10)
-                }
-            }.listRowBackground(rowBG)
-
-            Section("Notifications") {
-                HStack {
-                    Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill")
-                        .foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("macOS notifications: \(store.notifStatus)")
-                        if store.notifBlocked {
-                            Text("Blocked – alerts will appear as an on-screen banner with the app icon instead.").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    if store.notifBlocked { Button("Allow…") { store.actions.requestNotifications() } }
-                }
-                Toggle("Alert when a limit gets close", isOn: $settings.notificationsOn)
-                Picker("Mark as important", selection: $settings.importance) {
-                    ForEach(NotifImportance.allCases) { Text($0.label).tag($0) }
-                }
-                if settings.importance != .normal {
-                    Text("Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Stepper("Warn at \(settings.warnThreshold)%", value: $settings.warnThreshold, in: 50...95, step: 5)
-                Stepper("Critical at \(settings.criticalThreshold)%", value: $settings.criticalThreshold, in: 60...99, step: 1)
-                Toggle("Warn when on pace to hit a limit early", isOn: $settings.predictiveAlerts)
-                HStack {
-                    Button("Send test notification") { store.actions.testNotify() }
-                    Button("Test as important") { store.actions.testImportant() }
-                    Button("Open notification settings") { store.actions.openNotificationSettings() }
-                }
-            }.listRowBackground(rowBG)
-
-            Section("Data") {
-                HStack {
-                    Button("Export data (CSV)…") { store.actions.exportData() }
-                    Button("Copy usage summary") { store.actions.copySummary() }
-                }
-                Text("Daily tokens and your limit history are exported as two CSV files.").font(.caption).foregroundStyle(.secondary)
-            }.listRowBackground(rowBG)
-
-            Section("About") {
-                LabeledContent("Version", value: "\(AppInfo.version) \(AppInfo.stage)")
-                LabeledContent("Build", value: AppInfo.build)
-                LabeledContent("Source code") { Link("github.com/Ol775/MacApps", destination: AppInfo.repoURL) }
-                Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }.listRowBackground(rowBG)
+                .padding(28).frame(maxWidth: 680, alignment: .leading).frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(settings.isOLED ? Color.black : Color.clear)
+    }
+
+    // MARK: left column
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search", text: $searchBox.value).textFieldStyle(.plain)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.secondary.opacity(0.15)))
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 4) {
+                    profileRow
+                    Divider().padding(.vertical, 6)
+                    ForEach(matches) { c in categoryRow(c) }
+                    if matches.isEmpty { Text("No results").foregroundStyle(.secondary).padding(8) }
+                }
+            }
+        }
+        .padding(12).frame(width: 250)
+        .background(settings.isOLED ? Color.black : Color(nsColor: .controlBackgroundColor).opacity(0.4))
+    }
+
+    private var profileRow: some View {
+        let a = store.account, selected = store.settingsCategory == .account
+        return Button { store.settingsCategory = .account } label: {
+            HStack(spacing: 10) {
+                AvatarCircle(account: a, photo: store.photo, size: 42)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(a.loggedIn ? a.name : "Sign in").fontWeight(.semibold).foregroundStyle(selected ? Color.white : Color.primary)
+                    Text(a.loggedIn ? (a.plan.isEmpty ? "Claude account" : "Claude \(a.plan)") : "with your Claude account")
+                        .font(.caption).foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Color.brand : Color.clear))
+            .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+    }
+
+    private func categoryRow(_ c: SettingsCategory) -> some View {
+        let selected = store.settingsCategory == c
+        return Button { store.settingsCategory = c } label: {
+            HStack(spacing: 10) {
+                Image(systemName: c.icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .background(RoundedRectangle(cornerRadius: 6.5, style: .continuous).fill(c.tint.gradient))
+                Text(c.title).foregroundStyle(selected ? Color.white : Color.primary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 5)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? Color.brand : Color.clear))
+            .contentShape(Rectangle())
+        }.buttonStyle(.plain)
+    }
+
+    // MARK: panes
+
+    @ViewBuilder private func detail(_ c: SettingsCategory) -> some View {
+        switch c {
+        case .account: accountPane
+        case .general: generalPane
+        case .appearance: appearancePane
+        case .menuBar: menuBarPane
+        case .notifications: notificationsPane
+        case .data: dataPane
+        case .about: aboutPane
+        }
+    }
+
+    private var accountPane: some View {
+        let a = store.account
+        return VStack(alignment: .leading, spacing: 22) {
+            VStack(spacing: 8) {
+                AvatarCircle(account: a, photo: store.photo, size: 96).onTapGesture { if a.loggedIn { store.actions.choosePhoto() } }
+                Text(a.loggedIn ? a.name : "Not signed in").font(.title2.bold())
+                if a.loggedIn {
+                    Text(a.email).foregroundStyle(.secondary)
+                    if !a.plan.isEmpty {
+                        Text("Claude \(a.plan) plan").font(.caption.weight(.semibold)).foregroundStyle(Color.brand)
+                            .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Color.brand.opacity(0.15)))
+                    }
+                } else {
+                    Text("Connect your Claude account to see your session and weekly limits, when they reset, and get alerts before you hit them.")
+                        .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 380)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            if a.loggedIn {
+                SGroup(title: "Profile photo", footer: "Your photo stays on this Mac – Claude doesn’t share one.") {
+                    SRow(title: store.photo == nil ? "Choose a photo" : "Change photo") {
+                        Button(store.photo == nil ? "Choose…" : "Change…") { store.actions.choosePhoto() }
+                    }
+                    if store.photo != nil { SDivider(); SRow(title: "Remove photo") { Button("Remove") { store.actions.removePhoto() } } }
+                }
+                SGroup {
+                    SRow(title: "Sign out", subtitle: "Also signs out Claude Code – they share one login.") {
+                        Button { store.actions.signOut() } label: { Text("Sign Out…").foregroundStyle(Color.danger) }
+                    }
+                }
+            } else {
+                SGroup(footer: "Sign-in uses Claude’s official login, through Claude Code.") {
+                    if store.loginBusy {
+                        SRow(title: "Waiting for your browser…", subtitle: "Finish signing in in the browser window.") {
+                            HStack { ProgressView().controlSize(.small); Button("Cancel") { store.actions.cancelSignIn() } }
+                        }
+                    } else {
+                        SRow(title: "Sign in with Claude") {
+                            Button("Sign In") { store.actions.signIn() }.buttonStyle(.borderedProminent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var generalPane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "Startup") {
+                SRow(title: "Show in Dock", subtitle: "Turn off to live only in the menu bar.") { Toggle("", isOn: $settings.showInDock).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Launch at login") {
+                    Toggle("", isOn: Binding(
+                        get: { loginBox.value },
+                        set: { on in
+                            do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
+                            catch { NSSound.beep() }
+                            loginBox.value = SMAppService.mainApp.status == .enabled
+                        })).labelsHidden().toggleStyle(.switch)
+                }
+            }
+            SGroup(title: "Updates") {
+                SRow(title: "Refresh every", subtitle: "How often limits and usage are re-read.") {
+                    Picker("", selection: $settings.refreshMinutes) {
+                        Text("1 minute").tag(1); Text("2 minutes").tag(2); Text("5 minutes").tag(5); Text("10 minutes").tag(10)
+                    }.labelsHidden().frame(width: 130)
+                }
+            }
+        }
+    }
+
+    private var appearancePane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "Mode") {
+                HStack(spacing: 14) {
+                    ForEach(AppearanceMode.allCases) { m in modeTile(m) }
+                }
+                .padding(16).frame(maxWidth: .infinity)
+            }
+            if settings.appearance == .oled {
+                Text("OLED black uses pure black backgrounds – deepest on OLED displays and easy on the battery.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+            }
+            SGroup(title: "Colour theme") {
+                HStack(spacing: 16) {
+                    ForEach(AccentTheme.allCases) { t in
+                        Button { settings.theme = t } label: {
+                            VStack(spacing: 6) {
+                                Circle().fill(Color(nsColor: NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? t.colors.0 : t.colors.1 }))
+                                    .frame(width: 30, height: 30)
+                                    .overlay(Circle().stroke(Color.primary.opacity(settings.theme == t ? 0.9 : 0), lineWidth: 2).padding(-4))
+                                Text(t.label).font(.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary)
+                            }
+                        }.buttonStyle(.plain)
+                    }
+                }
+                .padding(16).frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func modeTile(_ m: AppearanceMode) -> some View {
+        let selected = settings.appearance == m
+        let fill: AnyShapeStyle
+        switch m {
+        case .light: fill = AnyShapeStyle(LinearGradient(colors: [Color(white: 0.98), Color(white: 0.86)], startPoint: .top, endPoint: .bottom))
+        case .dark: fill = AnyShapeStyle(LinearGradient(colors: [Color(white: 0.24), Color(white: 0.12)], startPoint: .top, endPoint: .bottom))
+        case .oled: fill = AnyShapeStyle(Color.black)
+        case .system: fill = AnyShapeStyle(LinearGradient(stops: [.init(color: Color(white: 0.96), location: 0.5), .init(color: Color(white: 0.14), location: 0.5)], startPoint: .leading, endPoint: .trailing))
+        }
+        return Button { settings.appearance = m } label: {
+            VStack(spacing: 7) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(fill)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous).stroke(Color.secondary.opacity(0.4), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 3).fill(Color.brand).frame(width: 30, height: 6).offset(y: 6)
+                }
+                .frame(width: 96, height: 62)
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(selected ? Color.brand : Color.clear, lineWidth: 3).padding(-4))
+                Text(m.label).font(.caption).fontWeight(selected ? .semibold : .regular)
+            }
+        }.buttonStyle(.plain)
+    }
+
+    private var menuBarPane: some View {
+        let sess = store.limits.first { $0.kind == .session }, week = store.limits.first { $0.kind == .weekly }
+        let sample: String = {
+            func p(_ l: Limit?) -> String { l.map { "\(Int($0.percent.rounded()))%" } ?? "00%" }
+            switch settings.menuBarStyle {
+            case .both: return "D \(p(sess))  W \(p(week))"
+            case .session: return "D \(p(sess))"
+            case .weekly: return "W \(p(week))"
+            case .tokens: return fmt(store.snapshot.today.billable)
+            case .iconOnly: return ""
+            }
+        }()
+        return VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "Preview") {
+                HStack(spacing: 8) {
+                    Image(nsImage: menuBarBotImage())
+                    Text(sample).font(.system(size: 13)).monospacedDigit()
+                }
+                .padding(18).frame(maxWidth: .infinity)
+            }
+            SGroup(title: "Show in the menu bar", footer: "D is your current session limit and W is the weekly limit.") {
+                SRow(title: "Display") {
+                    Picker("", selection: $settings.menuBarStyle) { ForEach(MenuBarStyle.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().frame(width: 170)
+                }
+            }
+        }
+    }
+
+    private var notificationsPane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "macOS permission") {
+                SRow(title: "Notifications: \(store.notifStatus)",
+                     subtitle: store.notifBlocked ? "Blocked – alerts appear as an on-screen banner with the app icon instead." : nil) {
+                    HStack {
+                        Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill").foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
+                        if store.notifBlocked { Button("Allow…") { store.actions.requestNotifications() } }
+                        else { Button("Open Settings") { store.actions.openNotificationSettings() } }
+                    }
+                }
+            }
+            SGroup(title: "Alerts") {
+                SRow(title: "Alert when a limit gets close") { Toggle("", isOn: $settings.notificationsOn).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Warn when on pace to hit a limit early", subtitle: "Uses your current pace and saved history.") { Toggle("", isOn: $settings.predictiveAlerts).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Warn at") {
+                    HStack { Text("\(settings.warnThreshold)%").monospacedDigit(); Stepper("", value: $settings.warnThreshold, in: 50...95, step: 5).labelsHidden() }
+                }
+                SDivider()
+                SRow(title: "Critical at") {
+                    HStack { Text("\(settings.criticalThreshold)%").monospacedDigit(); Stepper("", value: $settings.criticalThreshold, in: 60...99, step: 1).labelsHidden() }
+                }
+            }
+            SGroup(title: "Importance", footer: settings.importance == .normal ? nil :
+                    "Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.") {
+                SRow(title: "Mark as important") {
+                    Picker("", selection: $settings.importance) { ForEach(NotifImportance.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().frame(width: 230)
+                }
+            }
+            SGroup(title: "Try it") {
+                SRow(title: "Send a test notification") { Button("Send") { store.actions.testNotify() } }
+                SDivider()
+                SRow(title: "Send a test as important") { Button("Send") { store.actions.testImportant() } }
+            }
+        }
+    }
+
+    private var dataPane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "Export", footer: "Daily tokens and your limit history are saved as two CSV files in a folder you choose.") {
+                SRow(title: "Export data as CSV") { Button("Export…") { store.actions.exportData() } }
+            }
+            SGroup(title: "Share") {
+                SRow(title: "Copy usage summary", subtitle: "Your limits, forecasts and totals as text.") { Button("Copy") { store.actions.copySummary() } }
+            }
+            SGroup(title: "Saved activity", footer: "Daily activity is stored on this Mac so insights and the yearly view outlast Claude Code’s own log clean-up.") {
+                SRow(title: "Days stored") { Text("\(store.snapshot.days.count)").monospacedDigit().foregroundStyle(.secondary) }
+            }
+        }
+    }
+
+    private var aboutPane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(spacing: 8) {
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84)
+                Text("Claude Usage").font(.title2.bold())
+                Text("Version \(AppInfo.version) \(AppInfo.stage)").foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity)
+            SGroup {
+                SRow(title: "Version") { Text("\(AppInfo.version) \(AppInfo.stage)").foregroundStyle(.secondary) }
+                SDivider()
+                SRow(title: "Build") { Text(AppInfo.build).foregroundStyle(.secondary).monospacedDigit() }
+                SDivider()
+                SRow(title: "Source code") { Link("github.com/Ol775/MacApps", destination: AppInfo.repoURL) }
+            }
+            Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+        }
     }
 }

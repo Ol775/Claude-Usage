@@ -3,6 +3,12 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.3.1 – alpha
+- Settings toggles are now switches like System Settings
+
+## 0.3.0 – alpha
+- Account moved into Settings; Settings redesigned like System Settings (categories list, search, grouped sections, appearance tiles); app icon now matches the menu bar bot (orange bot on a dark tile)
+
 ## 0.2.0 – alpha
 - New original bot icon for the app and the menu bar (drop your own art at `assets/bot.png` to replace it)
 - Menu bar now reads `D 00%  W 00%` (D = current session, W = weekly)

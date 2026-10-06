@@ -8,12 +8,13 @@ func render(_ px: Int) -> Data {
     let s = CGFloat(px)
     let inset = s * 0.085, body = NSRect(x: inset, y: inset, width: s - 2*inset, height: s - 2*inset)
     let path = NSBezierPath(roundedRect: body, xRadius: s * 0.225, yRadius: s * 0.225)
-    NSGradient(starting: NSColor(srgbRed: 1.00, green: 0.60, blue: 0.38, alpha: 1),
-               ending: NSColor(srgbRed: 0.80, green: 0.34, blue: 0.16, alpha: 1))!.draw(in: path, angle: -90)
+    // dark tile with the same orange bot as the menu bar icon (eyes cut out to the tile)
+    NSGradient(starting: NSColor(srgbRed: 0.20, green: 0.20, blue: 0.23, alpha: 1),
+               ending: NSColor(srgbRed: 0.07, green: 0.07, blue: 0.09, alpha: 1))!.draw(in: path, angle: -90)
     // the bot (or custom artwork from assets/bot.png), centred on the tile
     let side = s * 0.60, area = NSRect(x: (s - side) / 2, y: (s - side) / 2 - s * 0.015, width: side, height: side)
     if let c = custom { c.draw(in: area, from: .zero, operation: .sourceOver, fraction: 1) }
-    else { drawBot(in: area, body: .white, eyes: NSColor(srgbRed: 0.83, green: 0.36, blue: 0.17, alpha: 1)) }
+    else { drawBot(in: area, body: NSColor(srgbRed: 1.00, green: 0.55, blue: 0.33, alpha: 1), eyes: NSColor(srgbRed: 0.12, green: 0.12, blue: 0.14, alpha: 1)) }
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }

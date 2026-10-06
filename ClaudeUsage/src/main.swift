@@ -156,7 +156,7 @@ final class App: NSObject, NSApplicationDelegate {
                     } else if f.error?.hasPrefix("Usage unavailable") == true, !self.store.limits.isEmpty {
                         self.store.stale = true            // network blip: keep the last good numbers instead of blanking the UI
                     } else { self.store.limits = []; self.store.limitError = f.error; self.store.stale = false }
-                    if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.showDashboard(.account) }
+                    if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.store.settingsCategory = .account; self.showDashboard(.settings) }
                 }
                 self.store.snapshot = s; self.store.lastUpdated = Date()
                 self.refreshNotifStatus()
@@ -437,6 +437,7 @@ final class App: NSObject, NSApplicationDelegate {
             guard i < steps.count else { tall(); return }
             let (a, t, th) = steps[i]; i += 1
             settings.appearance = a; settings.theme = th; store.tab = t
+            if t == .settings { store.settingsCategory = a == .dark ? .appearance : (a == .light ? .account : .notifications) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 try? "\(i) \(a.rawValue)-\(t.rawValue)-\(th.rawValue) \(self.dashboard?.windowNumber ?? 0)".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { next() }
