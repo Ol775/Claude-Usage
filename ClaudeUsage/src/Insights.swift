@@ -117,7 +117,7 @@ struct InsightsView: View {
                     }
 
                     // Heavy / light days
-                    section("Heavy and light days", subtitle: "Heavy = 1.5× your average active day or more; light = half or less") {
+                    section("Heavy and light days", subtitle: "Heavy: at least 1.5× your average active day. Light: half of it or less.") {
                         Chart(data) { r in
                             BarMark(x: .value("Day", r.date, unit: .day), y: .value("Tokens", r.tokens))
                                 .foregroundStyle(color(cls(r)))
@@ -129,10 +129,10 @@ struct InsightsView: View {
                         .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let x = v.as(Int.self) { Text(fmt(x)) } } } }
                         .padding(.top, 14).frame(height: 220)
                         HStack(spacing: 18) {
-                            legend(Color.brand, "Heavy · \(heavy.count) days")
-                            legend(Color.brand.opacity(0.55), "Normal · \(active.count - heavy.count - light.count)")
-                            legend(Color.secondary.opacity(0.55), "Light · \(light.count)")
-                            legend(Color.secondary.opacity(0.2), "Idle · \(n - active.count)")
+                            legend(Color.brand, "Heavy · \(plural(heavy.count, "day"))")
+                            legend(Color.brand.opacity(0.55), "Normal · \(plural(active.count - heavy.count - light.count, "day"))")
+                            legend(Color.secondary.opacity(0.55), "Light · \(plural(light.count, "day"))")
+                            legend(Color.secondary.opacity(0.2), "Idle · \(plural(n - active.count, "day"))")
                         }.font(.caption)
                     }
 
@@ -297,7 +297,7 @@ struct InsightsView: View {
             Image(systemName: "externaldrive.badge.checkmark").font(.title3).foregroundStyle(Color.brand)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Activity is saved on this Mac").font(.headline)
-                Text("\(stored) days of activity are stored" + (since.map { " · recording since \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") +
+                Text((stored == 1 ? "1 day of activity is stored" : "\(stored) days of activity are stored") + (since.map { " · recording since \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") +
                      ". They keep these insights and the yearly view going even after Claude Code clears its own logs, and your usual week is used to sharpen the weekly-limit forecast.")
                     .font(.callout).foregroundStyle(.secondary)
             }

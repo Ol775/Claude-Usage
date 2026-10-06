@@ -64,7 +64,7 @@ final class AccountView: NSView {
         drawAvatar(in: NSRect(x: 16, y: 14, width: 40, height: 40), account: account)
         let title = account.loggedIn ? account.name : "Not signed in"
         NSAttributedString(string: title, attributes: [.font: NSFont.boldSystemFont(ofSize: 14), .foregroundColor: NSColor.labelColor]).draw(at: NSPoint(x: 66, y: 34))
-        let sub = account.loggedIn ? [account.email, account.plan.isEmpty ? "" : "\(account.plan) plan"].filter { !$0.isEmpty }.joined(separator: " · ") : "Choose “Sign in with Claude…” below"
+        let sub = account.loggedIn ? [account.email, account.plan.isEmpty ? "" : "\(account.plan) plan"].filter { !$0.isEmpty }.joined(separator: " · ") : "Open Settings → Account to sign in"
         NSAttributedString(string: sub, attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]).draw(at: NSPoint(x: 66, y: 16))
         if account.loggedIn && !account.plan.isEmpty {
             let b = NSAttributedString(string: account.plan.uppercased(), attributes: [.font: NSFont.boldSystemFont(ofSize: 9), .foregroundColor: claudeOrange])
@@ -104,15 +104,15 @@ final class UsageBarView: NSView {
 }
 
 /// The menu bar icon: the custom image if one was bundled, otherwise the drawn bot in the accent colour.
-func menuBarBotImage() -> NSImage {
+func menuBarBotImage(mono: Bool = false) -> NSImage {
     if let url = Bundle.main.url(forResource: "Bot", withExtension: "png"), let img = NSImage(contentsOf: url) {
         img.size = NSSize(width: 18, height: 18); return img
     }
     let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
-        drawBot(in: rect.insetBy(dx: 0.5, dy: 0.5), body: claudeOrange, eyes: nil)
+        drawBot(in: rect.insetBy(dx: 0.5, dy: 0.5), body: mono ? .black : claudeOrange, eyes: nil)
         return true
     }
-    img.isTemplate = false
+    img.isTemplate = mono          // monochrome: macOS tints it to match the menu bar
     img.accessibilityDescription = "Claude Usage"
     return img
 }

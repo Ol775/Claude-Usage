@@ -22,6 +22,9 @@ struct Snapshot {
     var updated = Date()
 }
 
+/// "1 response", "2 responses".
+func plural(_ n: Int, _ noun: String) -> String { "\(n) \(noun)\(n == 1 ? "" : "s")" }
+
 func fmt(_ n: Int) -> String {
     switch n {
     case 1_000_000...: return String(format: "%.1fM", Double(n) / 1e6)

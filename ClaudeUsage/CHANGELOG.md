@@ -3,6 +3,13 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.7.0 – alpha (2026-10-06)
+- Updates download in the background and ask for a restart to finish (banner, menu item, notification with Restart Now)
+- Full menu bar customisation: choose the items, label style, percentage colour and icon style, with presets and a live preview
+- Fixed a false "on pace to hit your weekly limit" warning: a short busy stretch was being stretched across the whole week; the weekly forecast now uses the whole week plus your usual weekly pattern
+- Fixed the menu bar menu being rebuilt while it was open, a second copy of the app adding a second menu bar icon, update notices being hidden when limit alerts were off, and "Allow…" not showing before macOS had been asked about notifications
+- Grammar and wording fixes (1 response, 1 day…), a stale sign-in hint in the menu, and a Settings… menu item
+
 ## 0.6.1 – alpha (2026-10-06)
 - Change log in About shows only the last 3 versions (full history on GitHub)
 

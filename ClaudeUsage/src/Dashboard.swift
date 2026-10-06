@@ -18,6 +18,8 @@ struct Actions {
     var copyUpdateCommand: () -> Void = {}
     var openChangelog: () -> Void = {}
     var installUpdate: () -> Void = {}
+    var applyUpdate: () -> Void = {}
+    var postponeUpdate: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
     var requestNotifications: () -> Void = {}
     var exportData: () -> Void = {}
@@ -59,6 +61,7 @@ final class Store: ObservableObject {
     @Published var installing = false
     @Published var installMessage = ""
     @Published var installError: String?
+    @Published var bannerHidden = false
     var actions = Actions()
 }
 
@@ -97,7 +100,9 @@ struct DashboardView: View {
         HStack(spacing: 0) {
             SidebarView(store: store, collapsed: collapsed, settings: settings)
             Divider()
-            Group {
+            VStack(spacing: 0) {
+                UpdateBanner(store: store)
+                Group {
                 switch store.tab {
                 case .overview: OverviewView(store: store)
                 case .reports: ReportsView(store: store)
@@ -105,6 +110,8 @@ struct DashboardView: View {
                 case .usage: UsageView(store: store)
                 case .settings: SettingsPage(store: store, settings: settings)
                 }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor))
@@ -164,6 +171,28 @@ struct SidebarView: View {
     }
 }
 
+/// Shown above every page once an update has been downloaded: asks for a restart to finish installing it.
+struct UpdateBanner: View {
+    @ObservedObject var store: Store
+    var body: some View {
+        if case .ready(let u, _) = store.update, !store.bannerHidden {
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(.title3).foregroundStyle(Color.brand)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Version \(u.version) is ready to install").fontWeight(.semibold)
+                    Text("Restart Claude Usage to finish updating.").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Later") { store.actions.postponeUpdate() }
+                Button("Restart Now") { store.actions.applyUpdate() }.buttonStyle(.borderedProminent)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .background(Color.brand.opacity(0.14))
+            .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
+        }
+    }
+}
+
 // MARK: - Overview
 
 struct OverviewView: View {
@@ -178,7 +207,7 @@ struct OverviewView: View {
                             .font(.largeTitle.bold())
                         HStack(spacing: 6) {
                             if store.stale { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
-                            Text(store.stale ? "Couldn’t reach Anthropic – showing the last good reading"
+                            Text(store.stale ? "Couldn’t reach Anthropic – showing the last reading"
                                  : (store.lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "Loading…"))
                                 .foregroundStyle(.secondary)
                         }
@@ -220,7 +249,7 @@ struct OverviewView: View {
                 }
 
                 HStack(spacing: 16) {
-                    StatTile(title: "Today", value: fmt(store.snapshot.today.billable), sub: "\(store.snapshot.messagesToday) responses")
+                    StatTile(title: "Today", value: fmt(store.snapshot.today.billable), sub: plural(store.snapshot.messagesToday, "response"))
                     StatTile(title: "Last 7 days", value: fmt(store.snapshot.week.billable), sub: "tokens")
                     StatTile(title: "This month", value: fmt(store.snapshot.month.billable), sub: "tokens")
                     StatTile(title: "Cache reads (7d)", value: fmt(store.snapshot.week.cacheRead), sub: "not counted above")
@@ -581,7 +610,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .account: return "sign in sign out login profile photo avatar claude plan email"
         case .general: return "dock launch login refresh startup"
         case .appearance: return "theme dark light oled black colour color mode orange"
-        case .menuBar: return "menu bar icon session weekly percent"
+        case .menuBar: return "menu bar icon session weekly percent customise customize preset label tokens reset countdown"
         case .notifications: return "alert warn critical important time sensitive banner threshold"
         case .data: return "export csv copy summary history"
         case .about: return "version build github source repository"
@@ -679,7 +708,7 @@ struct SettingsPage: View {
         let a = store.account, selected = store.settingsCategory == .account
         return Button { store.settingsCategory = .account } label: {
             HStack(spacing: 10) {
-                AvatarCircle(account: a, photo: store.photo, size: 42)
+                AvatarCircle(account: a, photo: store.photo, size: 42).overlay(Circle().stroke(Color.white.opacity(selected ? 0.9 : 0), lineWidth: 2))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(a.loggedIn ? a.name : "Sign in").fontWeight(.semibold).foregroundStyle(selected ? Color.white : Color.primary)
                     Text(a.loggedIn ? (a.plan.isEmpty ? "Claude account" : "Claude \(a.plan)") : "with your Claude account")
@@ -769,7 +798,7 @@ struct SettingsPage: View {
             } else {
                 SGroup(footer: "Sign-in uses Claude’s official login, through Claude Code.") {
                     if store.loginBusy {
-                        SRow(title: "Waiting for your browser…", subtitle: "Finish signing in in the browser window.") {
+                        SRow(title: "Waiting for your browser…", subtitle: "Finish signing in using the browser window.") {
                             HStack { ProgressView().controlSize(.small); Button("Cancel") { store.actions.cancelSignIn() } }
                         }
                     } else {
@@ -785,7 +814,7 @@ struct SettingsPage: View {
     private var generalPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "Startup") {
-                SRow(title: "Show in Dock", subtitle: "Turn off to live only in the menu bar.") { Toggle("", isOn: $settings.showInDock).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Show in Dock", subtitle: "Turn off to keep the app in the menu bar only.") { Toggle("", isOn: $settings.showInDock).labelsHidden().toggleStyle(.switch) }
                 SDivider()
                 SRow(title: "Launch at login") {
                     Toggle("", isOn: Binding(
@@ -798,7 +827,7 @@ struct SettingsPage: View {
                 }
             }
             SGroup(title: "Updates") {
-                SRow(title: "Refresh every", subtitle: "How often limits and usage are re-read.") {
+                SRow(title: "Refresh every", subtitle: "How often limits and usage are refreshed.") {
                     Picker("", selection: $settings.refreshMinutes) {
                         Text("1 minute").tag(1); Text("2 minutes").tag(2); Text("5 minutes").tag(5); Text("10 minutes").tag(10)
                     }.labelsHidden().frame(width: 130)
@@ -860,29 +889,67 @@ struct SettingsPage: View {
     }
 
     private var menuBarPane: some View {
-        let sess = store.limits.first { $0.kind == .session }, week = store.limits.first { $0.kind == .weekly }
-        let sample: String = {
-            func p(_ l: Limit?) -> String { l.map { "\(Int($0.percent.rounded()))%" } ?? "00%" }
-            switch settings.menuBarStyle {
-            case .both: return "D \(p(sess))  W \(p(week))"
-            case .session: return "D \(p(sess))"
-            case .weekly: return "W \(p(week))"
-            case .tokens: return fmt(store.snapshot.today.billable)
-            case .iconOnly: return ""
+        let parts = MenuBarTitle.parts(limits: store.limits, tokensToday: store.snapshot.today.billable, settings: settings)
+        let showIcon = settings.menuShowIcon || parts.isEmpty
+        var preview = Text("")
+        for (i, p) in parts.enumerated() {
+            if i > 0 { preview = preview + Text("   ") }
+            if let l = p.label { preview = preview + Text(l + " ").fontWeight(.semibold) }
+            var v = Text(p.value).monospacedDigit()
+            if p.isPercent {
+                switch settings.menuPercentColour {
+                case .critical: if p.hot { v = v.foregroundColor(Color.danger) }
+                case .accent: v = v.foregroundColor(p.hot ? Color.danger : Color.brand)
+                case .plain: break
+                }
             }
-        }()
+            preview = preview + v
+        }
         return VStack(alignment: .leading, spacing: 22) {
-            SGroup(title: "Preview") {
-                HStack(spacing: 8) {
-                    Image(nsImage: menuBarBotImage())
-                    Text(sample).font(.system(size: 13)).monospacedDigit()
+            SGroup(title: "Preview", footer: "How the menu bar item looks right now.") {
+                HStack(spacing: 6) {
+                    if showIcon { Image(nsImage: menuBarBotImage(mono: settings.menuIconMono)).foregroundStyle(.primary) }
+                    preview.font(.system(size: 13))
                 }
                 .padding(18).frame(maxWidth: .infinity)
             }
-            SGroup(title: "Show in the menu bar", footer: "D is your current session limit and W is the weekly limit.") {
-                SRow(title: "Display") {
-                    Picker("", selection: $settings.menuBarStyle) { ForEach(MenuBarStyle.allCases) { Text($0.label).tag($0) } }
-                        .labelsHidden().frame(width: 170)
+            SGroup(title: "Presets") {
+                HStack(spacing: 10) {
+                    ForEach(MenuBarPreset.allCases) { p in
+                        Button { settings.apply(p) } label: {
+                            VStack(spacing: 2) {
+                                Text(p.label).fontWeight(.medium)
+                                Text(p.detail).font(.caption2).foregroundStyle(.secondary)
+                            }.frame(maxWidth: .infinity).padding(.vertical, 6)
+                        }.buttonStyle(.bordered)
+                    }
+                }
+                .padding(14)
+            }
+            SGroup(title: "Items", footer: "If you turn everything off, the icon stays so the item never disappears.") {
+                SRow(title: "Icon") { Toggle("", isOn: $settings.menuShowIcon).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Current session", subtitle: "How much of the session limit you’ve used.") { Toggle("", isOn: $settings.menuShowSession).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Weekly limit", subtitle: "How much of the weekly limit you’ve used.") { Toggle("", isOn: $settings.menuShowWeekly).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Tokens today", subtitle: "Input, output and cache-write tokens used today.") { Toggle("", isOn: $settings.menuShowTokens).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "Session reset countdown", subtitle: "Time until the session limit resets, such as ↻ 1h 30m.") { Toggle("", isOn: $settings.menuShowReset).labelsHidden().toggleStyle(.switch) }
+            }
+            SGroup(title: "Style", footer: "D is your current session limit and W is the weekly limit.") {
+                SRow(title: "Labels") {
+                    Picker("", selection: $settings.menuLabelStyle) { ForEach(MenuLabelStyle.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().frame(width: 190)
+                }
+                SDivider()
+                SRow(title: "Percentage colour") {
+                    Picker("", selection: $settings.menuPercentColour) { ForEach(MenuPercentColour.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().frame(width: 190)
+                }
+                SDivider()
+                SRow(title: "Match the menu bar colour", subtitle: "Draws the icon in black or white like other menu bar icons.") {
+                    Toggle("", isOn: $settings.menuIconMono).labelsHidden().toggleStyle(.switch)
                 }
             }
         }
@@ -892,10 +959,10 @@ struct SettingsPage: View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "macOS permission") {
                 SRow(title: "Notifications: \(store.notifStatus)",
-                     subtitle: store.notifBlocked ? "Blocked – alerts appear as an on-screen banner with the app icon instead." : nil) {
+                     subtitle: store.notifBlocked ? "Blocked – alerts appear as an on-screen banner with the app icon instead." : (store.notifStatus == "Allowed" ? nil : "macOS hasn’t been asked yet – choose Allow to turn notifications on.")) {
                     HStack {
                         Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill").foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
-                        if store.notifBlocked { Button("Allow…") { store.actions.requestNotifications() } }
+                        if store.notifStatus != "Allowed" { Button("Allow…") { store.actions.requestNotifications() } }
                         else { Button("Open Settings") { store.actions.openNotificationSettings() } }
                     }
                 }
@@ -1003,7 +1070,14 @@ struct SettingsPage: View {
         }
     }
 
-    private var updateAvailable: Bool { if case .available = store.update { return true }; return false }
+    private var updatePending: Bool { switch store.update { case .available, .ready: return true; default: return false } }
+
+    @ViewBuilder private func notesList(_ u: UpdateInfo) -> some View {
+        Text("What’s new").font(.subheadline.weight(.semibold))
+        ForEach(Array(u.notes.prefix(6).enumerated()), id: \.offset) { _, n in
+            HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(.callout).foregroundStyle(.secondary)
+        }
+    }
 
     @ViewBuilder private var updatesGroup: some View {
         let statusText: String = {
@@ -1012,29 +1086,43 @@ struct SettingsPage: View {
             case .checking: return "Checking…"
             case .upToDate(let d): return "You’re up to date · checked \(d.formatted(date: .omitted, time: .shortened))"
             case .available(let u): return "Version \(u.version) is available"
+            case .ready(let u, _): return "Version \(u.version) is ready to install"
             case .failed(let m): return m
             }
         }()
         SGroup(title: "Updates") {
-            SRow(title: statusText, subtitle: updateAvailable ? "You have \(Updater.installed)." : nil) {
+            SRow(title: statusText, subtitle: updatePending ? "You have \(Updater.installed)." : nil) {
                 Button("Check Now") { store.actions.checkUpdates() }
             }
             SDivider()
-            SRow(title: "Check automatically", subtitle: "Looks for a newer version on GitHub every few hours and notifies you.") {
+            SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and notifies you.") {
                 Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
             }
-            if case .available(let u) = store.update {
+            SDivider()
+            SRow(title: "Download updates in the background", subtitle: "Builds new versions quietly, then asks you to restart to finish.") {
+                Toggle("", isOn: $settings.autoDownloadUpdates).labelsHidden().toggleStyle(.switch)
+            }
+            if case .ready(let u, _) = store.update {
                 SDivider()
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("What’s new").font(.subheadline.weight(.semibold))
-                    ForEach(Array(u.notes.prefix(6).enumerated()), id: \.offset) { _, n in
-                        HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(.callout).foregroundStyle(.secondary)
-                    }
+                    notesList(u)
+                    HStack {
+                        Button("Restart & Update") { store.actions.applyUpdate() }.buttonStyle(.borderedProminent)
+                        Button("View on GitHub") { store.actions.openChangelog() }
+                    }.padding(.top, 4)
+                    Text("Claude Usage will close and reopen. Your current version is kept as a backup.").font(.caption).foregroundStyle(.secondary)
+                    if let e = store.installError { Text(e).font(.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
+                }
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            } else if case .available(let u) = store.update {
+                SDivider()
+                VStack(alignment: .leading, spacing: 8) {
+                    notesList(u)
                     if store.installing {
                         HStack(spacing: 10) { ProgressView().controlSize(.small); Text(store.installMessage).font(.callout) }.padding(.top, 4)
                     } else {
                         HStack {
-                            Button { store.actions.installUpdate() } label: { Text("Update Now") }.buttonStyle(.borderedProminent)
+                            Button("Update Now") { store.actions.installUpdate() }.buttonStyle(.borderedProminent)
                             Button("View on GitHub") { store.actions.openChangelog() }
                             Button("Copy command") { store.actions.copyUpdateCommand() }
                         }.padding(.top, 4)

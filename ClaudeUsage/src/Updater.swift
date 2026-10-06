@@ -9,6 +9,7 @@ enum UpdateStatus {
     case checking
     case upToDate(Date)
     case available(UpdateInfo)
+    case ready(UpdateInfo, URL)          // downloaded and built – restart to install
     case failed(String)
 }
 
@@ -89,17 +90,18 @@ enum Updater {
     }
 }
 
-// MARK: - Installing an update (download from GitHub → build → swap in → relaunch)
+// MARK: - Preparing and installing an update (download from GitHub → build → swap in → relaunch)
 
 extension Updater {
     /// Runs a command and returns its exit status (-1 if it couldn't start). Output goes to `log` when given.
     @discardableResult
-    static func run(_ exe: String, _ args: [String], cwd: URL? = nil, log: FileHandle? = nil, timeout: TimeInterval = 600) -> Int32 {
+    static func run(_ exe: String, _ args: [String], cwd: URL? = nil, log: FileHandle? = nil, timeout: TimeInterval = 600, lowPriority: Bool = false) -> Int32 {
         let p = Process(); p.executableURL = URL(fileURLWithPath: exe); p.arguments = args
         if let cwd = cwd { p.currentDirectoryURL = cwd }
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:" + (env["PATH"] ?? "")
         p.environment = env
+        p.qualityOfService = lowPriority ? .background : .userInitiated      // background builds stay out of the way
         p.standardOutput = log ?? FileHandle.nullDevice; p.standardError = log ?? FileHandle.nullDevice
         guard (try? p.run()) != nil else { return -1 }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { if p.isRunning { p.terminate() } }
@@ -111,9 +113,16 @@ extension Updater {
     private static func download(to file: URL) -> Bool {
         FileManager.default.createFile(atPath: file.path, contents: nil)
         if let gh = ghBinary(), let out = try? FileHandle(forWritingTo: file) {
-            let status = run(gh, ["api", "repos/\(repo)/tarball/main"], log: nil, timeout: 180, stdout: out)
+            let p = Process(); p.executableURL = URL(fileURLWithPath: gh); p.arguments = ["api", "repos/\(repo)/tarball/main"]
+            var env = ProcessInfo.processInfo.environment
+            env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
+            p.environment = env; p.standardOutput = out; p.standardError = FileHandle.nullDevice
+            if (try? p.run()) != nil {
+                DispatchQueue.global().asyncAfter(deadline: .now() + 180) { if p.isRunning { p.terminate() } }
+                p.waitUntilExit()
+            }
             try? out.close()
-            if status == 0, ((try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? 0) > 1000 { return true }
+            if p.terminationStatus == 0, ((try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? 0) > 1000 { return true }
         }
         guard let url = URL(string: "https://github.com/\(repo)/archive/refs/heads/main.tar.gz") else { return false }
         let sem = DispatchSemaphore(value: 0)
@@ -126,64 +135,62 @@ extension Updater {
         return ok
     }
 
-    @discardableResult
-    private static func run(_ exe: String, _ args: [String], log: FileHandle?, timeout: TimeInterval, stdout: FileHandle) -> Int32 {
-        let p = Process(); p.executableURL = URL(fileURLWithPath: exe); p.arguments = args
-        var env = ProcessInfo.processInfo.environment
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
-        p.environment = env; p.standardOutput = stdout; p.standardError = FileHandle.nullDevice
-        guard (try? p.run()) != nil else { return -1 }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { if p.isRunning { p.terminate() } }
-        p.waitUntilExit()
-        return p.terminationStatus
+    private static var cachesDir: URL {
+        if let o = ProcessInfo.processInfo.environment["CUB_CACHE_DIR"] { return URL(fileURLWithPath: o) }       // tests use their own folder
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")
     }
 
-    static func cleanupOldDownloads() {
+    /// Removes old download folders (but never the one holding an update that's waiting for a restart).
+    static func cleanupOldDownloads(keeping keep: URL? = nil) {
         let fm = FileManager.default
-        let dir = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")
-        for name in (try? fm.contentsOfDirectory(atPath: dir.path)) ?? [] where name.hasPrefix("update-") {
-            let url = dir.appendingPathComponent(name)
+        for name in (try? fm.contentsOfDirectory(atPath: cachesDir.path)) ?? [] where name.hasPrefix("update-") {
+            let url = cachesDir.appendingPathComponent(name)
+            if let keep = keep, keep.path.hasPrefix(url.path) { continue }
             if let d = (try? fm.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date, Date().timeIntervalSince(d) > 86400 { try? fm.removeItem(at: url) }
         }
     }
 
-    /// Downloads, builds and hands the new app to a helper that swaps it in once this app has quit.
-    /// Returns an error message, or nil once the hand-off has started (the caller should then quit).
-    /// `dest` / `relaunch` exist so the flow can be tested without touching the installed app.
-    static func install(_ info: UpdateInfo, dest: URL = Bundle.main.bundleURL, relaunch: Bool = true, progress: @escaping (String) -> Void) -> String? {
+    /// Downloads and builds the update, but does not install it. Returns the built app, or an error message.
+    static func prepare(_ info: UpdateInfo, lowPriority: Bool = false, progress: @escaping (String) -> Void) -> (app: URL?, error: String?) {
         let fm = FileManager.default
-        let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")
-        let root = caches.appendingPathComponent("update-\(Int(Date().timeIntervalSince1970))")
-        do { try fm.createDirectory(at: root, withIntermediateDirectories: true) } catch { return "Couldn’t create a work folder." }
+        let root = cachesDir.appendingPathComponent("update-\(Int(Date().timeIntervalSince1970))")
+        do { try fm.createDirectory(at: root, withIntermediateDirectories: true) } catch { return (nil, "Couldn’t create a work folder.") }
 
         progress("Downloading version \(info.version)…")
         let tar = root.appendingPathComponent("source.tar.gz")
-        guard download(to: tar) else { return "Couldn’t download the update from GitHub. Check that the GitHub CLI is signed in (gh auth login)." }
+        guard download(to: tar) else { return (nil, "Couldn’t download the update from GitHub. Check that the GitHub CLI is signed in (gh auth login).") }
 
         progress("Unpacking…")
-        guard run("/usr/bin/tar", ["-xzf", tar.path, "-C", root.path]) == 0,
-              let top = (try? fm.contentsOfDirectory(atPath: root.path))?.first(where: { $0 != "source.tar.gz" && !$0.hasPrefix(".") }) else { return "Couldn’t unpack the download." }
+        guard run("/usr/bin/tar", ["-xzf", tar.path, "-C", root.path], lowPriority: lowPriority) == 0,
+              let top = (try? fm.contentsOfDirectory(atPath: root.path))?.first(where: { $0 != "source.tar.gz" && !$0.hasPrefix(".") }) else { return (nil, "Couldn’t unpack the download.") }
         let src = root.appendingPathComponent(top).appendingPathComponent("ClaudeUsage")
         let got = (try? String(contentsOf: src.appendingPathComponent("VERSION"), encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard got == info.version else { return "GitHub now has version \(got ?? "?") instead of \(info.version). Check for updates again." }
+        guard got == info.version else { return (nil, "GitHub now has version \(got ?? "?") instead of \(info.version). Check for updates again.") }
 
         guard run("/usr/bin/xcrun", ["--find", "swiftc"]) == 0 else {
-            return "Building the update needs Apple’s command line tools. Run “xcode-select --install” in Terminal, then try again."
+            return (nil, "Building the update needs Apple’s command line tools. Run “xcode-select --install” in Terminal, then try again.")
         }
         progress("Building… this takes about a minute")
-        let logURL = caches.appendingPathComponent("last-update.log")
+        let logURL = cachesDir.appendingPathComponent("last-update.log")
         fm.createFile(atPath: logURL.path, contents: nil)
         let log = try? FileHandle(forWritingTo: logURL)
-        let status = run("/bin/zsh", ["build.sh"], cwd: src, log: log, timeout: 900)
+        let status = run("/bin/zsh", ["build.sh"], cwd: src, log: log, timeout: 900, lowPriority: lowPriority)
         try? log?.close()
-        let newApp = src.appendingPathComponent("Claude Usage.app")
-        let builtVersion = NSDictionary(contentsOf: newApp.appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String
-        guard status == 0, builtVersion == info.version else { return "The build failed. Details: \(logURL.path)" }
+        let app = src.appendingPathComponent("Claude Usage.app")
+        let built = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String
+        guard status == 0, built == info.version else { return (nil, "The build failed. Details: \(logURL.path)") }
+        return (app, nil)
+    }
 
-        progress("Installing…")
-        let backup = caches.appendingPathComponent("previous/Claude Usage.app")
+    /// Hands a built app to a helper that waits for this app to quit, swaps it in (keeping the old one as a backup)
+    /// and relaunches. Returns an error message, or nil once the hand-off has started – the caller should then quit.
+    /// `dest` / `relaunch` exist so the flow can be tested without touching the installed app.
+    static func apply(_ app: URL, dest: URL = Bundle.main.bundleURL, relaunch: Bool = true) -> String? {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: app.path) else { return "The downloaded update is no longer there. Check for updates again." }
+        let backup = cachesDir.appendingPathComponent("previous/Claude Usage.app")
         try? fm.createDirectory(at: backup.deletingLastPathComponent(), withIntermediateDirectories: true)
-        let script = root.appendingPathComponent("swap.sh")
+        let script = app.deletingLastPathComponent().appendingPathComponent("swap.sh")
         let body = """
         #!/bin/zsh
         # waits for the running app to quit, swaps in the new build (keeping the old one as a backup), then relaunches
@@ -200,9 +207,34 @@ extension Updater {
         """
         guard (try? body.write(to: script, atomically: true, encoding: .utf8)) != nil else { return "Couldn’t prepare the installer." }
         let p = Process(); p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        p.arguments = [script.path, String(ProcessInfo.processInfo.processIdentifier), newApp.path, dest.path, backup.path, relaunch ? "1" : "0"]
+        p.arguments = [script.path, String(ProcessInfo.processInfo.processIdentifier), app.path, dest.path, backup.path, relaunch ? "1" : "0"]
         p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
         guard (try? p.run()) != nil else { return "Couldn’t start the installer." }
         return nil
+    }
+
+    /// Prepare and apply in one go (used by the Update Now button and the command-line test).
+    static func install(_ info: UpdateInfo, dest: URL = Bundle.main.bundleURL, relaunch: Bool = true, progress: @escaping (String) -> Void) -> String? {
+        let r = prepare(info, progress: progress)
+        guard let app = r.app else { return r.error }
+        progress("Installing…")
+        return apply(app, dest: dest, relaunch: relaunch)
+    }
+
+    // MARK: remembering a downloaded update across restarts
+
+    static func savePrepared(_ info: UpdateInfo, app: URL) {
+        UserDefaults.standard.set(["version": info.version, "notes": info.notes, "path": app.path] as [String: Any], forKey: "preparedUpdate")
+    }
+    static func clearPrepared() { UserDefaults.standard.removeObject(forKey: "preparedUpdate") }
+
+    /// A previously downloaded update that's still on disk and still newer than the installed version.
+    static func restorePrepared() -> (UpdateInfo, URL)? {
+        guard let d = UserDefaults.standard.dictionary(forKey: "preparedUpdate"),
+              let version = d["version"] as? String, let path = d["path"] as? String,
+              isNewer(version, than: installed), FileManager.default.fileExists(atPath: path),
+              (NSDictionary(contentsOf: URL(fileURLWithPath: path).appendingPathComponent("Contents/Info.plist"))?["CFBundleShortVersionString"] as? String) == version
+        else { clearPrepared(); return nil }
+        return (UpdateInfo(version: version, notes: d["notes"] as? [String] ?? []), URL(fileURLWithPath: path))
     }
 }

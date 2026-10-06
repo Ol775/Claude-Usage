@@ -69,27 +69,24 @@ enum Predictor {
         let elapsedH = max(now.timeIntervalSince(start), 0) / 3600
         let remainingH = resets.timeIntervalSince(now) / 3600
 
-        // Recent pace from samples inside this window.
-        let span: TimeInterval = l.kind == .session ? 3600 : 12 * 3600
-        let minSpan: TimeInterval = l.kind == .session ? 600 : 3600
-        let inWindow = samples.filter { s in
-            let r = l.kind == .session ? s.sessionReset : s.weeklyReset
-            return r.map { abs($0.timeIntervalSince(resets)) < 300 } ?? false && now.timeIntervalSince(s.t) <= span
-        }
+        // Session: the pace over the last hour is a fair guide for the rest of a 5-hour window.
+        // Weekly: a short burst must NOT be stretched across days (nobody uses Claude non-stop), so it uses the whole
+        // week so far plus your usual week from saved history instead.
         var rate: Double?
         var recent = false
-        if let first = inWindow.first, let last = inWindow.last, last.t.timeIntervalSince(first.t) >= minSpan {
-            let p0 = l.kind == .session ? first.session : first.weekly
-            let p1 = l.kind == .session ? last.session : last.weekly
-            rate = max(0, (p1 - p0) / (last.t.timeIntervalSince(first.t) / 3600)); recent = true
-        } else if elapsedH >= 0.1 {
-            rate = l.percent / elapsedH
+        if l.kind == .session {
+            let inWindow = samples.filter { s in
+                guard let r = s.sessionReset else { return false }
+                return abs(r.timeIntervalSince(resets)) < 300 && now.timeIntervalSince(s.t) <= 3600
+            }
+            if let first = inWindow.first, let last = inWindow.last, last.t.timeIntervalSince(first.t) >= 600 {
+                rate = max(0, (last.session - first.session) / (last.t.timeIntervalSince(first.t) / 3600)); recent = true
+            }
         }
-        // Weekly limits also learn from the saved activity history: your usual tokens per weekday, scaled by how many
-        // percent this window's tokens have cost so far. It leads early in the window and hands over to the live pace later.
+        if rate == nil, elapsedH >= 0.1 { rate = l.percent / elapsedH }               // average since the window began (idle time included)
         if l.kind == .weekly, let act = activityRate(l, resets: resets, now: now, days: activity) {
-            let w = max(0, 1 - elapsedH / 48)
-            rate = rate.map { $0 * (1 - w) + act * w } ?? act
+            // your usual weekday pattern, scaled by what this week's tokens have cost so far, carries most of the weight
+            rate = rate.map { 0.35 * $0 + 0.65 * act } ?? act
         }
         guard let perHour = rate else { return .none("Not enough data yet") }
         if perHour < 0.01 { return .safe(projected: l.percent, perHour: 0) }

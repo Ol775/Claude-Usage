@@ -60,19 +60,6 @@ enum NotifImportance: String, CaseIterable, Identifiable {
     }
 }
 
-enum MenuBarStyle: String, CaseIterable, Identifiable {
-    case both, session, weekly, tokens, iconOnly
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .both: return "Session · Weekly"
-        case .session: return "Session only"
-        case .weekly: return "Weekly only"
-        case .tokens: return "Tokens today"
-        case .iconOnly: return "Icon only"
-        }
-    }
-}
 
 var currentTheme: AccentTheme = .claude
 
@@ -98,7 +85,15 @@ final class Settings: ObservableObject {
     @Published var theme: AccentTheme { didSet { currentTheme = theme; if Settings.persist { d.set(theme.rawValue, forKey: "theme") }; onChange() } }
     @Published var showInDock: Bool { didSet { if Settings.persist { d.set(showInDock, forKey: "showInDock") }; onChange() } }
     @Published var notificationsOn: Bool { didSet { if Settings.persist { d.set(notificationsOn, forKey: "notificationsOn") } } }
-    @Published var menuBarStyle: MenuBarStyle { didSet { if Settings.persist { d.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }; onChange() } }
+    @Published var menuShowIcon: Bool { didSet { save(menuShowIcon, "menuShowIcon"); onChange() } }
+    @Published var menuShowSession: Bool { didSet { save(menuShowSession, "menuShowSession"); onChange() } }
+    @Published var menuShowWeekly: Bool { didSet { save(menuShowWeekly, "menuShowWeekly"); onChange() } }
+    @Published var menuShowTokens: Bool { didSet { save(menuShowTokens, "menuShowTokens"); onChange() } }
+    @Published var menuShowReset: Bool { didSet { save(menuShowReset, "menuShowReset"); onChange() } }
+    @Published var menuIconMono: Bool { didSet { save(menuIconMono, "menuIconMono"); onChange() } }
+    @Published var menuLabelStyle: MenuLabelStyle { didSet { save(menuLabelStyle.rawValue, "menuLabelStyle"); onChange() } }
+    @Published var menuPercentColour: MenuPercentColour { didSet { save(menuPercentColour.rawValue, "menuPercentColour"); onChange() } }
+    @Published var autoDownloadUpdates: Bool { didSet { save(autoDownloadUpdates, "autoDownloadUpdates") } }
     @Published var autoCheckUpdates: Bool { didSet { if Settings.persist { d.set(autoCheckUpdates, forKey: "autoCheckUpdates") }; onChange() } }
     @Published var importance: NotifImportance { didSet { if Settings.persist { d.set(importance.rawValue, forKey: "importance") } } }
     @Published var warnThreshold: Int { didSet { if Settings.persist { d.set(warnThreshold, forKey: "warnThreshold") } } }
@@ -112,7 +107,22 @@ final class Settings: ObservableObject {
         showInDock = d.object(forKey: "showInDock") as? Bool ?? true
         notificationsOn = d.object(forKey: "notificationsOn") as? Bool ?? true
         predictiveAlerts = d.object(forKey: "predictiveAlerts") as? Bool ?? true
-        menuBarStyle = MenuBarStyle(rawValue: d.string(forKey: "menuBarStyle") ?? "") ?? .both
+        // Menu bar items. Before 0.7 there was a single "display" choice – carry it over once.
+        let ud = UserDefaults.standard, old = ud.string(forKey: "menuBarStyle")
+        func flag(_ key: String, _ fallback: Bool, from oldValues: [String]? = nil) -> Bool {
+            if let v = ud.object(forKey: key) as? Bool { return v }
+            if let o = old, let list = oldValues { return list.contains(o) }
+            return fallback
+        }
+        menuShowIcon = flag("menuShowIcon", true)
+        menuShowSession = flag("menuShowSession", true, from: ["both", "session"])
+        menuShowWeekly = flag("menuShowWeekly", true, from: ["both", "weekly"])
+        menuShowTokens = flag("menuShowTokens", false, from: ["tokens"])
+        menuShowReset = flag("menuShowReset", false)
+        menuIconMono = flag("menuIconMono", false)
+        menuLabelStyle = MenuLabelStyle(rawValue: ud.string(forKey: "menuLabelStyle") ?? "") ?? .letters
+        menuPercentColour = MenuPercentColour(rawValue: ud.string(forKey: "menuPercentColour") ?? "") ?? .critical
+        autoDownloadUpdates = ud.object(forKey: "autoDownloadUpdates") as? Bool ?? true
         autoCheckUpdates = d.object(forKey: "autoCheckUpdates") as? Bool ?? true
         importance = NotifImportance(rawValue: d.string(forKey: "importance") ?? "") ?? .normal
         warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
@@ -129,4 +139,16 @@ final class Settings: ObservableObject {
         }
     }
     var isOLED: Bool { appearance == .oled }
+
+    private func save(_ value: Any, _ key: String) { if Settings.persist { d.set(value, forKey: key) } }
+
+    func apply(_ p: MenuBarPreset) {
+        switch p {
+        case .standard: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false
+        case .compact: menuShowIcon = false; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false
+        case .minimal: menuShowIcon = true; menuShowSession = false; menuShowWeekly = false; menuShowTokens = false; menuShowReset = false
+        case .everything: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = true; menuShowReset = true
+        }
+        menuLabelStyle = .letters; menuPercentColour = .critical; menuIconMono = false
+    }
 }
