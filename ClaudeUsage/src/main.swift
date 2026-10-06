@@ -198,6 +198,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     @objc func refreshAction() { lastFetch = .distantPast; refresh() }
     func refresh() {
         guard !refreshing else { pendingRefresh = true; return }
+        if Demo.enabled {            // screenshots: made-up data, nothing read from or saved to the real history
+            let s = Demo.snapshot()
+            store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
+            store.samples = Demo.samples(); store.snapshot = s; store.lastUpdated = Date()
+            build(s); return
+        }
         refreshing = true
         let needFetch = Date().timeIntervalSince(lastFetch) > 100
         DispatchQueue.global(qos: .utility).async {

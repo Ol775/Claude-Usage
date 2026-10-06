@@ -3,6 +3,12 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.8.3 – alpha (2026-10-06)
+- Fixed the extra weekly limit bars (Opus, Sonnet) showing blue instead of Claude orange in dark and OLED modes
+
+## 0.8.2 – alpha (2026-10-06)
+- Added a demo-data mode used to make the README screenshots
+
 ## 0.8.1 – alpha (2026-10-06)
 - Update and error messages no longer mention a private repo; the repository is now public
 

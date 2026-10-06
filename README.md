@@ -4,7 +4,7 @@
 
 A native macOS menu bar + desktop app for your Claude usage. The app lives in [`ClaudeUsage/`](ClaudeUsage).
 
-## ClaudeUsage  (v0.8.1 alpha)
+## ClaudeUsage  (v0.8.3 alpha)
 
 A menu bar + desktop app for your Claude usage.
 
@@ -22,6 +22,25 @@ A menu bar + desktop app for your Claude usage.
 Limits come from Claude Code's login in your own keychain; nothing is stored in this repo.
 API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way.
 Unofficial – not affiliated with Anthropic.
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/1-overview.png" alt="Overview: session and weekly limits with a forecast"></td>
+<td width="50%"><img src="docs/screenshots/2-reports.png" alt="Reports: day, week and month charts"></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/3-insights.png" alt="Insights: costs, activity and heavy days"></td>
+<td width="50%"><img src="docs/screenshots/4-menu-bar.png" alt="Menu bar customisation with a live preview"></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/5-light.png" alt="Light mode in Claude orange"></td>
+<td width="50%"><img src="docs/screenshots/6-oled.png" alt="OLED black mode: usage by day, hour, model and project"></td>
+</tr>
+</table>
+
+<sub>Screenshots use made-up demo data (<code>CUB_DEMO=1</code>), not a real account. <code>docs/make-screenshots.swift</code> frames them.</sub>
 
 ## Install
 

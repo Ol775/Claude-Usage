@@ -238,7 +238,12 @@ struct OverviewView: View {
                             ForEach(Array(extra.enumerated()), id: \.offset) { _, l in
                                 HStack {
                                     Text(l.name).frame(width: 150, alignment: .leading)
-                                    ProgressView(value: min(max(l.percent, 0), 100), total: 100).tint(.brand)
+                                    GeometryReader { g in      // drawn by hand: the system progress bar ignores our dynamic colour in dark mode and turns blue
+                                        ZStack(alignment: .leading) {
+                                            Capsule().fill(Color.primary.opacity(0.12))
+                                            Capsule().fill(Color.brand).frame(width: g.size.width * CGFloat(min(max(l.percent, 0), 100) / 100))
+                                        }
+                                    }.frame(height: 6)
                                     Text("\(Int(l.percent.rounded()))%").monospacedDigit().frame(width: 44, alignment: .trailing)
                                 }
                             }
