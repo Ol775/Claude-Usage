@@ -80,7 +80,7 @@ enum Updater {
     /// Blocking check – call from a background queue.
     static func check() -> UpdateStatus {
         guard let raw = fetch("ClaudeUsage/VERSION") else {
-            return .failed("Couldn’t reach GitHub. Sign in with the GitHub CLI (gh auth login) or make the repo public.")
+            return .failed("Couldn’t reach GitHub. Check your internet connection and try again.")
         }
         let latest = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !latest.isEmpty, latest.first?.isNumber == true else { return .failed("Unexpected version file on GitHub.") }
@@ -109,7 +109,7 @@ extension Updater {
         return p.terminationStatus
     }
 
-    /// Downloads the main branch as a tarball (through the GitHub CLI for a private repo, else the public URL).
+    /// Downloads the main branch as a tarball (through the GitHub CLI if it’s signed in, else the public URL).
     private static func download(to file: URL) -> Bool {
         FileManager.default.createFile(atPath: file.path, contents: nil)
         if let gh = ghBinary(), let out = try? FileHandle(forWritingTo: file) {
@@ -158,7 +158,7 @@ extension Updater {
 
         progress("Downloading version \(info.version)…")
         let tar = root.appendingPathComponent("source.tar.gz")
-        guard download(to: tar) else { return (nil, "Couldn’t download the update from GitHub. Check that the GitHub CLI is signed in (gh auth login).") }
+        guard download(to: tar) else { return (nil, "Couldn’t download the update from GitHub. Check your internet connection and try again.") }
 
         progress("Unpacking…")
         guard run("/usr/bin/tar", ["-xzf", tar.path, "-C", root.path], lowPriority: lowPriority) == 0,

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.8.1 – alpha (2026-10-06)
+- Update and error messages no longer mention a private repo; the repository is now public
+
 ## 0.8.0 – alpha (2026-10-06)
 - Added Help & Legal in Settings (terms of use, accuracy and privacy notes, unofficial-app disclaimer) and a Report a Bug button that opens a pre-filled GitHub issue; Report a Bug also added to the menu bar menu
 

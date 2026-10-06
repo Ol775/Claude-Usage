@@ -1017,7 +1017,7 @@ struct SettingsPage: View {
 
     private var supportPane: some View {
         VStack(alignment: .leading, spacing: 22) {
-            SGroup(title: "Report a bug", footer: "Opens a GitHub page with your app and macOS version filled in. Nothing is sent until you press Submit there. You’ll need a GitHub account with access to the repository.") {
+            SGroup(title: "Report a bug", footer: "Opens a GitHub page with your app and macOS version filled in. Nothing is sent until you press Submit there. You’ll need a free GitHub account.") {
                 SRow(title: "Found a problem?", subtitle: "Tell us what happened and what you expected.") {
                     Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }.buttonStyle(.borderedProminent)
                 }
