@@ -39,6 +39,10 @@ enum Legal {
         ]),
     ]
 
+    /// Supplies the app's current yes/no states for diagnostics (set at launch; see `AppDelegate.diagnosticState`).
+    /// Each line is built from a fixed vocabulary (booleans, counts, enum words), never from account, path or usage data.
+    static var stateProvider: () -> [String] = { [] }
+
     /// Facts that help diagnose a bug. No account details, file paths or usage numbers.
     /// (Recent events are short status messages such as "Usage unavailable (HTTP 500)", with the home folder shortened to ~.)
     static var diagnostics: String {
@@ -47,6 +51,7 @@ enum Legal {
         App: Claude Usage \(AppInfo.version) \(AppInfo.stage) (build \(AppInfo.build))
         macOS: \(os)
         Chip: \(chip)
+        \(stateProvider().joined(separator: "\n"))
         Recent events:
         \(AppLog.recent())
         """

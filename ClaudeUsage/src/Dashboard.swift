@@ -916,6 +916,7 @@ struct SettingsPage: View {
     @ObservedObject var store: Store
     @ObservedObject var settings: Settings
     @StateObject private var loginBox = Box(SMAppService.mainApp.status == .enabled)
+    @StateObject private var showDiagnostics = Box(Dev.env("CUB_SHOW_DIAG") != nil)
     @StateObject private var searchBox = Box("")
     @StateObject private var openLegal = Box(Set<String>())
     @StateObject private var openVersions = Box(Set(Changelog.load().prefix(1).map(\.version)))
@@ -1311,8 +1312,17 @@ struct SettingsPage: View {
                     Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }.buttonStyle(.borderedProminent)
                 }
                 SDivider()
-                SRow(title: "Copy diagnostics", subtitle: "Version, build, macOS and chip. No account details or usage numbers.") {
+                SRow(title: "Diagnostics", subtitle: "Version, macOS, chip and a few yes/no states. No account details, file paths or usage numbers.") {
+                    Button(showDiagnostics.value ? "Hide" : "Preview") { showDiagnostics.value.toggle() }
                     Button("Copy") { Legal.copyDiagnostics() }
+                }
+                if showDiagnostics.value {
+                    Text(Legal.diagnostics).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))
+                        .padding(.horizontal, 14).padding(.bottom, 10)
+                    Text("This is exactly what “Copy” and “Report a Bug” include. It never leaves your Mac unless you paste or submit it.")
+                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 10)
                 }
                 SDivider()
                 SRow(title: "Known issues and requests") { Button("View on GitHub") { NSWorkspace.shared.open(Legal.issuesURL) } }

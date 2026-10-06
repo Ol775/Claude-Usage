@@ -30,6 +30,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     func applicationDidFinishLaunching(_ n: Notification) {
         store.canInstall = canSelfUpdate
+        Legal.stateProvider = { [weak self] in self?.diagnosticState() ?? [] }
         Pricing.loadCached()          // prices fetched earlier (see Pricing.refreshIfStale) apply from the first scan
         let lastRun = UserDefaults.standard.string(forKey: "lastRunVersion")
         UserDefaults.standard.set(AppInfo.version, forKey: "lastRunVersion")
@@ -321,6 +322,38 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         updateTimer?.invalidate(); updateTimer = nil
         guard settings.autoCheckUpdates else { return }
         updateTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdates(manual: false) }
+    }
+
+    /// The short, fixed-vocabulary state lines that go into diagnostics: yes/no flags, counts and enum words only.
+    /// Nothing here may include the account, a path, a token or a usage number.
+    func diagnosticState() -> [String] {
+        let known: Set<String> = ["Current session", "Weekly – all models", "Weekly – Opus", "Weekly – Sonnet"]
+        let read = store.limits.map { $0.name }.filter { known.contains($0) }
+        let fetch: String = {
+            guard let e = store.limitError else { return store.stale ? "kept last reading" : "ok" }
+            if e.hasPrefix("Usage unavailable") { return "network or server error" }
+            if e.hasPrefix("Usage response not recognised") { return "response format changed" }
+            if e.hasPrefix("Login expired") { return "login expired" }
+            if e.hasPrefix("Sign in") { return "signed out" }
+            return "other error"
+        }()
+        let update: String = {
+            switch store.update {
+            case .idle, .checking: return "not checked yet"
+            case .upToDate: return "up to date"
+            case .available: return store.installing ? "downloading" : "available"
+            case .ready: return "ready to install"
+            case .failed: return "last check failed"
+            }
+        }()
+        let since = store.lastUpdated.map { "\(max(0, Int(Date().timeIntervalSince($0) / 60))) min ago" } ?? "never"
+        return [
+            "Claude Code: \(claudeBinary() != nil ? "found" : "not found"), \(store.account.loggedIn ? "signed in" : "signed out")",
+            "Limits read: \(read.isEmpty ? "none" : read.joined(separator: ", ")) (fetch: \(fetch), last refresh \(since))",
+            "Updates: \(update); can self-update: \(store.canInstall ? "yes" : "no"); in Applications: \(Bundle.main.bundleURL.path.hasPrefix("/Applications/") ? "yes" : "no")",
+            "ChatGPT: \(!settings.chatgptEnabled ? "off" : "on, \(store.chatgpt.signedIn ? "signed in, \(store.chatgpt.isFree ? "free" : "paid") plan" : "signed out")")",
+            "Notifications: \(store.notifStatus)",
+        ]
     }
 
     /// Whether this copy can replace itself: a real .app sitting in a folder we can write to.

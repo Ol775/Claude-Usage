@@ -88,6 +88,11 @@ func runSelfTests() -> Int32 {
     let calm = Limit(name: "Weekly – all models", percent: 20, resets: now.addingTimeInterval(86400))
     if case .hits = Predictor.forecast(calm, samples: [], now: now) { check(false, "20% with 6 days elapsed must not predict a limit hit") }
 
+    // Diagnostics: only fixed-vocabulary lines, no identity (the provider's lines are checked in the app; here the shape of the text)
+    let diagText = Legal.diagnostics
+    check(!diagText.contains("@") && !diagText.lowercased().contains("token") && !diagText.contains("/Users/"), "diagnostics hold no email, token or user path")
+    check(diagText.split(separator: "\n").count < 40, "diagnostics stay short")
+
     // Diagnostics never carry the home folder path
     check(!Legal.diagnostics.contains(NSHomeDirectory()), "diagnostics hide the home folder")
 

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.12 – alpha (2026-10-06)
+- Diagnostics now include a few yes/no states (Claude Code found/signed in, which limits were read and why a fetch failed, update state, notifications, ChatGPT on/off and paid/free) and Settings → Help & Legal can preview exactly what is included before you copy it or report a bug. Nothing includes account details, file paths or usage numbers
+
 ## 0.9.11 – alpha (2026-10-06)
 - Updates now show a progress bar for download, verification and install (in Settings → About, above every page and in the menu); copies that can't replace themselves (run from a disk image or a read-only folder) get a Download Update button that saves the verified installer to Downloads, with its own progress bar
 
