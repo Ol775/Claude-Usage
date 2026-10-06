@@ -9,7 +9,11 @@ permissions:
 
 jobs:
   build-and-test:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-latest]        # the app targets macOS 13+, so build and self-test on older systems too
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
