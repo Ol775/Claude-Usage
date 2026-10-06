@@ -1,0 +1,22 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build
+        working-directory: ClaudeUsage
+        run: ./build.sh
+      - name: Self-tests
+        working-directory: ClaudeUsage
+        run: "./Claude\\ Usage.app/Contents/MacOS/ClaudeUsage --selftest"
+      - name: Check the disk image builds
+        working-directory: ClaudeUsage
+        run: ./make-dmg.sh

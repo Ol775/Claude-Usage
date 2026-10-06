@@ -226,15 +226,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     self.store.account = a
                     if a.loggedIn { ActivityStore.shared.markSignedIn() }
                     if f.error == nil {
-                        self.store.limits = f.limits; self.store.limitError = nil; self.store.stale = false
+                        self.store.limits = f.limits; self.store.limitError = nil; self.store.stale = false; self.store.staleReason = nil
                         History.shared.record(f.limits); self.store.samples = History.shared.samples
-                    } else if f.error?.hasPrefix("Usage unavailable") == true, !self.store.limits.isEmpty {
-                        self.store.stale = true            // network blip: keep the last good numbers instead of blanking the UI
+                    } else if f.error?.hasPrefix("Usage unavailable") == true || f.error?.hasPrefix("Usage response not recognised") == true, !self.store.limits.isEmpty {
+                        self.store.stale = true            // network blip or changed response: keep the last good numbers instead of blanking the UI
+                        self.store.staleReason = f.error?.hasPrefix("Usage response") == true ? "Claude’s usage format changed – showing the last reading. Please update the app or report a bug." : nil
                     } else { self.store.limits = []; self.store.limitError = f.error; self.store.stale = false }
                     if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.store.settingsCategory = .account; self.showDashboard(.settings) }
                 }
                 if let g = gpt {
-                    if g.limits.isEmpty, g.signedIn, g.error?.hasPrefix("ChatGPT usage unavailable") == true, !self.store.chatgpt.limits.isEmpty {
+                    if g.limits.isEmpty, g.signedIn, g.error?.hasPrefix("ChatGPT usage") == true, !self.store.chatgpt.limits.isEmpty {
                         self.store.chatgpt.error = g.error          // network blip: keep the last good numbers
                     } else {
                         self.store.chatgpt = g
@@ -768,6 +769,8 @@ if CommandLine.arguments.contains("--snapshot") {
     }
     exit(0)
 }
+
+if CommandLine.arguments.contains("--selftest") { exit(runSelfTests()) }
 
 if CommandLine.arguments.contains("--install-update") {
     // Dev aid: runs the whole download -> build -> install flow into CUB_INSTALL_DEST (never the installed app) and exits.

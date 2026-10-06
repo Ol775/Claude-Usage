@@ -53,6 +53,7 @@ final class Store: ObservableObject {
     @Published var limits: [Limit] = []
     @Published var limitError: String?
     @Published var stale = false
+    @Published var staleReason: String?       // set when the last reading is kept because the response changed shape
     @Published var account = Account()
     @Published var chatgpt = ChatGPTState()
     @Published var chatgptBusy = false
@@ -216,7 +217,7 @@ struct OverviewView: View {
                             .font(.largeTitle.bold())
                         HStack(spacing: 6) {
                             if store.stale { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
-                            Text(store.stale ? "Couldn’t reach Anthropic – showing the last reading"
+                            Text(store.stale ? (store.staleReason ?? "Couldn’t reach Anthropic – showing the last reading")
                                  : (store.lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "Loading…"))
                                 .foregroundStyle(.secondary)
                         }

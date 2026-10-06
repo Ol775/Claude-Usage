@@ -85,7 +85,7 @@ enum ChatGPT {
         if s.isFree {            // Codex only reports meaningful limits on paid plans
             s.limits = []
             s.error = "Free ChatGPT plans aren’t supported. Usage limits are shown for paid plans (Plus, Pro, Business or Enterprise)."
-        } else if s.limits.isEmpty { s.error = "No limit data returned" }
+        } else if s.limits.isEmpty { s.error = "ChatGPT usage response not recognised – OpenAI may have changed it" }
         return s
     }
 

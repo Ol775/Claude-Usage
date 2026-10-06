@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.3 – alpha (2026-10-06)
+- Added built-in self-tests (--selftest) and a GitHub Actions build; if Claude or ChatGPT change their usage format the app now keeps the last reading and says so instead of going blank
+
 ## 0.9.2 – alpha (2026-10-06)
 - Updates now download the release disk image and verify its checksum, so they work without developer tools (falls back to building from source)
 

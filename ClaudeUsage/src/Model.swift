@@ -7,6 +7,18 @@ func parseDate(_ t: String) -> Date? {
     return ISO8601DateFormatter().date(from: clean)
 }
 
+/// Turns the oauth usage response into limits. Unknown or missing sections are skipped, so a changed response degrades
+/// to "fewer limits" rather than a crash.
+func parseClaudeLimits(_ json: [String: Any]) -> [Limit] {
+    var result: [Limit] = []
+    for (key, name) in [("five_hour", "Current session"), ("seven_day", "Weekly – all models"),
+                        ("seven_day_opus", "Weekly – Opus"), ("seven_day_sonnet", "Weekly – Sonnet")] {
+        guard let o = json[key] as? [String: Any], let u = (o["utilization"] as? NSNumber)?.doubleValue else { continue }
+        result.append(Limit(name: name, percent: u, resets: (o["resets_at"] as? String).flatMap(parseDate)))
+    }
+    return result
+}
+
 /// Reads Claude Code's own login from the keychain and asks Anthropic for the same
 /// session / weekly usage numbers that Claude Code's /usage view shows.
 func fetchLimits() -> (limits: [Limit], error: String?) {
@@ -30,13 +42,8 @@ func fetchLimits() -> (limits: [Limit], error: String?) {
     if status == 401 { return ([], "Login expired – open Claude Code to refresh") }
     guard status == 200, let d = body, let json = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
     else { return ([], "Usage unavailable (HTTP \(status))") }
-    var result: [Limit] = []
-    for (key, name) in [("five_hour", "Current session"), ("seven_day", "Weekly – all models"),
-                        ("seven_day_opus", "Weekly – Opus"), ("seven_day_sonnet", "Weekly – Sonnet")] {
-        guard let o = json[key] as? [String: Any], let u = (o["utilization"] as? NSNumber)?.doubleValue else { continue }
-        result.append(Limit(name: name, percent: u, resets: (o["resets_at"] as? String).flatMap(parseDate)))
-    }
-    return (result, result.isEmpty ? "No limit data returned" : nil)
+    let result = parseClaudeLimits(json)
+    return (result, result.isEmpty ? "Usage response not recognised – Claude may have changed it" : nil)
 }
 
 func untilText(_ d: Date?) -> String {
