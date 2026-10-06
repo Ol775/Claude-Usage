@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.3.3 – alpha
+- Dock icon is set from the bundled icon at launch, so a stale macOS icon cache can't show an old one
+
 ## 0.3.2 – alpha
 - Dashboard now comes to the front when opened from the Dock or menu; README version heading stays in sync (bump.sh updates it)
 

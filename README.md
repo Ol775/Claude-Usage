@@ -2,7 +2,7 @@
 
 Small native macOS apps.
 
-## ClaudeUsage  (v0.3.2 alpha)
+## ClaudeUsage  (v0.3.3 alpha)
 
 A menu bar + desktop app for your Claude usage.
 

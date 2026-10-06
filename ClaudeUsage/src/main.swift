@@ -24,6 +24,8 @@ final class App: NSObject, NSApplicationDelegate {
     // MARK: lifecycle
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        // Set the Dock icon straight from the bundled icon so a stale macOS icon cache can never show an old one.
+        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"), let img = NSImage(contentsOf: url) { NSApp.applicationIconImage = img }
         settings.applyAppearance()
         applyPolicy()
         settings.onChange = { [weak self] in DispatchQueue.main.async { self?.applyPolicy(); self?.applyWindowStyle(); self?.scheduleTimer(); self?.build(self?.store.snapshot ?? Snapshot()) } }
