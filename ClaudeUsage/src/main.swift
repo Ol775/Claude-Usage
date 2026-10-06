@@ -514,12 +514,14 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         func finish() { try? "done".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8); DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(0) } }
         // Full-height renders of the long pages (a normal window only shows the top), captured from outside by the tour script.
         func tall(_ idx: Int = 0) {
-            let shots: [(AppearanceMode, String)] = [(.dark, "insights"), (.light, "insights"), (.oled, "insights")]
+            let shots: [(AppearanceMode, String)] = [(.dark, "about"), (.light, "about")]
             guard idx < shots.count else { finish(); return }
             let (mode, name) = shots[idx]
             settings.appearance = mode
             let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 1020, height: 3700), styleMask: [.borderless], backing: .buffered, defer: false)
-            w.contentView = NSHostingView(rootView: InsightsView(store: store).frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
+            store.settingsCategory = .about
+            let page: AnyView = name == "about" ? AnyView(SettingsPage(store: store, settings: settings)) : AnyView(InsightsView(store: store))
+            w.contentView = NSHostingView(rootView: page.frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
             w.orderFrontRegardless()
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 try? "\(100 + idx) tall-\(name)-\(mode.rawValue) \(w.windowNumber)".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8)

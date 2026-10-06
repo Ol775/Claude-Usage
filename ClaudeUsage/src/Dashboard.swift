@@ -629,6 +629,7 @@ struct SettingsPage: View {
     @ObservedObject var settings: Settings
     @StateObject private var loginBox = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var searchBox = Box("")
+    @StateObject private var openVersions = Box(Set(Changelog.load().prefix(1).map(\.version)))
 
     private var matches: [SettingsCategory] {
         let q = searchBox.value.trimmingCharacters(in: .whitespaces).lowercased()
@@ -953,11 +954,47 @@ struct SettingsPage: View {
                 SDivider()
                 SRow(title: "Build") { Text(AppInfo.build).foregroundStyle(.secondary).monospacedDigit() }
                 SDivider()
-                SRow(title: "Source code") { Link("github.com/Ol775/MacApps", destination: AppInfo.repoURL) }
+                SRow(title: "Source code") { Link(AppInfo.repoURL.absoluteString.replacingOccurrences(of: "https://", with: ""), destination: AppInfo.repoURL) }
             }
             updatesGroup
+            changelogGroup
             Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+        }
+    }
+
+    @ViewBuilder private var changelogGroup: some View {
+        let entries = Changelog.load()
+        SGroup(title: "Change log", footer: entries.isEmpty ? nil : "Newest first. Every version of Claude Usage and what changed in it.") {
+            if entries.isEmpty {
+                SRow(title: "Change log unavailable") { EmptyView() }
+            } else {
+                ForEach(Array(entries.enumerated()), id: \.element.id) { i, e in
+                    if i > 0 { SDivider() }
+                    DisclosureGroup(isExpanded: Binding(
+                        get: { openVersions.value.contains(e.version) },
+                        set: { on in if on { openVersions.value.insert(e.version) } else { openVersions.value.remove(e.version) } })) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(Array(e.items.enumerated()), id: \.offset) { _, item in
+                                HStack(alignment: .top, spacing: 8) { Text("•"); Text(item).fixedSize(horizontal: false, vertical: true) }
+                                    .font(.callout).foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(.top, 6).padding(.leading, 2).frame(maxWidth: .infinity, alignment: .leading)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("Version \(e.version)").fontWeight(.semibold)
+                            if e.version == AppInfo.version {
+                                Text("CURRENT").font(.system(size: 9, weight: .bold)).foregroundStyle(Color.brand)
+                                    .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(Color.brand.opacity(0.18)))
+                            }
+                            Spacer()
+                            Text([e.stage, e.date].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                }
+            }
         }
     }
 

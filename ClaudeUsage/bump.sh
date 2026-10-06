@@ -15,11 +15,12 @@ new="$maj.$min.$pat"
 echo "$new" > VERSION
 python3 - "$new" "$note" <<'PY'
 import sys
+from datetime import date
 v, note = sys.argv[1], sys.argv[2]
 s = open("CHANGELOG.md").read()
 marker = "## "
 i = s.index(marker)
-open("CHANGELOG.md", "w").write(s[:i] + f"## {v} – alpha\n- {note}\n\n" + s[i:])
+open("CHANGELOG.md", "w").write(s[:i] + f"## {v} – alpha ({date.today().isoformat()})\n- {note}\n\n" + s[i:])
 PY
 # keep the README heading in step with the version
 python3 - "$new" <<'PY'

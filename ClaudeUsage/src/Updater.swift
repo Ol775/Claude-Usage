@@ -25,7 +25,7 @@ func isNewer(_ a: String, than b: String) -> Bool {
 }
 
 enum Updater {
-    static let repo = "Ol775/MacApps"
+    static let repo = "Ol775/Claude-Usage"
     /// `CUB_PRETEND_VERSION` lets tests act as an older install.
     static var installed: String { ProcessInfo.processInfo.environment["CUB_PRETEND_VERSION"] ?? AppInfo.version }
 

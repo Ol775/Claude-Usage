@@ -9,7 +9,7 @@ BUILD="${BUILD:-$( [ -d ../.git ] && git rev-list --count HEAD 2>/dev/null || ca
 APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
 swiftc -O -target "$(uname -m)-apple-macos13.0" \
-  src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/Updater.swift src/Dashboard.swift src/Reports.swift src/Insights.swift \
+  src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/Changelog.swift src/Updater.swift src/Dashboard.swift src/Reports.swift src/Insights.swift \
   -o "$APP/Contents/MacOS/ClaudeUsage"
 rm -rf build/AppIcon.iconset && mkdir -p build/AppIcon.iconset
 mkdir -p build/iconsrc && cp src/makeicon.swift build/iconsrc/main.swift
@@ -17,6 +17,7 @@ swiftc build/iconsrc/main.swift src/BotArt.swift -o build/makeicon
 CUSTOM=""; [ -f assets/bot.png ] && CUSTOM="assets/bot.png" && cp assets/bot.png "$APP/Contents/Resources/Bot.png"
 build/makeicon build/AppIcon.iconset $CUSTOM
 iconutil -c icns build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
+cp CHANGELOG.md "$APP/Contents/Resources/CHANGELOG.md"          # shown in Settings → About
 cat > "$APP/Contents/Info.plist" <<P
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
