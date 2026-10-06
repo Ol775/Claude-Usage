@@ -570,7 +570,7 @@ struct AvatarCircle: View {
 // MARK: - Settings (modelled on System Settings: a categories list on the left, grouped sections on the right)
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
-    case account, general, appearance, menuBar, notifications, data, about
+    case account, general, appearance, menuBar, notifications, data, support, about
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -580,6 +580,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .menuBar: return "Menu Bar"
         case .notifications: return "Notifications"
         case .data: return "Data & Export"
+        case .support: return "Help & Legal"
         case .about: return "About"
         }
     }
@@ -591,6 +592,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .menuBar: return "menubar.rectangle"
         case .notifications: return "bell.badge.fill"
         case .data: return "square.and.arrow.up.fill"
+        case .support: return "lifepreserver.fill"
         case .about: return "info.circle.fill"
         }
     }
@@ -602,6 +604,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .menuBar: return .teal
         case .notifications: return .red
         case .data: return .green
+        case .support: return .orange
         case .about: return Color(white: 0.45)
         }
     }
@@ -613,6 +616,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .menuBar: return "menu bar icon session weekly percent customise customize preset label tokens reset countdown"
         case .notifications: return "alert warn critical important time sensitive banner threshold"
         case .data: return "export csv copy summary history"
+        case .support: return "bug report issue feedback help support terms conditions legal disclaimer privacy licence license warranty"
         case .about: return "version build github source repository"
         }
     }
@@ -658,6 +662,7 @@ struct SettingsPage: View {
     @ObservedObject var settings: Settings
     @StateObject private var loginBox = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var searchBox = Box("")
+    @StateObject private var openLegal = Box(Set<String>())
     @StateObject private var openVersions = Box(Set(Changelog.load().prefix(1).map(\.version)))
 
     private var matches: [SettingsCategory] {
@@ -748,6 +753,7 @@ struct SettingsPage: View {
         case .menuBar: menuBarPane
         case .notifications: notificationsPane
         case .data: dataPane
+        case .support: supportPane
         case .about: aboutPane
         }
     }
@@ -1009,6 +1015,40 @@ struct SettingsPage: View {
         }
     }
 
+    private var supportPane: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SGroup(title: "Report a bug", footer: "Opens a GitHub page with your app and macOS version filled in. Nothing is sent until you press Submit there. You’ll need a GitHub account with access to the repository.") {
+                SRow(title: "Found a problem?", subtitle: "Tell us what happened and what you expected.") {
+                    Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }.buttonStyle(.borderedProminent)
+                }
+                SDivider()
+                SRow(title: "Copy diagnostics", subtitle: "Version, build, macOS and chip. No account details or usage numbers.") {
+                    Button("Copy") { Legal.copyDiagnostics() }
+                }
+                SDivider()
+                SRow(title: "Known issues and requests") { Button("View on GitHub") { NSWorkspace.shared.open(Legal.issuesURL) } }
+            }
+            SGroup(title: "Terms & legal", footer: "Last updated \(Legal.updated). This is a plain-English summary for a free hobby app, not legal advice.") {
+                ForEach(Array(Legal.sections.enumerated()), id: \.element.id) { i, sec in
+                    if i > 0 { SDivider() }
+                    DisclosureGroup(isExpanded: Binding(
+                        get: { openLegal.value.contains(sec.id) },
+                        set: { on in if on { openLegal.value.insert(sec.id) } else { openLegal.value.remove(sec.id) } })) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(sec.body.enumerated()), id: \.offset) { _, line in
+                                Text(line).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.top, 6).frame(maxWidth: .infinity, alignment: .leading)
+                    } label: { Text(sec.title).fontWeight(.semibold) }
+                    .padding(.horizontal, 14).padding(.vertical, 10)
+                }
+            }
+            Text("Claude Usage is unofficial and not affiliated with or endorsed by Anthropic. Figures and forecasts are estimates.")
+                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+        }
+    }
+
     private var aboutPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(spacing: 8) {
@@ -1027,6 +1067,10 @@ struct SettingsPage: View {
             changelogGroup
             Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+            HStack(spacing: 14) {
+                Button("Terms & Legal") { store.settingsCategory = .support }
+                Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }
+            }.buttonStyle(.link).padding(.horizontal, 8)
         }
     }
 

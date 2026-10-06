@@ -2,7 +2,7 @@
 
 A native macOS menu bar + desktop app for your Claude usage. The app lives in [`ClaudeUsage/`](ClaudeUsage).
 
-## ClaudeUsage  (v0.7.1 alpha)
+## ClaudeUsage  (v0.8.0 alpha)
 
 A menu bar + desktop app for your Claude usage.
 

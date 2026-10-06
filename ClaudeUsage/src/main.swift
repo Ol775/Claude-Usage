@@ -137,6 +137,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     @objc func openDashboard() { showDashboard(.overview) }
     @objc func openSettings() { showDashboard(.settings) }
     @objc func openReports() { showDashboard(.reports) }
+    @objc func reportBug() { NSWorkspace.shared.open(Legal.newIssueURL) }
     @objc func openRepo() { NSWorkspace.shared.open(AppInfo.repoURL) }
     @objc func copySummaryAction() { copySummary() }
     func showDashboard(_ tab: DashTab? = nil) {
@@ -608,6 +609,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         let r = NSMenuItem(title: "Refresh", action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
         let cu = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdatesAction), keyEquivalent: ""); cu.target = self; m.addItem(cu)
         let gh = NSMenuItem(title: "GitHub Repository", action: #selector(openRepo), keyEquivalent: ""); gh.target = self; m.addItem(gh)
+        let rb = NSMenuItem(title: "Report a Bug…", action: #selector(reportBug), keyEquivalent: ""); rb.target = self; m.addItem(rb)
         let ab = NSMenuItem(title: "About Claude Usage", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
         m.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = m
@@ -639,7 +641,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             let (mode, name) = shots[idx]
             settings.appearance = mode
             let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 1020, height: 3700), styleMask: [.borderless], backing: .buffered, defer: false)
-            store.settingsCategory = .about
+            store.settingsCategory = SettingsCategory(rawValue: ProcessInfo.processInfo.environment["CUB_TALL_CAT"] ?? "") ?? .about    // dev aid: pick the settings pane to render
             let page: AnyView = name == "about" ? AnyView(SettingsPage(store: store, settings: settings)) : AnyView(InsightsView(store: store))
             w.contentView = NSHostingView(rootView: page.frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
             w.orderFrontRegardless()
