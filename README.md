@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.png" alt="Claude Usage – session and weekly limits in your Mac's menu bar" width="720"></p>
+
 # Claude Usage
 
 A native macOS menu bar + desktop app for your Claude usage. The app lives in [`ClaudeUsage/`](ClaudeUsage).
