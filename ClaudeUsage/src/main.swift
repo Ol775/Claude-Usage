@@ -3,11 +3,12 @@ import SwiftUI
 import UserNotifications
 import UniformTypeIdentifiers
 
-final class App: NSObject, NSApplicationDelegate {
+final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     let store = Store.shared
     let settings = Settings.shared
     var timer: Timer?
+    var updateTimer: Timer?
     var refreshing = false
     var lastFetch = Date.distantPast
     var dashboard: NSWindow?
@@ -28,7 +29,7 @@ final class App: NSObject, NSApplicationDelegate {
         if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"), let img = NSImage(contentsOf: url) { NSApp.applicationIconImage = img }
         settings.applyAppearance()
         applyPolicy()
-        settings.onChange = { [weak self] in DispatchQueue.main.async { self?.applyPolicy(); self?.applyWindowStyle(); self?.scheduleTimer(); self?.build(self?.store.snapshot ?? Snapshot()) } }
+        settings.onChange = { [weak self] in DispatchQueue.main.async { self?.applyPolicy(); self?.applyWindowStyle(); self?.scheduleTimer(); self?.scheduleUpdateChecks(); self?.build(self?.store.snapshot ?? Snapshot()) } }
         store.actions = Actions(
             signIn: { [weak self] in self?.signIn() }, signOut: { [weak self] in self?.signOut() },
             cancelSignIn: { [weak self] in self?.loginProcess?.terminate() },
@@ -36,6 +37,10 @@ final class App: NSObject, NSApplicationDelegate {
             refresh: { [weak self] in self?.lastFetch = .distantPast; self?.refresh() },
             testNotify: { [weak self] in self?.notify("Claude Usage", "Notifications are working.") },
             testImportant: { [weak self] in self?.notify("Claude Usage", "This is how an important alert looks.", important: true) },
+            chooseStock: { [weak self] i in setStockAvatar(i); self?.store.stockIndex = i; self?.photoChanged() },
+            checkUpdates: { [weak self] in self?.checkForUpdates(manual: true) },
+            copyUpdateCommand: { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("cd ~/Projects/MacApps && ./update.sh", forType: .string); Toast.show("Update command copied", "Paste it into Terminal to update Claude Usage.") },
+            openChangelog: { NSWorkspace.shared.open(URL(string: AppInfo.repoURL.absoluteString + "/blob/main/ClaudeUsage/CHANGELOG.md")!) },
             openNotificationSettings: {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
             },
@@ -43,6 +48,7 @@ final class App: NSObject, NSApplicationDelegate {
             exportData: { [weak self] in self?.exportData() },
             copySummary: { [weak self] in self?.copySummary() })
         installMainMenu()
+        if App.notificationsEnabled { UNUserNotificationCenter.current().delegate = self }
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
         item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
         item.button?.attributedTitle = NSAttributedString(string: " …")
@@ -60,6 +66,8 @@ final class App: NSObject, NSApplicationDelegate {
         }
         refresh()
         scheduleTimer()
+        scheduleUpdateChecks()
+        if settings.autoCheckUpdates { DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.checkForUpdates(manual: false) } }
     }
 
     func scheduleTimer() {
@@ -175,18 +183,22 @@ final class App: NSObject, NSApplicationDelegate {
 
     // MARK: notifications
 
-    func notify(_ title: String, _ body: String, important: Bool = false) {
+    func notify(_ title: String, _ body: String, important: Bool = false, openAbout: Bool = false) {
         guard App.notificationsEnabled, settings.notificationsOn || title == "Claude Usage" else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { st in
             DispatchQueue.main.async {
                 if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
                     let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
+                    if openAbout { c.userInfo = ["open": "about"] }
                     if important { c.interruptionLevel = .timeSensitive; c.relevanceScore = 1; c.subtitle = "Important"; c.threadIdentifier = "claude-usage-important" }
                     center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
                 } else {
                     // macOS is blocking notifications for this app: show our own banner (with the icon) so the alert isn't lost.
-                    Toast.show(title, body, important: important) { [weak self] in self?.showDashboard(.settings) }
+                    Toast.show(title, body, important: important) { [weak self] in
+                        if openAbout { self?.store.settingsCategory = .about }
+                        self?.showDashboard(.settings)
+                    }
                 }
             }
         }
@@ -212,6 +224,45 @@ final class App: NSObject, NSApplicationDelegate {
                 if !granted { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!) }
             }
         }
+    }
+
+    // MARK: updates
+
+    func scheduleUpdateChecks() {
+        updateTimer?.invalidate()
+        guard settings.autoCheckUpdates else { return }
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdates(manual: false) }
+    }
+
+    func checkForUpdates(manual: Bool) {
+        store.update = .checking
+        DispatchQueue.global(qos: .utility).async {
+            let status = Updater.check()
+            DispatchQueue.main.async {
+                self.store.update = status
+                if case .available(let info) = status {
+                    // Notify once per new version (a manual check just updates the Settings page).
+                    if UserDefaults.standard.string(forKey: "notifiedUpdate") != info.version {
+                        UserDefaults.standard.set(info.version, forKey: "notifiedUpdate")
+                        self.notify("Claude Usage \(info.version) is available", info.notes.first ?? "Open Settings → About to see what’s new and update.", openAbout: true)
+                    }
+                }
+                self.build(self.store.snapshot)
+            }
+        }
+    }
+
+    @objc func checkUpdatesAction() { store.settingsCategory = .about; showDashboard(.settings); checkForUpdates(manual: true) }
+    @objc func openUpdate() { store.settingsCategory = .about; showDashboard(.settings) }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if response.notification.request.content.userInfo["open"] as? String == "about" {
+            DispatchQueue.main.async { self.store.settingsCategory = .about; self.showDashboard(.settings) }
+        } else { DispatchQueue.main.async { self.showDashboard(.overview) } }
+        completionHandler()
+    }
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
 
     // MARK: export & share
@@ -315,7 +366,7 @@ final class App: NSObject, NSApplicationDelegate {
         }
     }
 
-    func photoChanged() { store.photo = avatarImage; build(store.snapshot) }
+    func photoChanged() { store.photo = avatarImage; store.stockIndex = stockAvatarIndex; build(store.snapshot) }
     func choosePhoto() {
         let panel = NSOpenPanel()
         panel.title = "Choose a profile photo"; panel.message = "The photo stays on this Mac."
@@ -366,6 +417,11 @@ final class App: NSObject, NSApplicationDelegate {
 
         let m = NSMenu()
         add(m, AccountView(store.account))
+        if case .available(let u) = store.update {
+            let up = NSMenuItem(title: "", action: #selector(openUpdate), keyEquivalent: ""); up.target = self
+            up.attributedTitle = NSAttributedString(string: "⬆︎  Update available – v\(u.version)", attributes: [.foregroundColor: claudeOrange, .font: NSFont.boldSystemFont(ofSize: 13)])
+            m.addItem(up)
+        }
         m.addItem(.separator())
         let main = store.limits.filter { $0.kind != .other }
         if main.isEmpty {
@@ -408,6 +464,7 @@ final class App: NSObject, NSApplicationDelegate {
         let rp = NSMenuItem(title: "Open Reports…", action: #selector(openReports), keyEquivalent: "e"); rp.target = self; m.addItem(rp)
         let cs = NSMenuItem(title: "Copy Usage Summary", action: #selector(copySummaryAction), keyEquivalent: "c"); cs.target = self; m.addItem(cs)
         let r = NSMenuItem(title: "Refresh", action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
+        let cu = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdatesAction), keyEquivalent: ""); cu.target = self; m.addItem(cu)
         let gh = NSMenuItem(title: "GitHub Repository", action: #selector(openRepo), keyEquivalent: ""); gh.target = self; m.addItem(gh)
         let ab = NSMenuItem(title: "About Claude Usage", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
         m.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -418,7 +475,9 @@ final class App: NSObject, NSApplicationDelegate {
 
     func startTour() {
         Settings.persist = false
+        App.notificationsEnabled = false
         showDashboard(.overview)
+        checkForUpdates(manual: true)
         refresh()
         var steps: [(AppearanceMode, DashTab, AccentTheme)] = []
         for a in [AppearanceMode.dark, .light] { for t in DashTab.allCases { steps.append((a, t, .claude)) } }
@@ -445,7 +504,7 @@ final class App: NSObject, NSApplicationDelegate {
             guard i < steps.count else { tall(); return }
             let (a, t, th) = steps[i]; i += 1
             settings.appearance = a; settings.theme = th; store.tab = t
-            if t == .settings { store.settingsCategory = a == .dark ? .appearance : (a == .light ? .account : .notifications) }
+            if t == .settings { store.settingsCategory = a == .dark ? .account : (a == .light ? .about : .notifications) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 try? "\(i) \(a.rawValue)-\(t.rawValue)-\(th.rawValue) \(self.dashboard?.windowNumber ?? 0)".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { next() }
@@ -481,6 +540,18 @@ if CommandLine.arguments.contains("--snapshot") {
         let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds)!
         host.cacheDisplay(in: host.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "/tmp/menu_snapshot_\(name).png"))
+    }
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--check-update") {
+    // Dev aid: prints what the update check finds (use CUB_PRETEND_VERSION=0.1.0 to pretend to be an older install).
+    print("installed:", Updater.installed)
+    switch Updater.check() {
+    case .available(let u): print("AVAILABLE", u.version); u.notes.prefix(4).forEach { print("  -", $0) }
+    case .upToDate: print("UP TO DATE")
+    case .failed(let m): print("FAILED:", m)
+    default: break
     }
     exit(0)
 }

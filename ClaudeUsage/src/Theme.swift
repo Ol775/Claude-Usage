@@ -99,6 +99,7 @@ final class Settings: ObservableObject {
     @Published var showInDock: Bool { didSet { if Settings.persist { d.set(showInDock, forKey: "showInDock") }; onChange() } }
     @Published var notificationsOn: Bool { didSet { if Settings.persist { d.set(notificationsOn, forKey: "notificationsOn") } } }
     @Published var menuBarStyle: MenuBarStyle { didSet { if Settings.persist { d.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }; onChange() } }
+    @Published var autoCheckUpdates: Bool { didSet { if Settings.persist { d.set(autoCheckUpdates, forKey: "autoCheckUpdates") }; onChange() } }
     @Published var importance: NotifImportance { didSet { if Settings.persist { d.set(importance.rawValue, forKey: "importance") } } }
     @Published var warnThreshold: Int { didSet { if Settings.persist { d.set(warnThreshold, forKey: "warnThreshold") } } }
     @Published var criticalThreshold: Int { didSet { if Settings.persist { d.set(criticalThreshold, forKey: "criticalThreshold") } } }
@@ -112,6 +113,7 @@ final class Settings: ObservableObject {
         notificationsOn = d.object(forKey: "notificationsOn") as? Bool ?? true
         predictiveAlerts = d.object(forKey: "predictiveAlerts") as? Bool ?? true
         menuBarStyle = MenuBarStyle(rawValue: d.string(forKey: "menuBarStyle") ?? "") ?? .both
+        autoCheckUpdates = d.object(forKey: "autoCheckUpdates") as? Bool ?? true
         importance = NotifImportance(rawValue: d.string(forKey: "importance") ?? "") ?? .normal
         warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
         criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95

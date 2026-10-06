@@ -13,6 +13,10 @@ struct Actions {
     var refresh: () -> Void = {}
     var testNotify: () -> Void = {}
     var testImportant: () -> Void = {}
+    var chooseStock: (Int) -> Void = { _ in }
+    var checkUpdates: () -> Void = {}
+    var copyUpdateCommand: () -> Void = {}
+    var openChangelog: () -> Void = {}
     var openNotificationSettings: () -> Void = {}
     var requestNotifications: () -> Void = {}
     var exportData: () -> Void = {}
@@ -49,6 +53,8 @@ final class Store: ObservableObject {
     @Published var lastUpdated: Date?
     @Published var notifStatus = "Checking…"
     @Published var notifBlocked = false
+    @Published var stockIndex: Int? = stockAvatarIndex
+    @Published var update: UpdateStatus = .idle
     var actions = Actions()
 }
 
@@ -732,6 +738,18 @@ struct SettingsPage: View {
             .frame(maxWidth: .infinity)
 
             if a.loggedIn {
+                SGroup(title: "Choose a robot", footer: "Stock robot avatars – pick one as your account picture.") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.fixed(62), spacing: 14), count: 6), alignment: .leading, spacing: 14) {
+                        ForEach(0..<stockBots.count, id: \.self) { i in
+                            Button { store.actions.chooseStock(i) } label: {
+                                Image(nsImage: stockAvatarImage(i)).resizable().frame(width: 62, height: 62).clipShape(Circle())
+                                    .overlay(Circle().stroke(store.stockIndex == i ? Color.brand : Color(nsColor: .separatorColor), lineWidth: store.stockIndex == i ? 3 : 1).padding(store.stockIndex == i ? -3 : 0))
+                            }
+                            .buttonStyle(.plain).help(stockBots[i].name)
+                        }
+                    }
+                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                }
                 SGroup(title: "Profile photo", footer: "Your photo stays on this Mac – Claude doesn’t share one.") {
                     SRow(title: store.photo == nil ? "Choose a photo" : "Change photo") {
                         Button(store.photo == nil ? "Choose…" : "Change…") { store.actions.choosePhoto() }
@@ -933,8 +951,47 @@ struct SettingsPage: View {
                 SDivider()
                 SRow(title: "Source code") { Link("github.com/Ol775/MacApps", destination: AppInfo.repoURL) }
             }
+            updatesGroup
             Text("Early alpha – expect rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
                 .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+        }
+    }
+
+    private var updateAvailable: Bool { if case .available = store.update { return true }; return false }
+
+    @ViewBuilder private var updatesGroup: some View {
+        let statusText: String = {
+            switch store.update {
+            case .idle: return "Not checked yet"
+            case .checking: return "Checking…"
+            case .upToDate(let d): return "You’re up to date · checked \(d.formatted(date: .omitted, time: .shortened))"
+            case .available(let u): return "Version \(u.version) is available"
+            case .failed(let m): return m
+            }
+        }()
+        SGroup(title: "Updates") {
+            SRow(title: statusText, subtitle: updateAvailable ? "You have \(Updater.installed)." : nil) {
+                Button("Check Now") { store.actions.checkUpdates() }
+            }
+            SDivider()
+            SRow(title: "Check automatically", subtitle: "Looks for a newer version on GitHub every few hours and notifies you.") {
+                Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
+            }
+            if case .available(let u) = store.update {
+                SDivider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What’s new").font(.subheadline.weight(.semibold))
+                    ForEach(Array(u.notes.prefix(6).enumerated()), id: \.offset) { _, n in
+                        HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(.callout).foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Button("View on GitHub") { store.actions.openChangelog() }
+                        Button("Copy update command") { store.actions.copyUpdateCommand() }
+                    }.padding(.top, 4)
+                    Text("Paste the command into Terminal – it pulls the new version, rebuilds, installs and relaunches the app.").font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }

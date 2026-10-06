@@ -29,9 +29,25 @@ func saveAvatar(from url: URL) -> Bool {
     guard let tiff = out.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
           (try? png.write(to: avatarURL())) != nil else { return false }
     avatarImage = NSImage(data: png)
+    stockAvatarIndex = nil
     return true
 }
-func removeAvatar() { try? FileManager.default.removeItem(at: avatarURL()); avatarImage = nil }
+func removeAvatar() { try? FileManager.default.removeItem(at: avatarURL()); avatarImage = nil; stockAvatarIndex = nil }
+
+/// Which robot stock avatar is the account picture (nil when a photo or nothing is set).
+var stockAvatarIndex: Int? {
+    get { UserDefaults.standard.object(forKey: "stockAvatar") as? Int }
+    set { if let v = newValue { UserDefaults.standard.set(v, forKey: "stockAvatar") } else { UserDefaults.standard.removeObject(forKey: "stockAvatar") } }
+}
+
+/// Uses a robot stock image as the account picture.
+func setStockAvatar(_ i: Int) {
+    let img = stockAvatarImage(i)
+    guard let tiff = img.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
+          (try? png.write(to: avatarURL())) != nil else { return }
+    avatarImage = NSImage(data: png)
+    stockAvatarIndex = i
+}
 
 /// Circular avatar for AppKit views: the photo if there is one, else accent-coloured initials, or a grey "?" when signed out.
 func drawAvatar(in rect: NSRect, account: Account) {
