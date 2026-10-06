@@ -62,6 +62,9 @@ struct ReportsView: View {
             out[key] = LimitPoint(t: min(when, now), v: v, name: name, window: w)
         }
         for s in samples { add("Session", s.t, s.session, s.sessionReset); add("Weekly", s.t, s.weekly, s.weeklyReset) }
+        if settings.chatgptEnabled {
+            for s in store.gptSamples where s.t >= start { for w in s.w { add(ChatGPT.seriesName(w.seconds), s.t, w.percent, w.reset) } }
+        }
         return out.values.sorted { $0.t < $1.t }
     }
 
@@ -76,6 +79,19 @@ struct ReportsView: View {
             best[k] = (r, v)
         }
         return best.values.map { PeakBar(end: min($0.0, now), peak: $0.1) }.sorted { $0.end < $1.end }
+    }
+
+    /// Claude keeps its orange and grey; each ChatGPT window gets a shade of ChatGPT green.
+    /// (KeyValuePairs can't be built from an array, so the realistic combinations are listed explicitly.)
+    private func styleScale(_ pts: [LimitPoint]) -> KeyValuePairs<String, Color> {
+        let set = Set(pts.map(\.name))
+        switch (set.contains("ChatGPT 5-hour"), set.contains("ChatGPT weekly"), set.contains("ChatGPT monthly")) {
+        case (true, true, _): return ["Session": Color.brand, "Weekly": Color.primary.opacity(0.55), "ChatGPT 5-hour": Color.gpt, "ChatGPT weekly": Color.gpt.opacity(0.55)]
+        case (true, false, _): return ["Session": Color.brand, "Weekly": Color.primary.opacity(0.55), "ChatGPT 5-hour": Color.gpt]
+        case (false, true, _): return ["Session": Color.brand, "Weekly": Color.primary.opacity(0.55), "ChatGPT weekly": Color.gpt.opacity(0.55)]
+        case (_, _, true): return ["Session": Color.brand, "Weekly": Color.primary.opacity(0.55), "ChatGPT monthly": Color.gpt]
+        default: return ["Session": Color.brand, "Weekly": Color.primary.opacity(0.55)]
+        }
     }
 
     private var peakLabel: String { range == .month ? "weekly windows" : "sessions" }
@@ -122,7 +138,7 @@ struct ReportsView: View {
                     .frame(height: 200)
                 }
 
-                chartCard(title: "Limit utilisation", subtitle: "Session and weekly usage against the limit") {
+                chartCard(title: "Limit utilisation", subtitle: settings.chatgptEnabled ? "Claude and ChatGPT usage against their limits" : "Session and weekly usage against the limit") {
                     if pts.count < 2 {
                         emptyNote
                     } else {
@@ -135,7 +151,7 @@ struct ReportsView: View {
                                 .annotation(position: .top, alignment: .leading) { Text("Limit").font(.caption2).foregroundStyle(Color.danger) }
                             RuleMark(y: .value("Warn", warn)).foregroundStyle(Color.orange.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
                         }
-                        .chartForegroundStyleScale(["Session": Color.brand, "Weekly": Color.primary.opacity(0.55)])
+                        .chartForegroundStyleScale(styleScale(pts))
                         .chartXScale(domain: start...end)
                         .chartYScale(domain: 0...115)
                         .chartXAxis { xAxis() }

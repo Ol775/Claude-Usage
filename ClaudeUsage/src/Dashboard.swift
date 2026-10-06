@@ -8,6 +8,10 @@ struct Actions {
     var signIn: () -> Void = {}
     var signOut: () -> Void = {}
     var cancelSignIn: () -> Void = {}
+    var connectChatGPT: () -> Void = {}
+    var disconnectChatGPT: () -> Void = {}
+    var signOutChatGPT: () -> Void = {}
+    var cancelChatGPT: () -> Void = {}
     var choosePhoto: () -> Void = {}
     var removePhoto: () -> Void = {}
     var refresh: () -> Void = {}
@@ -50,6 +54,9 @@ final class Store: ObservableObject {
     @Published var limitError: String?
     @Published var stale = false
     @Published var account = Account()
+    @Published var chatgpt = ChatGPTState()
+    @Published var chatgptBusy = false
+    @Published var gptSamples: [GPTSample] = GPTHistory.shared.samples
     @Published var samples: [Sample] = []
     @Published var loginBusy = false
     @Published var photo: NSImage? = avatarImage
@@ -74,6 +81,7 @@ final class Box<T>: ObservableObject {
 extension Color {
     static var brand: Color { Color(nsColor: claudeOrange) }
     static var danger: Color { Color(nsColor: alertRed) }
+    static var gpt: Color { Color(red: 0.063, green: 0.639, blue: 0.498) }       // ChatGPT green, used for its lines in the charts
 }
 
 struct CardStyle: ViewModifier {
@@ -197,6 +205,7 @@ struct UpdateBanner: View {
 
 struct OverviewView: View {
     @ObservedObject var store: Store
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         ScrollView {
@@ -250,8 +259,10 @@ struct OverviewView: View {
                         }
                         .padding(18).card()
                     }
-                    ProjectionCard(store: store)
                 }
+
+                if settings.chatgptEnabled { ChatGPTSection(store: store) }
+                if !store.limits.isEmpty { ProjectionCard(store: store) }
 
                 HStack(spacing: 16) {
                     StatTile(title: "Today", value: fmt(store.snapshot.today.billable), sub: plural(store.snapshot.messagesToday, "response"))
@@ -281,6 +292,60 @@ struct Ring: View {
                 Text("used").font(.caption2).foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// ChatGPT limits (through Codex's sign-in): same look as the Claude cards, without a forecast.
+struct ChatGPTSection: View {
+    @ObservedObject var store: Store
+    var body: some View {
+        let g = store.chatgpt
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("ChatGPT").font(.title3.bold())
+                Text("Codex limits").font(.caption).foregroundStyle(.secondary)
+                if !g.plan.isEmpty {
+                    Text("\(g.plan.uppercased()) PLAN").font(.system(size: 9, weight: .bold)).foregroundStyle(Color.brand)
+                        .padding(.horizontal, 7).padding(.vertical, 3).background(Capsule().fill(Color.brand.opacity(0.18)))
+                }
+                Spacer()
+            }
+            if g.limits.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: g.isFree ? "lock.fill" : "bubble.left.and.bubble.right").font(.title2).foregroundStyle(.secondary)
+                    Text(store.chatgptBusy ? "Waiting for your browser…" : (g.error ?? "Loading ChatGPT limits…")).fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    if !g.signedIn && !store.chatgptBusy { Button("Connect") { store.actions.connectChatGPT() }.buttonStyle(.borderedProminent) }
+                }
+                .padding(18).card()
+            } else {
+                let rows = stride(from: 0, to: g.limits.count, by: 2).map { Array(g.limits[$0..<min($0 + 2, g.limits.count)]) }
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, l in PlainLimitCard(limit: l) }
+                        if row.count == 1 { Color.clear.frame(maxWidth: .infinity) }
+                    }
+                }
+                if let e = g.error { Text(e).font(.caption).foregroundStyle(.secondary) }
+            }
+        }
+    }
+}
+
+struct PlainLimitCard: View {
+    let limit: Limit
+    var body: some View {
+        HStack(spacing: 18) {
+            Ring(percent: limit.percent, color: limit.percent >= 95 ? .danger : .brand).frame(width: 104, height: 104)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(limit.name).font(.headline)
+                Text(untilText(limit.resets)).font(.subheadline).foregroundStyle(.secondary)
+                Label(limit.percent >= 95 ? "Almost at the limit" : "\(Int((100 - limit.percent).rounded()))% left", systemImage: limit.percent >= 95 ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.callout).foregroundStyle(limit.percent >= 95 ? Color.danger : Color.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(18).frame(maxWidth: .infinity).card()
     }
 }
 
@@ -336,12 +401,76 @@ struct StatTile: View {
 
 struct Pt: Identifiable { let t: Date; let v: Double; var id: TimeInterval { t.timeIntervalSince1970 } }
 
+/// A small coloured dot followed by the text, for chart legends.
+/// "Buy me a coffee" button: a drawn coffee cup on the familiar yellow (not the official artwork).
+struct CoffeeButton: View {
+    var body: some View {
+        Button { NSWorkspace.shared.open(AppInfo.coffeeURL) } label: {
+            HStack(spacing: 7) {
+                Image(systemName: "cup.and.saucer.fill").font(.system(size: 14, weight: .semibold))
+                Text("Buy me a coffee").font(.system(size: 13, weight: .bold))
+            }
+            .foregroundStyle(Color.black.opacity(0.85))
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(Capsule().fill(Color(red: 1.0, green: 0.867, blue: 0.0)))
+        }
+        .buttonStyle(.plain).help("buymeacoffee.com/ol775")
+    }
+}
+
+struct LegendLabel: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 5) { configuration.icon.font(.system(size: 7)); configuration.title.foregroundStyle(.secondary) }
+    }
+}
+
 struct ProjectionCard: View {
     @ObservedObject var store: Store
     @StateObject private var kindBox = Box(LimitKind.session)
     var kind: LimitKind { kindBox.value }
 
     var limit: Limit? { store.limits.first { $0.kind == kind } }
+
+    // ChatGPT on the same chart: its 5-hour window goes on the Session view, its weekly window on the Weekly view.
+    var gptLimit: Limit? {
+        guard Settings.shared.chatgptEnabled else { return nil }
+        return store.chatgpt.limits.first { $0.name.hasPrefix("ChatGPT ") && (kind == .session ? ChatGPT.isSession($0.seconds) : ChatGPT.isWeekly($0.seconds)) }
+    }
+    private func gptWindow(_ s: GPTSample) -> GPTWin? { s.w.first { kind == .session ? ChatGPT.isSession($0.seconds) : ChatGPT.isWeekly($0.seconds) } }
+    /// One line per ChatGPT window, so the line doesn't join across a reset.
+    private func gptSeries(from start: Date, now: Date) -> [(id: String, pts: [Pt])] {
+        var groups: [Int: [Pt]] = [:]
+        for s in store.gptSamples where s.t >= start && s.t <= now {
+            guard let w = gptWindow(s), let r = w.reset else { continue }
+            groups[Int(r.timeIntervalSince1970 / 600), default: []].append(Pt(t: s.t, v: w.percent))
+        }
+        return groups.keys.sorted().map { (id: "gpt\($0)", pts: groups[$0]!) }
+    }
+    private func gptForecast(_ l: Limit, now: Date) -> Forecast {
+        // reuse the Claude predictor on ChatGPT's own readings (no token history to blend in, so it uses the window average / recent pace)
+        let pseudo = Limit(name: kind == .session ? "Current session" : "Weekly – all models", percent: l.percent, resets: l.resets)
+        let samples = store.gptSamples.compactMap { s -> Sample? in
+            guard let w = gptWindow(s) else { return nil }
+            return Sample(t: s.t, session: kind == .session ? w.percent : 0, sessionReset: kind == .session ? w.reset : nil,
+                          weekly: kind == .weekly ? w.percent : 0, weeklyReset: kind == .weekly ? w.reset : nil)
+        }
+        return Predictor.forecast(pseudo, samples: samples, activity: [:], now: now)
+    }
+    /// The dashed projection, cut off at the chart's right edge.
+    private func gptProjection(_ f: Forecast, l: Limit, now: Date, chartEnd: Date) -> (Date, Double)? {
+        guard let own = l.resets else { return nil }
+        var end = own, v = l.percent
+        switch f {
+        case .hits(let at, _, _): end = at; v = 100
+        case .safe(let p, let rate): guard rate > 0 else { return nil }; v = min(p, 115)
+        default: return nil
+        }
+        if end > chartEnd {
+            let frac = chartEnd.timeIntervalSince(now) / max(end.timeIntervalSince(now), 1)
+            v = l.percent + (v - l.percent) * frac; end = chartEnd
+        }
+        return end > now ? (end, v) : nil
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -360,7 +489,32 @@ struct ProjectionCard: View {
                 let pts = points(l, resets: resets, now: now)
                 let f = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days, now: now)
                 let proj = projection(f, l: l, resets: resets, now: now)
+                let gl = gptLimit
+                let gSeries = gl == nil ? [] : gptSeries(from: start, now: now)
+                let gf = gl.map { gptForecast($0, now: now) }
+                let gproj = gl.flatMap { g in gf.flatMap { gptProjection($0, l: g, now: now, chartEnd: resets) } }
+                if gl != nil {
+                    HStack(spacing: 14) {
+                        Label("Claude", systemImage: "circle.fill").foregroundStyle(Color.brand)
+                        Label("ChatGPT", systemImage: "circle.fill").foregroundStyle(Color.gpt)
+                    }.labelStyle(LegendLabel()).font(.caption)
+                }
                 Chart {
+                    ForEach(gSeries, id: \.id) { s in
+                        ForEach(s.pts) { p in
+                            LineMark(x: .value("Time", p.t), y: .value("Used", p.v), series: .value("S", s.id))
+                                .foregroundStyle(Color.gpt).lineStyle(StrokeStyle(lineWidth: 2.2))
+                        }
+                    }
+                    if let g = gl, let (gend, gv) = gproj {
+                        LineMark(x: .value("Time", now), y: .value("Used", g.percent), series: .value("S", "gptproj"))
+                            .foregroundStyle(Color.gpt).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                        LineMark(x: .value("Time", gend), y: .value("Used", gv), series: .value("S", "gptproj"))
+                            .foregroundStyle(Color.gpt).lineStyle(StrokeStyle(lineWidth: 2, dash: [5, 4]))
+                    }
+                    if let g = gl, g.resets.map({ $0 > start && $0 <= resets }) == true {
+                        PointMark(x: .value("Time", now), y: .value("Used", g.percent)).foregroundStyle(Color.gpt).symbolSize(60)
+                    }
                     ForEach(pts) { p in
                         AreaMark(x: .value("Time", p.t), y: .value("Used", p.v))
                             .foregroundStyle(LinearGradient(colors: [Color.brand.opacity(0.35), Color.brand.opacity(0.02)], startPoint: .top, endPoint: .bottom))
@@ -389,7 +543,8 @@ struct ProjectionCard: View {
                 }
                 .padding(.top, 16)
                 .frame(height: 246)
-                Text(Predictor.describe(f)).font(.callout).foregroundStyle(.secondary)
+                Text(gl == nil ? Predictor.describe(f) : "Claude: " + Predictor.describe(f)).font(.callout).foregroundStyle(.secondary)
+                if let g = gl, let gf = gf { Text("ChatGPT: " + Predictor.describe(gf)).font(.callout).foregroundStyle(Color.gpt).help(g.name) }
                 if store.samples.count < 3 {
                     Text("The line fills in as the app runs – predictions improve after a few minutes of data.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -622,7 +777,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .notifications: return "alert warn critical important time sensitive banner threshold"
         case .data: return "export csv copy summary history"
         case .support: return "bug report issue feedback help support terms conditions legal disclaimer privacy licence license warranty"
-        case .about: return "version build github source repository"
+        case .about: return "version build github source repository coffee donate tip support the developer"
         }
     }
 }
@@ -806,6 +961,7 @@ struct SettingsPage: View {
                         Button { store.actions.signOut() } label: { Text("Sign Out…").foregroundStyle(Color.danger) }
                     }
                 }
+                chatgptGroup
             } else {
                 SGroup(footer: "Sign-in uses Claude’s official login, through Claude Code.") {
                     if store.loginBusy {
@@ -817,6 +973,35 @@ struct SettingsPage: View {
                             Button("Sign In") { store.actions.signIn() }.buttonStyle(.borderedProminent)
                         }
                     }
+                }
+                chatgptGroup
+            }
+        }
+    }
+
+    /// Optional ChatGPT usage, read through OpenAI's Codex CLI sign-in (works with free and paid ChatGPT accounts).
+    @ViewBuilder private var chatgptGroup: some View {
+        let g = store.chatgpt
+        SGroup(title: "ChatGPT", footer: "Shows your Codex usage limits for a paid ChatGPT plan, using the sign-in saved by OpenAI’s Codex CLI (install with “brew install codex”). Claude Usage only reads it to ask ChatGPT for your limits – it never changes, copies or stores your ChatGPT login.") {
+            if !settings.chatgptEnabled {
+                SRow(title: "Show ChatGPT usage", subtitle: "See your ChatGPT (Codex) limits next to Claude’s. Needs a paid ChatGPT plan. Nothing is read until you connect.") {
+                    Button("Connect…") { store.actions.connectChatGPT() }.buttonStyle(.borderedProminent)
+                }
+            } else if store.chatgptBusy {
+                SRow(title: "Waiting for your browser…", subtitle: "Finish signing in to ChatGPT using the browser window.") {
+                    HStack { ProgressView().controlSize(.small); Button("Cancel") { store.actions.cancelChatGPT() } }
+                }
+            } else if g.signedIn {
+                SRow(title: g.email.isEmpty ? "Connected to ChatGPT" : g.email, subtitle: g.isFree ? "ChatGPT Free plan – not supported, a paid plan is needed" : (g.plan.isEmpty ? nil : "ChatGPT \(g.plan) plan")) {
+                    Button { store.actions.signOutChatGPT() } label: { Text("Sign Out…").foregroundStyle(Color.danger) }
+                }
+                SDivider()
+                SRow(title: "Stop showing ChatGPT", subtitle: "Hides it everywhere. Your ChatGPT sign-in is left as it is.") {
+                    Button("Disconnect") { store.actions.disconnectChatGPT() }
+                }
+            } else {
+                SRow(title: g.error ?? "Not signed in to ChatGPT") {
+                    HStack { Button("Sign In") { store.actions.connectChatGPT() }.buttonStyle(.borderedProminent); Button("Disconnect") { store.actions.disconnectChatGPT() } }
                 }
             }
         }
@@ -900,7 +1085,7 @@ struct SettingsPage: View {
     }
 
     private var menuBarPane: some View {
-        let parts = MenuBarTitle.parts(limits: store.limits, tokensToday: store.snapshot.today.billable, settings: settings)
+        let parts = MenuBarTitle.parts(limits: store.limits, tokensToday: store.snapshot.today.billable, settings: settings, chatgpt: store.chatgpt.limits)
         let showIcon = settings.menuShowIcon || parts.isEmpty
         var preview = Text("")
         for (i, p) in parts.enumerated() {
@@ -943,6 +1128,10 @@ struct SettingsPage: View {
                 SRow(title: "Current session", subtitle: "How much of the session limit you’ve used.") { Toggle("", isOn: $settings.menuShowSession).labelsHidden().toggleStyle(.switch) }
                 SDivider()
                 SRow(title: "Weekly limit", subtitle: "How much of the weekly limit you’ve used.") { Toggle("", isOn: $settings.menuShowWeekly).labelsHidden().toggleStyle(.switch) }
+                SDivider()
+                SRow(title: "ChatGPT usage", subtitle: settings.chatgptEnabled ? "Your ChatGPT limit, shown as G 12%." : "Connect ChatGPT in Settings → Account first.") {
+                    Toggle("", isOn: $settings.menuShowChatGPT).labelsHidden().toggleStyle(.switch).disabled(!settings.chatgptEnabled)
+                }
                 SDivider()
                 SRow(title: "Tokens today", subtitle: "Input, output and cache-write tokens used today.") { Toggle("", isOn: $settings.menuShowTokens).labelsHidden().toggleStyle(.switch) }
                 SDivider()
@@ -1067,6 +1256,9 @@ struct SettingsPage: View {
                 SRow(title: "Build") { Text(AppInfo.build).foregroundStyle(.secondary).monospacedDigit() }
                 SDivider()
                 SRow(title: "Source code") { Link(AppInfo.repoURL.absoluteString.replacingOccurrences(of: "https://", with: ""), destination: AppInfo.repoURL) }
+            }
+            SGroup(footer: "Claude Usage is free and open source. If it saves you from a surprise limit, a coffee helps keep it going – entirely optional.") {
+                SRow(title: "Support the developer") { CoffeeButton() }
             }
             updatesGroup
             changelogGroup

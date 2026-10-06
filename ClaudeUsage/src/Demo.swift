@@ -74,9 +74,9 @@ enum Demo {
     }
 
     /// A week of limit readings every 20 minutes: session fills and resets every 5 hours, weekly climbs steadily.
-    static func samples(now: Date = Date()) -> [Sample] {
-        let sessionReset = now.addingTimeInterval(2 * 3600 + 10 * 60)
-        let weeklyReset = now.addingTimeInterval(2 * 86400 + 6 * 3600)
+    static func samples(now: Date = Date(), sessionIn: TimeInterval = 2 * 3600 + 10 * 60, weeklyIn: TimeInterval = 2 * 86400 + 6 * 3600, sessionTarget: Double = 58, weeklyTarget: Double = 46, seed: Int = 0) -> [Sample] {
+        let sessionReset = now.addingTimeInterval(sessionIn)
+        let weeklyReset = now.addingTimeInterval(weeklyIn)
         let step: TimeInterval = 20 * 60, cal = Calendar.current
         var out: [Sample] = []
         var t = now.addingTimeInterval(-7 * 86400)
@@ -85,7 +85,7 @@ enum Demo {
         while t <= now {
             let h = Double(cal.component(.hour, from: t)) + Double(cal.component(.minute, from: t)) / 60
             let wd = cal.component(.weekday, from: t)
-            let active = max(0, exp(-pow(h - 13, 2) / 22)) * ((wd == 1 || wd == 7) ? 0.3 : 1.0) * (0.6 + 0.8 * rnd(Int(t.timeIntervalSince1970 / step), 9))
+            let active = max(0, exp(-pow(h - 13, 2) / 22)) * ((wd == 1 || wd == 7) ? 0.3 : 1.0) * (0.6 + 0.8 * rnd(Int(t.timeIntervalSince1970 / step), 9 + seed))
             let w = Int(floor(sessionReset.timeIntervalSince(t) / (5 * 3600)))
             if w != window { window = w; sess = 0 }
             sess = min(97, sess + active * 4.5)
@@ -97,12 +97,12 @@ enum Demo {
         }
         // land exactly on the headline numbers
         if let last = out.last, last.session > 0 {
-            let ks = 58.0 / last.session
+            let ks = sessionTarget / last.session
             for i in out.indices where out[i].sessionReset == out.last!.sessionReset { out[i].session = min(100, out[i].session * ks) }
         }
         if let lw = out.last?.weekly, lw > 0 {
             let start = weeklyReset.addingTimeInterval(-7 * 86400)
-            let kw = 46.0 / lw
+            let kw = weeklyTarget / lw
             for i in out.indices where out[i].t >= start { out[i].weekly = min(100, out[i].weekly * kw) }
         }
         return out

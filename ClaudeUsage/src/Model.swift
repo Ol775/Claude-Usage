@@ -1,6 +1,6 @@
 import AppKit
 
-struct Limit { let name: String; let percent: Double; let resets: Date? }
+struct Limit { let name: String; let percent: Double; let resets: Date?; var seconds: Double = 0 }     // seconds: window length (ChatGPT only)
 
 func parseDate(_ t: String) -> Date? {
     let clean = t.replacingOccurrences(of: "\\.\\d+", with: "", options: .regularExpression)

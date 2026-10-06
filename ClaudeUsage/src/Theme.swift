@@ -8,6 +8,7 @@ enum AppInfo {
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1" }
     static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "alpha" }
     static let repoURL = URL(string: "https://github.com/Ol775/Claude-Usage")!
+    static let coffeeURL = URL(string: "https://buymeacoffee.com/ol775")!
     static var display: String { "v\(version) \(stage)" }
 }
 
@@ -88,6 +89,8 @@ final class Settings: ObservableObject {
     @Published var menuShowIcon: Bool { didSet { save(menuShowIcon, "menuShowIcon"); onChange() } }
     @Published var menuShowSession: Bool { didSet { save(menuShowSession, "menuShowSession"); onChange() } }
     @Published var menuShowWeekly: Bool { didSet { save(menuShowWeekly, "menuShowWeekly"); onChange() } }
+    @Published var chatgptEnabled: Bool { didSet { save(chatgptEnabled, "chatgptEnabled"); onChange() } }
+    @Published var menuShowChatGPT: Bool { didSet { save(menuShowChatGPT, "menuShowChatGPT"); onChange() } }
     @Published var menuShowTokens: Bool { didSet { save(menuShowTokens, "menuShowTokens"); onChange() } }
     @Published var menuShowReset: Bool { didSet { save(menuShowReset, "menuShowReset"); onChange() } }
     @Published var menuIconMono: Bool { didSet { save(menuIconMono, "menuIconMono"); onChange() } }
@@ -117,6 +120,8 @@ final class Settings: ObservableObject {
         menuShowIcon = flag("menuShowIcon", true)
         menuShowSession = flag("menuShowSession", true, from: ["both", "session"])
         menuShowWeekly = flag("menuShowWeekly", true, from: ["both", "weekly"])
+        chatgptEnabled = flag("chatgptEnabled", false)
+        menuShowChatGPT = flag("menuShowChatGPT", false)
         menuShowTokens = flag("menuShowTokens", false, from: ["tokens"])
         menuShowReset = flag("menuShowReset", false)
         menuIconMono = flag("menuIconMono", false)
@@ -144,10 +149,10 @@ final class Settings: ObservableObject {
 
     func apply(_ p: MenuBarPreset) {
         switch p {
-        case .standard: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false
-        case .compact: menuShowIcon = false; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false
-        case .minimal: menuShowIcon = true; menuShowSession = false; menuShowWeekly = false; menuShowTokens = false; menuShowReset = false
-        case .everything: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = true; menuShowReset = true
+        case .standard: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false; menuShowChatGPT = false
+        case .compact: menuShowIcon = false; menuShowSession = true; menuShowWeekly = true; menuShowTokens = false; menuShowReset = false; menuShowChatGPT = false
+        case .minimal: menuShowIcon = true; menuShowSession = false; menuShowWeekly = false; menuShowTokens = false; menuShowReset = false; menuShowChatGPT = false
+        case .everything: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = true; menuShowReset = true; menuShowChatGPT = chatgptEnabled
         }
         menuLabelStyle = .letters; menuPercentColour = .critical; menuIconMono = false
     }

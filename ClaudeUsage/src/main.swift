@@ -13,6 +13,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     var lastFetch = Date.distantPast
     var dashboard: NSWindow?
     var loginProcess: Process?
+    var chatgptProcess: Process?
     var shownSignedOutPrompt = false
     var menuOpen = false, pendingBuild = false, pendingRefresh = false
     var scheduledMinutes = 0, scheduledAutoCheck: Bool?
@@ -42,6 +43,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         store.actions = Actions(
             signIn: { [weak self] in self?.signIn() }, signOut: { [weak self] in self?.signOut() },
             cancelSignIn: { [weak self] in self?.loginProcess?.terminate() },
+            connectChatGPT: { [weak self] in self?.connectChatGPT() }, disconnectChatGPT: { [weak self] in self?.disconnectChatGPT() },
+            signOutChatGPT: { [weak self] in self?.signOutChatGPT() }, cancelChatGPT: { [weak self] in self?.chatgptProcess?.terminate() },
             choosePhoto: { [weak self] in self?.choosePhoto() }, removePhoto: { [weak self] in removeAvatar(); self?.photoChanged() },
             refresh: { [weak self] in self?.lastFetch = .distantPast; self?.refresh() },
             testNotify: { [weak self] in self?.notify("Claude Usage", "Notifications are working.", system: true) },
@@ -201,16 +204,20 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if Demo.enabled {            // screenshots: made-up data, nothing read from or saved to the real history
             let s = Demo.snapshot()
             store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
+            store.chatgpt = settings.chatgptEnabled ? ChatGPT.demo : ChatGPTState()
+            store.gptSamples = settings.chatgptEnabled ? ChatGPT.demoSamples() : []
             store.samples = Demo.samples(); store.snapshot = s; store.lastUpdated = Date()
             build(s); return
         }
         refreshing = true
         let needFetch = Date().timeIntervalSince(lastFetch) > 100
+        let wantGPT = settings.chatgptEnabled
         DispatchQueue.global(qos: .utility).async {
             let s = scan()
             var acct: Account?
             var fetched: (limits: [Limit], error: String?)?
             if needFetch { acct = fetchAccount(); fetched = acct!.loggedIn ? fetchLimits() : ([], "Sign in to see your limits") }
+            let gpt: ChatGPTState? = needFetch && wantGPT ? ChatGPT.fetch() : nil
             DispatchQueue.main.async {
                 self.refreshing = false
                 defer { if self.pendingRefresh { self.pendingRefresh = false; self.refresh() } }
@@ -226,6 +233,14 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     } else { self.store.limits = []; self.store.limitError = f.error; self.store.stale = false }
                     if !a.loggedIn, !self.shownSignedOutPrompt, App.notificationsEnabled { self.shownSignedOutPrompt = true; self.store.settingsCategory = .account; self.showDashboard(.settings) }
                 }
+                if let g = gpt {
+                    if g.limits.isEmpty, g.signedIn, g.error?.hasPrefix("ChatGPT usage unavailable") == true, !self.store.chatgpt.limits.isEmpty {
+                        self.store.chatgpt.error = g.error          // network blip: keep the last good numbers
+                    } else {
+                        self.store.chatgpt = g
+                        if GPTHistory.shared.record(g.limits) || self.store.gptSamples.isEmpty { self.store.gptSamples = GPTHistory.shared.samples }
+                    }
+                } else if !wantGPT, self.store.chatgpt.signedIn || self.store.chatgpt.error != nil { self.store.chatgpt = ChatGPTState() }
                 self.store.snapshot = s; self.store.lastUpdated = Date()
                 self.refreshNotifStatus()
                 self.build(s)
@@ -509,6 +524,47 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         }
     }
 
+    // MARK: ChatGPT (through OpenAI's Codex CLI sign-in)
+
+    func connectChatGPT() {
+        settings.chatgptEnabled = true
+        if ChatGPT.hasLogin { lastFetch = .distantPast; refresh(); return }
+        guard let bin = ChatGPT.codexBinary() else {
+            let a = NSAlert(); a.messageText = "Codex not found"
+            a.informativeText = "Claude Usage reads your ChatGPT limits through OpenAI’s Codex CLI sign-in. Install it with “brew install codex” (or from github.com/openai/codex), then press Connect again."
+            NSApp.activate(ignoringOtherApps: true); a.runModal(); lastFetch = .distantPast; refresh(); return
+        }
+        guard chatgptProcess == nil else { return }
+        let p = Process(); p.executableURL = URL(fileURLWithPath: bin); p.arguments = ["login"]
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(NSHomeDirectory())/.local/bin:" + (env["PATH"] ?? "/usr/bin:/bin")
+        p.environment = env; p.standardOutput = Pipe(); p.standardError = Pipe()
+        p.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                self.chatgptProcess = nil; self.store.chatgptBusy = false; self.lastFetch = .distantPast; self.refresh()
+            }
+        }
+        do { try p.run(); chatgptProcess = p; store.chatgptBusy = true } catch { NSSound.beep() }
+    }
+
+    func disconnectChatGPT() {
+        settings.chatgptEnabled = false; settings.menuShowChatGPT = false
+        store.chatgpt = ChatGPTState(); build(store.snapshot)
+    }
+
+    func signOutChatGPT() {
+        let a = NSAlert(); a.messageText = "Sign out of ChatGPT?"
+        a.informativeText = "This also signs out the Codex CLI, because they share one ChatGPT login."
+        a.addButton(withTitle: "Sign out"); a.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        DispatchQueue.global().async {
+            ChatGPT.runCodex(["logout"])
+            DispatchQueue.main.async { self.store.chatgpt = ChatGPTState(); self.lastFetch = .distantPast; self.refresh() }
+        }
+    }
+
     func photoChanged() { store.photo = avatarImage; store.stockIndex = stockAvatarIndex; build(store.snapshot) }
     func choosePhoto() {
         let panel = NSOpenPanel()
@@ -533,7 +589,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     func build(_ s: Snapshot) {
         checkLimits()
         let font = NSFont.menuBarFont(ofSize: 0)
-        let parts = MenuBarTitle.parts(limits: store.limits, tokensToday: s.today.billable, settings: settings)
+        let parts = MenuBarTitle.parts(limits: store.limits, tokensToday: s.today.billable, settings: settings, chatgpt: store.chatgpt.limits)
         let t = NSMutableAttributedString()
         for (i, part) in parts.enumerated() {
             t.append(NSAttributedString(string: i == 0 ? " " : "  ", attributes: [.font: font]))
@@ -583,6 +639,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
         }
         if store.stale { add(m, RowView(left: "Couldn’t reach Anthropic – showing the last reading", leftBold: false, size: 10, tint: .secondaryLabelColor)) }
+        if settings.chatgptEnabled {
+            m.addItem(.separator())
+            header(m, store.chatgpt.planName)
+            if store.chatgpt.limits.isEmpty {
+                add(m, RowView(left: store.chatgpt.error ?? "Loading ChatGPT limits…", leftBold: false, size: 11, tint: .secondaryLabelColor))
+            } else {
+                for l in store.chatgpt.limits { add(m, UsageBarView(l)) }
+                if let e = store.chatgpt.error { add(m, RowView(left: e, leftBold: false, size: 10, tint: .secondaryLabelColor)) }
+            }
+        }
         m.addItem(.separator())
         block(m, "Today", s.today)
         add(m, RowView(left: "\(plural(s.messagesToday, "response")) today", leftBold: false, size: 11, tint: .secondaryLabelColor))
@@ -648,7 +714,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             settings.appearance = mode
             let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 1020, height: 3700), styleMask: [.borderless], backing: .buffered, defer: false)
             store.settingsCategory = SettingsCategory(rawValue: ProcessInfo.processInfo.environment["CUB_TALL_CAT"] ?? "") ?? .about    // dev aid: pick the settings pane to render
-            let page: AnyView = name == "about" ? AnyView(SettingsPage(store: store, settings: settings)) : AnyView(InsightsView(store: store))
+            let pageName = ProcessInfo.processInfo.environment["CUB_TALL_PAGE"] ?? ""      // dev aid: overview | reports | insights | (settings)
+            let page: AnyView = pageName == "overview" ? AnyView(OverviewView(store: store)) : (pageName == "reports" ? AnyView(ReportsView(store: store))
+                : (pageName == "insights" ? AnyView(InsightsView(store: store)) : AnyView(SettingsPage(store: store, settings: settings))))
             w.contentView = NSHostingView(rootView: page.frame(width: 1020, height: 3700).background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor)))
             w.orderFrontRegardless()
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {

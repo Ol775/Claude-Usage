@@ -10,7 +10,7 @@ enum Legal {
     static let sections: [Section] = [
         Section(id: "about", title: "About this app", body: [
             "Claude Usage is an independent, unofficial app. It is not made, endorsed or supported by Anthropic.",
-            "“Claude”, “Claude Code” and “Anthropic” are trademarks of Anthropic, PBC. They are used here only to say what the app works with.",
+            "“Claude”, “Claude Code” and “Anthropic” are trademarks of Anthropic, PBC. “ChatGPT”, “Codex” and “OpenAI” are trademarks of OpenAI. They are used here only to say what the app works with, and the app isn’t affiliated with either company.",
         ]),
         Section(id: "terms", title: "Terms of use", body: [
             "By using Claude Usage you agree to these terms. If you don’t agree, please stop using the app and delete it.",
@@ -20,7 +20,7 @@ enum Legal {
             "The app may change, stop working or be withdrawn at any time, for example if Anthropic changes the service it reads from.",
         ]),
         Section(id: "accuracy", title: "Accuracy of figures", body: [
-            "Session and weekly limits come from the same Anthropic service that Claude Code’s /usage command reads. That service is not a public, documented API, so the figures may change, be delayed or be wrong.",
+            "Session and weekly limits come from the same Anthropic service that Claude Code’s /usage command reads, and ChatGPT limits come from the service OpenAI’s Codex CLI uses. Neither is a public, documented API, so the figures may change, be delayed or be wrong.",
             "Forecasts, “on pace” warnings and reset predictions are estimates based on your recent activity. They are not guarantees.",
             "Costs shown are API-equivalent estimates worked out from public list prices and the logs on your Mac. They are not what your plan bills, and they are not an invoice or a financial record.",
             "Token and message counts come from Claude Code’s local log files, which Claude Code may change or delete. Don’t rely on them for accounting or billing.",
@@ -28,7 +28,8 @@ enum Legal {
         Section(id: "privacy", title: "Privacy and your data", body: [
             "Claude Usage works on your Mac. Your usage history, saved activity, settings and profile photo are stored only on this Mac, in Application Support/ClaudeUsage and the app’s preferences.",
             "The app reads Claude Code’s log files in ~/.claude/projects, and the sign-in token Claude Code keeps in your keychain. The token is used only to ask Anthropic for your usage limits. It is never stored by the app, logged or sent anywhere else.",
-            "The app makes two kinds of network request: to Anthropic, for your usage limits, and to GitHub, to check for and download updates. The developer runs no servers, receives no analytics, and collects no data about you.",
+            "ChatGPT is optional and off until you connect it in Settings → Account. It needs a paid ChatGPT plan, and it shows your Codex usage limits. When it’s on, the app reads the sign-in that OpenAI’s Codex CLI saves in ~/.codex/auth.json and uses it only to ask ChatGPT for your usage limits. It never changes, refreshes, copies or stores that login, and it does not read your chats.",
+            "The app makes up to three kinds of network request: to Anthropic, for your usage limits; to ChatGPT, for your ChatGPT limits, only if you connect it; and to GitHub, to check for and download updates. The developer runs no servers, receives no analytics, and collects no data about you.",
             "Reports and diagnostics leave your Mac only when you choose to send them. “Report a Bug” opens a pre-filled GitHub page that you review and submit yourself.",
             "You can delete everything the app stores by quitting it and removing the ClaudeUsage folder in ~/Library/Application Support.",
         ]),

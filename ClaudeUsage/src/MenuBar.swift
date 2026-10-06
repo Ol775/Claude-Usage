@@ -47,7 +47,7 @@ enum MenuBarTitle {
 
     /// The text pieces for the current settings. Falls back to today's tokens when limits aren't available
     /// (for example when signed out), so the item is never empty.
-    static func parts(limits: [Limit], tokensToday: Int, settings: Settings) -> [TitlePart] {
+    static func parts(limits: [Limit], tokensToday: Int, settings: Settings, chatgpt: [Limit] = []) -> [TitlePart] {
         let sess = limits.first { $0.kind == .session }, week = limits.first { $0.kind == .weekly }
         let critical = Double(settings.criticalThreshold)
         func label(_ k: LimitKind) -> String? {
@@ -60,6 +60,9 @@ enum MenuBarTitle {
         var out: [TitlePart] = []
         if settings.menuShowSession, let x = sess { out.append(TitlePart(label: label(.session), value: "\(Int(x.percent.rounded()))%", hot: x.percent >= critical, isPercent: true)) }
         if settings.menuShowWeekly, let x = week { out.append(TitlePart(label: label(.weekly), value: "\(Int(x.percent.rounded()))%", hot: x.percent >= critical, isPercent: true)) }
+        if settings.menuShowChatGPT, let g = chatgpt.first {
+            out.append(TitlePart(label: settings.menuLabelStyle == .none ? nil : (settings.menuLabelStyle == .letters ? "G" : "ChatGPT"), value: "\(Int(g.percent.rounded()))%", hot: g.percent >= critical, isPercent: true))
+        }
         if settings.menuShowReset, let r = sess?.resets { out.append(TitlePart(label: nil, value: "↻ " + shortUntil(r), hot: false, isPercent: false)) }
         let wantsLimits = settings.menuShowSession || settings.menuShowWeekly
         let missingLimits = wantsLimits && !out.contains { $0.isPercent }
