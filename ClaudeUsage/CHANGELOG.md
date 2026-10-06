@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.9.7 – alpha (2026-10-06)
+- Dev flag --refresh-pricing
+
 ## 0.9.6 – alpha (2026-10-06)
 - First-run welcome card when Claude Code isn't set up or signed in; model prices can now be updated from pricing.json without an app release (checked daily, validated, cached)
 

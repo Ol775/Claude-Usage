@@ -777,6 +777,12 @@ if CommandLine.arguments.contains("--snapshot") {
 
 if CommandLine.arguments.contains("--selftest") { exit(runSelfTests()) }
 
+if CommandLine.arguments.contains("--refresh-pricing") {      // dev aid: fetches pricing.json now and reports what was applied
+    Pricing.refreshIfStale(force: true)
+    print("cached:", FileManager.default.fileExists(atPath: Pricing.cacheURL.path), "models:", Pricing.table.count, "opus-5-5 input:", Pricing.forModel("claude-opus-5-5")?.input ?? -1)
+    exit(0)
+}
+
 if CommandLine.arguments.contains("--install-update") {
     // Dev aid: runs the whole download -> build -> install flow into CUB_INSTALL_DEST (never the installed app) and exits.
     guard case .available(let info) = Updater.check() else { print("no update available"); exit(0) }
