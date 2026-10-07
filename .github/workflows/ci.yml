@@ -20,7 +20,9 @@ jobs:
           fetch-depth: 0
       - name: Build
         working-directory: ClaudeUsage
-        run: ./build.sh
+        run: |
+          swiftc --version
+          ./build.sh
       - name: Self-tests
         working-directory: ClaudeUsage
         run: "./Claude\\ Usage.app/Contents/MacOS/ClaudeUsage --selftest"
