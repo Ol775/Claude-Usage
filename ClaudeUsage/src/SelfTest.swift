@@ -41,6 +41,18 @@ func runSelfTests() -> Int32 {
     check(claude.first?.resets != nil, "fractional-second reset date parses")
     check(parseClaudeLimits(json("{}")).isEmpty && parseClaudeLimits(json("{\"five_hour\":{\"utilization\":\"x\"}}")).isEmpty, "malformed response gives no limits, no crash")
 
+    // Real-shaped fixtures (see Fixtures.swift)
+    let cur = parseClaudeLimits(json(Fixtures.claudeCurrent))
+    check(cur.map { $0.name } == ["Current session", "Weekly – all models"] && cur[0].percent == 42.5 && cur[1].percent == 18, "current Claude response: session and weekly read from the classic sections (the list isn't double-counted)")
+    check(cur[0].resets != nil && cur[1].resets != nil, "current Claude response: reset times parse")
+    let only = parseClaudeLimits(json(Fixtures.claudeLimitsOnly))
+    check(only.map { $0.name } == ["Current session", "Weekly – all models", "Weekly – Opus"] && only[0].percent == 61 && only[2].percent == 12, "if the classic sections vanish, the limits list is used (unknown kinds ignored)")
+    check(parseClaudeLimits(json(Fixtures.claudeUnrecognised)).isEmpty, "an unrecognised Claude response gives no limits (the app then keeps the last reading)")
+    let gFree = ChatGPT.parse(json(Fixtures.chatgptFree), now: now)
+    check(gFree.isFree && gFree.limits.isEmpty && gFree.signedIn, "real free-plan ChatGPT response is recognised and blanked")
+    let gPlus = ChatGPT.parse(json(Fixtures.chatgptPlus), now: now)
+    check(gPlus.limits.map { $0.name } == ["ChatGPT 5-hour", "ChatGPT weekly", "Code review weekly", "GPT-5-Codex-Mini 5-hour"], "paid ChatGPT response: main, code-review and additional limits (got \(gPlus.limits.map { $0.name }))")
+
     // ChatGPT (Codex) response
     check(ChatGPT.windowName(seconds: 18000) == "5-hour", "5h window name")
     check(ChatGPT.windowName(seconds: 604800) == "weekly", "weekly window name")
@@ -123,7 +135,16 @@ func runSelfTests() -> Int32 {
     let fx = FileManager.default.temporaryDirectory.appendingPathComponent("cub-selftest-\(ProcessInfo.processInfo.processIdentifier)/-Users-\(NSUserName().replacingOccurrences(of: ".", with: "-"))-Projects-Demo/log.jsonl")
     try? FileManager.default.createDirectory(at: fx.deletingLastPathComponent(), withIntermediateDirectories: true)
     try? fixture.write(to: fx, atomically: true, encoding: .utf8)
-    let recs = parseLog(fx, oldest: Date(timeIntervalSince1970: 0))
+    let parsed = parseLog(fx, oldest: Date(timeIntervalSince1970: 0))
+    let recs = parsed.recs + parsed.tail
+    // Reading a growing log in two steps must give the same records as reading it whole (and never double-count a half-written line)
+    let lines = fixture.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+    let firstHalf = lines.prefix(5).joined(separator: "\n") + "\n" + String(lines[5].prefix(30))        // ends mid-line
+    try? firstHalf.write(to: fx, atomically: true, encoding: .utf8)
+    let part1 = parseLog(fx, oldest: Date(timeIntervalSince1970: 0))
+    try? fixture.write(to: fx, atomically: true, encoding: .utf8)
+    let part2 = parseLog(fx, oldest: Date(timeIntervalSince1970: 0), from: part1.consumed)
+    check((part1.recs + part2.recs + part2.tail).count == recs.count && part2.consumed > part1.consumed, "incremental log parsing equals a full parse (\((part1.recs + part2.recs + part2.tail).count) vs \(recs.count))")
     try? FileManager.default.removeItem(at: fx.deletingLastPathComponent())
     check(recs.filter { $0.promptId != nil }.count == 1, "only the real prompt counts (not tool results or meta) – got \(recs.filter { $0.promptId != nil }.count)")
     check(recs.filter { !$0.key.isEmpty }.count == 2 && Set(recs.filter { !$0.key.isEmpty }.map { $0.key }).count == 1, "split assistant lines share one message key, so tokens count once")

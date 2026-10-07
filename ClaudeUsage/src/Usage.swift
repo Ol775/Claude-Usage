@@ -46,7 +46,8 @@ struct Rec {
 
 final class LogCache {
     static let shared = LogCache()
-    var files: [String: (mtime: Date, size: Int, recs: [Rec])] = [:]
+    /// `recs` are the complete lines up to byte `consumed`; `tail` is an unfinished last line that is re-read next time.
+    var files: [String: (mtime: Date, size: Int, consumed: Int, recs: [Rec], tail: [Rec])] = [:]
 }
 
 /// "-Users-me-Projects-MyApp" -> "Projects-MyApp"; the home folder itself -> "Home".
@@ -58,14 +59,17 @@ func projectName(for url: URL) -> String {
     return name.isEmpty ? "Home" : name
 }
 
-func parseLog(_ url: URL, oldest: Date) -> [Rec] {
+/// Parses a Claude Code log from byte `offset` onwards. Logs only ever grow, so a later call can start where the last one stopped
+/// (`consumed`) instead of re-reading the whole file. A final line without its newline may still be mid-write, so its record is
+/// returned separately as `tail` and not counted as consumed – the next call re-reads it once it is complete.
+func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], tail: [Rec], consumed: Int) {
     let project = projectName(for: url)
-    guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return [] }   // mapped, so big logs aren’t loaded into memory whole
+    guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return ([], [], offset) }   // mapped, so big logs aren’t loaded into memory whole
     let usageNeedle = Data("\"usage\"".utf8), toolNeedle = Data("\"tool_use\"".utf8), userNeedle = Data("\"type\":\"user\"".utf8)
     let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     let iso2 = ISO8601DateFormatter()
-    var out: [Rec] = []
-    for line in data.split(separator: 10) {
+
+    func record(_ line: Data) -> Rec? {
         let hasUsage = line.range(of: usageNeedle) != nil
         let hasTool = line.range(of: toolNeedle) != nil
         let isUser = !hasUsage && line.range(of: userNeedle) != nil
@@ -73,21 +77,21 @@ func parseLog(_ url: URL, oldest: Date) -> [Rec] {
               let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
               let ts = obj["timestamp"] as? String,
               let date = iso.date(from: ts) ?? iso2.date(from: ts), date >= oldest,
-              let msg = obj["message"] as? [String: Any] else { continue }
+              let msg = obj["message"] as? [String: Any] else { return nil }
         let session = obj["sessionId"] as? String ?? ""
 
         if obj["type"] as? String == "user" {
             // A real prompt: not a tool result, not meta, not a sub-agent's internal prompt.
-            if obj["isMeta"] as? Bool == true || obj["isSidechain"] as? Bool == true { continue }
+            if obj["isMeta"] as? Bool == true || obj["isSidechain"] as? Bool == true { return nil }
             var isPrompt = false
             if msg["content"] is String { isPrompt = true }
             else if let parts = msg["content"] as? [[String: Any]] {
                 isPrompt = parts.contains { $0["type"] as? String == "text" } && !parts.contains { $0["type"] as? String == "tool_result" }
             }
             if isPrompt, let id = obj["uuid"] as? String {
-                out.append(Rec(date: date, model: "", key: "", project: project, session: session, u: Usage(), toolIds: [], promptId: id))
+                return Rec(date: date, model: "", key: "", project: project, session: session, u: Usage(), toolIds: [], promptId: id)
             }
-            continue
+            return nil
         }
 
         var tools: [String] = []
@@ -95,14 +99,24 @@ func parseLog(_ url: URL, oldest: Date) -> [Rec] {
             tools = parts.compactMap { $0["type"] as? String == "tool_use" ? ($0["id"] as? String) : nil }
         }
         let usage = msg["usage"] as? [String: Any]
-        guard usage != nil || !tools.isEmpty else { continue }
+        guard usage != nil || !tools.isEmpty else { return nil }
         let u = usage ?? [:]
         let use = Usage(input: u["input_tokens"] as? Int ?? 0, output: u["output_tokens"] as? Int ?? 0,
                         cacheWrite: u["cache_creation_input_tokens"] as? Int ?? 0, cacheRead: u["cache_read_input_tokens"] as? Int ?? 0)
         let key = usage == nil ? "" : "\(msg["id"] as? String ?? "")|\(obj["requestId"] as? String ?? "")"
-        out.append(Rec(date: date, model: msg["model"] as? String ?? "unknown", key: key, project: project, session: session, u: use, toolIds: tools, promptId: nil))
+        return Rec(date: date, model: msg["model"] as? String ?? "unknown", key: key, project: project, session: session, u: use, toolIds: tools, promptId: nil)
     }
-    return out
+
+    var out: [Rec] = [], tail: [Rec] = []
+    var pos = min(max(offset, 0), data.count), consumed = pos
+    while pos < data.count {
+        let nl = data[pos...].firstIndex(of: 10)
+        let end = nl ?? data.count
+        if let r = record(data[pos..<end]) { if nl != nil { out.append(r) } else { tail.append(r) } }
+        if let nl = nl { consumed = nl + 1 }
+        pos = end + 1
+    }
+    return (out, tail, consumed)
 }
 
 func scan() -> Snapshot {
@@ -127,10 +141,15 @@ func scan() -> Snapshot {
               let mtime = v.contentModificationDate, mtime >= oldest else { continue }
         let size = v.fileSize ?? 0, path = url.path
         live.insert(path)
-        if let c = cache.files[path], c.mtime == mtime, c.size == size { all += c.recs; continue }
-        let recs = parseLog(url, oldest: oldest)
-        cache.files[path] = (mtime, size, recs)
-        all += recs
+        if let c = cache.files[path], c.mtime == mtime, c.size == size { all += c.recs + c.tail; continue }
+        if let c = cache.files[path], size > c.size, c.consumed <= c.size {          // the log grew: read only the new part
+            let more = parseLog(url, oldest: oldest, from: c.consumed)
+            cache.files[path] = (mtime, size, more.consumed, c.recs + more.recs, more.tail)
+        } else {
+            let all1 = parseLog(url, oldest: oldest)                                  // new or rewritten file: read it all
+            cache.files[path] = (mtime, size, all1.consumed, all1.recs, all1.tail)
+        }
+        if let c = cache.files[path] { all += c.recs + c.tail }
     }
     for p in cache.files.keys where !live.contains(p) { cache.files[p] = nil }
 

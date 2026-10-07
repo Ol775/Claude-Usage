@@ -16,6 +16,17 @@ func parseClaudeLimits(_ json: [String: Any]) -> [Limit] {
         guard let o = json[key] as? [String: Any], let u = (o["utilization"] as? NSNumber)?.doubleValue else { continue }
         result.append(Limit(name: name, percent: u, resets: (o["resets_at"] as? String).flatMap(parseDate)))
     }
+    // Fallback: the response also carries a `limits` list ({kind, percent, resets_at}). If the classic sections ever disappear,
+    // the same limits are read from there, so a reshuffled response still shows your numbers.
+    if let list = json["limits"] as? [[String: Any]] {
+        for item in list {
+            guard let kind = (item["kind"] as? String)?.lowercased(), let pct = (item["percent"] as? NSNumber)?.doubleValue else { continue }
+            let name: String? = kind == "session" ? "Current session" : kind == "weekly_all" ? "Weekly – all models"
+                : kind.contains("opus") ? "Weekly – Opus" : kind.contains("sonnet") ? "Weekly – Sonnet" : nil
+            guard let n = name, !result.contains(where: { $0.name == n }) else { continue }
+            result.append(Limit(name: n, percent: pct, resets: (item["resets_at"] as? String).flatMap(parseDate)))
+        }
+    }
     return result
 }
 

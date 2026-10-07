@@ -9,7 +9,7 @@ BUILD="${BUILD:-$( [ -d ../.git ] && git rev-list --count HEAD 2>/dev/null || ca
 APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
 # UNIVERSAL=1 builds Apple silicon + Intel (used for releases); the default builds only for this Mac, which is faster.
-SRC="src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/SelfTest.swift src/Updater.swift src/Dashboard.swift src/Reports.swift src/Insights.swift"
+SRC="src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/Fixtures.swift src/SelfTest.swift src/Updater.swift src/Dashboard.swift src/Overview.swift src/ProjectionChart.swift src/UsageView.swift src/SettingsView.swift src/SettingsParts.swift src/Reports.swift src/Insights.swift"
 if [ "${UNIVERSAL:-0}" = "1" ]; then
   for arch in arm64 x86_64; do swiftc -O -target "$arch-apple-macos13.0" ${=SRC} -o "build/ClaudeUsage-$arch"; done
   lipo -create build/ClaudeUsage-arm64 build/ClaudeUsage-x86_64 -output "$APP/Contents/MacOS/ClaudeUsage"

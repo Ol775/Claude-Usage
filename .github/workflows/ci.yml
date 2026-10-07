@@ -15,7 +15,7 @@ jobs:
         os: [macos-14, macos-15, macos-latest]        # the app targets macOS 13+, so build and self-test on older systems too
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - name: Build
