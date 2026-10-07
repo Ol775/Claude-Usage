@@ -39,7 +39,7 @@ The biggest gap is that most testing happened on one Mac.
 - ✅ **`Dashboard.swift` split** from 1,512 lines into `Dashboard`, `Overview`, `ProjectionChart`, `UsageView`, `SettingsView` and `SettingsParts`.
 - ✅ **Incremental log parsing.** A growing Claude Code log is read from where it stopped last time (same totals on real data, checked against the previous build).
 - ✅ **GitHub Actions pinned by commit** with Dependabot keeping them current.
-- ✅ **Swift portability.** CI builds on three Xcode and Swift generations (macOS 14, 15 and 26 runners) and has already caught one portability bug.
+- ✅ **Swift portability.** CI builds on Swift 5.10, 6.1 and 6.3 (the macOS 14, 15 and 26 runners) and has already caught one portability bug.
 
 ### B3. Trust, security and distribution ⏳
 - **Decide on a paid Apple Developer ID and notarisation** at 1.0 (removes the first-launch prompt; costs $99/yr). Until then the free path stays: Homebrew tap, checksums, offline signature.
