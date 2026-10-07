@@ -14,6 +14,10 @@ git commit -am "…" && git push
 
 `release.sh` refuses to run if the tree is dirty, `main` isn't pushed, or the signing key doesn't match the public key in `src/Updater.swift`. It builds the universal DMG, signs it, publishes the GitHub release and updates the Homebrew cask. The release notes are the version's `CHANGELOG.md` entry, so write change-log notes for people, not for developers.
 
+## Beta releases
+
+`PRERELEASE=1 ./release.sh` publishes a GitHub pre-release. Only copies with **Settings → About → Get beta versions** turned on are offered it; everyone else (and Homebrew) stays on the latest normal release. Bump to a version higher than the current release, as usual. The next normal release reaches beta testers too, because it has a higher version.
+
 ## The signing key
 
 - Ed25519 private key at `~/.config/claude-usage/signing.key` (mode 600). Never commit it or upload it anywhere public.

@@ -2,6 +2,7 @@
 # Publishes the current VERSION: builds the universal DMG, signs it with the release key, creates the GitHub release
 # (DMG + .sha256 + .sig) and updates the Homebrew tap. Run after ./bump.sh, a build, and pushing the commit.
 # Usage: ./release.sh ["extra note"]   – the release notes are this version's CHANGELOG entry (plus the optional note)
+# Beta channel: PRERELEASE=1 ./release.sh  publishes a GitHub pre-release (only "Get beta versions" installs see it; Homebrew isn't updated).
 # Key rotation (see ../RELEASING.md): ROTATING=1 SIGNING_KEY=<old key> ./release.sh  signs with the old key a build that embeds the new one.
 # The signing key (never committed, back it up!) lives at ~/.config/claude-usage/signing.key; its public half is built into the app.
 set -e
@@ -27,9 +28,9 @@ fi
 dmg="dist/Claude-Usage-$ver.dmg"
 build/sign-tool sign "$key" "$dmg" > "$dmg.sig"                      # legacy (DMG bytes only): installs from 0.9.10-0.9.12 still need it
 build/sign-tool sign-update "$key" "$dmg" "$ver" > "$dmg.sig2"      # version-bound: required by 0.9.13 and later
-gh release create "v$ver" "$dmg" "$dmg.sha256" "$dmg.sig" "$dmg.sig2" --repo Ol775/Claude-Usage --title "v$ver" --notes "$note" --latest
+gh release create "v$ver" "$dmg" "$dmg.sha256" "$dmg.sig" "$dmg.sig2" --repo Ol775/Claude-Usage --title "v$ver" --notes "$note" $([ "${PRERELEASE:-}" = 1 ] && echo --prerelease || echo --latest)
 sha=$(cut -d' ' -f1 "$dmg.sha256")
-if [ -d "$tap/.git" ]; then
+if [ -d "$tap/.git" ] && [ "${PRERELEASE:-}" != 1 ]; then
   sed -i '' -e "s/^  version \".*\"/  version \"$ver\"/" -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" "$tap/Casks/claude-usage.rb"
   git -C "$tap" add -A && git -C "$tap" commit -q -m "claude-usage $ver" && git -C "$tap" push -q origin main
   echo "Homebrew tap updated to $ver"

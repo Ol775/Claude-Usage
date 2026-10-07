@@ -454,6 +454,21 @@ struct SettingsPage: View {
                     HStack { Text("\(settings.criticalThreshold)%").monospacedDigit(); Stepper("", value: $settings.criticalThreshold, in: 60...99, step: 1).labelsHidden() }
                 }
             }
+            SGroup(title: "Quiet hours", footer: "Limit alerts wait until quiet hours end. If a limit is still high then, you’ll get the alert.") {
+                SRow(title: "Pause alerts overnight") { Toggle("", isOn: $settings.quietHoursOn).labelsHidden().toggleStyle(.switch) }
+                if settings.quietHoursOn {
+                    SDivider()
+                    SRow(title: "From") { hourPicker($settings.quietStart) }
+                    SDivider()
+                    SRow(title: "Until") { hourPicker($settings.quietEnd) }
+                }
+                if let until = settings.snoozedUntil, until > Clock.now {
+                    SDivider()
+                    SRow(title: "Snoozed until \(until.formatted(date: .omitted, time: .shortened))", subtitle: "From “Snooze 1 Hour” on an alert.") {
+                        Button("Resume") { settings.snoozedUntil = nil }
+                    }
+                }
+            }
             SGroup(title: "Importance", footer: settings.importance == .normal ? nil :
                     "Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.") {
                 SRow(title: "Mark as important") {
@@ -469,6 +484,14 @@ struct SettingsPage: View {
         }
     }
 
+    private func hourPicker(_ hour: Binding<Int>) -> some View {
+        Picker("", selection: hour) {
+            ForEach(0..<24, id: \.self) { h in
+                Text(Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: Clock.now)!.formatted(date: .omitted, time: .shortened)).tag(h)
+            }
+        }.labelsHidden().frame(width: 130)
+    }
+
     private var dataPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "Export", footer: "Daily tokens and your limit history are saved as two CSV files in a folder you choose.") {
@@ -477,8 +500,25 @@ struct SettingsPage: View {
             SGroup(title: "Share") {
                 SRow(title: "Copy usage summary", subtitle: "Your limits, forecasts and totals as text.") { Button("Copy") { store.actions.copySummary() } }
             }
-            SGroup(title: "Saved activity", footer: "Daily activity is stored on this Mac so insights and the yearly view outlast Claude Code’s own log clean-up.") {
+            SGroup(title: "Saved activity", footer: "Daily activity is stored on this Mac so insights and the yearly view outlast Claude Code’s own log clean-up. Older days are removed at the next refresh.") {
                 SRow(title: "Days stored") { Text("\(store.snapshot.days.count)").monospacedDigit().foregroundStyle(.secondary) }
+                SDivider()
+                SRow(title: "Keep daily activity") {
+                    Picker("", selection: $settings.activityKeepDays) {
+                        Text("Forever").tag(0); Text("2 years").tag(730); Text("1 year").tag(365); Text("6 months").tag(182)
+                    }.labelsHidden().frame(width: 130)
+                }
+                SDivider()
+                SRow(title: "Keep limit readings", subtitle: "Used for the limit charts and forecasts.") {
+                    Picker("", selection: $settings.readingsKeepDays) {
+                        Text("90 days").tag(90); Text("60 days").tag(60); Text("30 days").tag(30)
+                    }.labelsHidden().frame(width: 130)
+                }
+            }
+            SGroup(title: "Settings file", footer: "Moves your preferences to another Mac. The file holds settings only: no history, account details or photo.") {
+                SRow(title: "Export settings") { Button("Export…") { store.actions.exportSettings() } }
+                SDivider()
+                SRow(title: "Import settings") { Button("Import…") { store.actions.importSettings() } }
             }
             SGroup(title: "Delete", footer: "Erases everything this app stores on your Mac and quits. Your Claude Code and ChatGPT sign-ins and logs are not touched.") {
                 SRow(title: "Delete all my data", subtitle: "History, activity, settings, profile photo and event log.") {
@@ -626,6 +666,10 @@ struct SettingsPage: View {
             SDivider()
             SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and shows a banner in the app.") {
                 Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
+            }
+            SDivider()
+            SRow(title: "Get beta versions", subtitle: "Also offers test releases before everyone else gets them. They may have more bugs.") {
+                Toggle("", isOn: $settings.betaUpdates).labelsHidden().toggleStyle(.switch)
             }
             if store.canInstall {
                 SDivider()

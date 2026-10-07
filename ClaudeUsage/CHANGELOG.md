@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.13.0 – beta (2026-10-07)
+- Settings → Data: choose how long daily activity and limit readings are kept, and export or import your settings as a file. Limit alerts have Open Dashboard and Snooze 1 Hour buttons, and quiet hours hold alerts back overnight. Settings → About: Get beta versions offers test releases early
+
 ## 0.12.0 – beta (2026-10-07)
 - Settings → Data: Delete all my data button
 

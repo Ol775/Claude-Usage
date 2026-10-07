@@ -49,10 +49,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .general: return "dock launch login refresh startup"
         case .appearance: return "theme dark light oled black colour color mode orange"
         case .menuBar: return "menu bar icon session weekly percent customise customize preset label tokens reset countdown"
-        case .notifications: return "alert warn critical important time sensitive banner threshold"
-        case .data: return "export csv copy summary history"
+        case .notifications: return "alert warn critical important time sensitive banner threshold quiet hours snooze night"
+        case .data: return "export csv copy summary history retention keep delete import settings file backup"
         case .support: return "bug report issue feedback help support terms conditions legal disclaimer privacy licence license warranty"
-        case .about: return "version build github source repository coffee donate tip support the developer"
+        case .about: return "version build github source repository coffee donate tip support the developer update beta channel"
         }
     }
 }

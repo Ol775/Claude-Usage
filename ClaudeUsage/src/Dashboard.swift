@@ -32,6 +32,8 @@ struct Actions {
     var exportData: () -> Void = {}
     var copySummary: () -> Void = {}
     var deleteAllData: () -> Void = {}
+    var exportSettings: () -> Void = {}
+    var importSettings: () -> Void = {}
 }
 
 enum DashTab: String, CaseIterable, Identifiable {

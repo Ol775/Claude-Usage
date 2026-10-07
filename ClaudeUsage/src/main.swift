@@ -75,7 +75,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             requestNotifications: { [weak self] in self?.requestNotifications() },
             exportData: { [weak self] in self?.exportData() },
             copySummary: { [weak self] in self?.copySummary() },
-            deleteAllData: { [weak self] in self?.deleteAllData() })
+            deleteAllData: { [weak self] in self?.deleteAllData() },
+            exportSettings: { [weak self] in self?.exportSettings() },
+            importSettings: { [weak self] in self?.importSettings() })
         installMainMenu()
         let prepared = Updater.restorePrepared()                         // an update downloaded earlier and not yet installed
         if let (info, app) = prepared { store.update = .ready(info, app) }
@@ -89,7 +91,9 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             center.delegate = self
             center.setNotificationCategories([
                 UNNotificationCategory(identifier: "UPDATE", actions: [UNNotificationAction(identifier: "update.now", title: "Update Now", options: [.foreground])], intentIdentifiers: [], options: []),
-                UNNotificationCategory(identifier: "READY", actions: [UNNotificationAction(identifier: "restart.now", title: "Restart Now", options: [.foreground])], intentIdentifiers: [], options: [])])
+                UNNotificationCategory(identifier: "READY", actions: [UNNotificationAction(identifier: "restart.now", title: "Restart Now", options: [.foreground])], intentIdentifiers: [], options: []),
+                UNNotificationCategory(identifier: "LIMIT", actions: [UNNotificationAction(identifier: "open.dashboard", title: "Open Dashboard", options: [.foreground]),
+                                                                      UNNotificationAction(identifier: "snooze.1h", title: "Snooze 1 Hour", options: [])], intentIdentifiers: [], options: [])])
         }
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
         item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
@@ -277,7 +281,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
 
     // MARK: notifications
 
-    func notify(_ title: String, _ body: String, important: Bool = false, openAbout: Bool = false, system: Bool = false, ready: Bool = false) {
+    func notify(_ title: String, _ body: String, important: Bool = false, openAbout: Bool = false, system: Bool = false, ready: Bool = false, limit: Bool = false) {
         guard App.notificationsEnabled, settings.notificationsOn || system else { return }     // `system` notices ignore the limit-alerts switch
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { st in
@@ -285,6 +289,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                 if st.authorizationStatus == .authorized || st.authorizationStatus == .provisional {
                     let c = UNMutableNotificationContent(); c.title = title; c.body = body; c.sound = .default
                     if ready { c.userInfo = ["open": "about"]; c.categoryIdentifier = "READY" } else if openAbout { c.userInfo = ["open": "about"]; c.categoryIdentifier = "UPDATE" }
+                    else if limit { c.categoryIdentifier = "LIMIT" }
                     if important { c.interruptionLevel = .timeSensitive; c.relevanceScore = 1; c.subtitle = "Important"; c.threadIdentifier = "claude-usage-important" }
                     center.add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
                 } else {
@@ -473,6 +478,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         let opensAbout = response.notification.request.content.userInfo["open"] as? String == "about"
         DispatchQueue.main.async {
             if action == "restart.now" { self.applyReadyUpdate() }
+            else if action == "snooze.1h" { self.settings.snoozedUntil = Clock.now.addingTimeInterval(3600) }
             else if action == "update.now" {
                 self.store.settingsCategory = .about; self.showDashboard(.settings)
                 if case .available = self.store.update { self.installUpdate() }
@@ -525,11 +531,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     }
 
     func checkLimits() {
+        guard !settings.alertsPaused else { return }       // quiet hours or snoozed: nothing is marked as sent, so alerts still due fire afterwards
         var seen = notified
         func once(_ key: String, _ title: String, _ body: String, critical: Bool = false) {
             guard !seen.contains(key) else { return }
             let important = settings.importance == .all || (settings.importance == .critical && critical)
-            seen.append(key); notify(title, body, important: important)
+            seen.append(key); notify(title, body, important: important, limit: true)
         }
         var windows = UserDefaults.standard.dictionary(forKey: "alertWindows") as? [String: Int] ?? [:]
         defer { UserDefaults.standard.set(windows, forKey: "alertWindows") }
@@ -574,6 +581,45 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
         }
         do { try p.run(); loginProcess = p; store.loginBusy = true } catch { NSSound.beep() }
+    }
+
+    /// Saves the preferences (only the keys in `Settings.keys`) to a JSON file. No history, account details or photo.
+    func exportSettings() {
+        let panel = NSSavePanel()
+        panel.title = "Export settings"; panel.nameFieldStringValue = "Claude Usage settings.json"; panel.allowedContentTypes = [.json]
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        var prefs: [String: Any] = [:]
+        for k in Settings.keys { if let v = UserDefaults.standard.object(forKey: k) { prefs[k] = v } }
+        let doc: [String: Any] = ["app": "Claude Usage", "format": 1, "version": AppInfo.version, "settings": prefs]
+        do {
+            try JSONSerialization.data(withJSONObject: doc, options: [.prettyPrinted, .sortedKeys]).write(to: url, options: .atomic)
+            Toast.show("Settings exported", "Saved to \(url.lastPathComponent).")
+        } catch {
+            let al = NSAlert(); al.messageText = "Couldn’t save the file"; al.informativeText = error.localizedDescription; al.runModal()
+        }
+    }
+
+    /// Reads a file made by `exportSettings`. Only known keys with plain values are applied; everything else is ignored.
+    func importSettings() {
+        let panel = NSOpenPanel()
+        panel.title = "Import settings"; panel.allowedContentTypes = [.json]; panel.allowsMultipleSelection = false
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, size < 100_000,
+              let data = try? Data(contentsOf: url), let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              doc["app"] as? String == "Claude Usage", let raw = doc["settings"] as? [String: Any] else {
+            let al = NSAlert(); al.messageText = "That isn’t a Claude Usage settings file"
+            al.informativeText = "Choose a file made with Export Settings."; al.runModal(); return
+        }
+        let prefs = Settings.validated(raw)
+        let a = NSAlert(); a.messageText = "Replace your settings?"
+        a.informativeText = "\(prefs.count) settings from “\(url.lastPathComponent)” will replace the ones you have now. Your history and sign-ins aren’t affected."
+        a.addButton(withTitle: "Import"); a.addButton(withTitle: "Cancel")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        for (k, v) in prefs { UserDefaults.standard.set(v, forKey: k) }
+        settings.reload()
+        Toast.show("Settings imported", "\(prefs.count) settings applied.")
     }
 
     /// Erases the app's own folder and preferences, then quits. Claude Code's and Codex's logins and logs are never touched.

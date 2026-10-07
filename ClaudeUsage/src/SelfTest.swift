@@ -236,7 +236,29 @@ func runSelfTests() -> Int32 {
     Settings.shared.menuIconStyle = .match
     check(Settings.shared.menuIconImage().isTemplate, "'match the menu bar' makes a template icon macOS tints")
     Settings.shared.menuIconStyle = savedStyle; Settings.shared.menuIconHex = savedHex
+
+    // Quiet hours, including a window that crosses midnight
+    let st = Settings.shared, saved = (st.quietHoursOn, st.quietStart, st.quietEnd)
+    func at(_ h: Int) -> Date { Calendar.current.date(bySettingHour: h, minute: 30, second: 0, of: now)! }
+    st.quietHoursOn = true; st.quietStart = 22; st.quietEnd = 8
+    check(st.inQuietHours(at(23)) && st.inQuietHours(at(3)) && !st.inQuietHours(at(8)) && !st.inQuietHours(at(15)), "overnight quiet hours 22–8")
+    st.quietStart = 13; st.quietEnd = 14
+    check(st.inQuietHours(at(13)) && !st.inQuietHours(at(14)) && !st.inQuietHours(at(12)), "daytime quiet hours 13–14")
+    st.quietHoursOn = false
+    check(!st.inQuietHours(at(13)), "quiet hours off never pauses")
+    (st.quietHoursOn, st.quietStart, st.quietEnd) = saved
     Settings.persist = true
+
+    // Settings import keeps only known keys with plain, short values
+    let imported = Settings.validated(["theme": "ocean", "warnThreshold": 70, "quietHoursOn": true, "evil": "x", "notifiedKeys": ["a"],
+                                       "displayName": String(repeating: "a", count: 500), "refreshMinutes": 1e9, "menuIconHex": ["#fff"]])
+    check(Set(imported.keys) == ["theme", "warnThreshold", "quietHoursOn"], "settings import drops unknown keys, long text, huge numbers and lists (\(imported.keys.sorted()))")
+
+    // Beta channel: the highest plain version wins, drafts and odd tags are skipped
+    let rels: [[String: Any]] = [["tag_name": "v0.12.0"], ["tag_name": "v0.13.0", "prerelease": true], ["tag_name": "v0.14.0", "draft": true],
+                                 ["tag_name": "v9.9.9-evil"], ["tag_name": "v0.12.1"]]
+    check(Updater.newestRelease(rels)?["tag_name"] as? String == "v0.13.0", "beta channel picks the newest non-draft release")
+    check(Updater.newestRelease([]) == nil, "no releases, no update")
 
     // Profile picture: transparent padding is trimmed so the picture fills the round frame
     let padded = NSImage(size: NSSize(width: 100, height: 100), flipped: false) { r in

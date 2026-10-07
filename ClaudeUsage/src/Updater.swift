@@ -95,9 +95,20 @@ enum Updater {
         return out
     }
 
+    /// From a list of releases, the one with the highest plain version number (drafts skipped). Used by the beta channel,
+    /// which also considers pre-releases; stable uses GitHub's "latest", which never is one.
+    static func newestRelease(_ list: [[String: Any]]) -> [String: Any]? {
+        func ver(_ r: [String: Any]) -> String? {
+            guard r["draft"] as? Bool != true, let t = r["tag_name"] as? String else { return nil }
+            let v = t.hasPrefix("v") ? String(t.dropFirst()) : t
+            return isPlainVersion(v) ? v : nil
+        }
+        return list.filter { ver($0) != nil }.max { isNewer(ver($1)!, than: ver($0)!) }
+    }
+
     /// The newest GitHub release: version, disk image URL and checksum (from the asset digest or a `.sha256` file).
-    static func latestRelease() -> (version: String, dmg: URL?, sha: String?, sig: URL?)? {
-        guard let url = URL(string: "https://api.github.com/repos/\(repo)/releases/latest") else { return nil }
+    static func latestRelease(beta: Bool = Settings.shared.betaUpdates) -> (version: String, dmg: URL?, sha: String?, sig: URL?)? {
+        guard let url = URL(string: "https://api.github.com/repos/\(repo)/releases" + (beta ? "?per_page=20" : "/latest")) else { return nil }
         var req = URLRequest(url: url, timeoutInterval: 15); req.cachePolicy = .reloadIgnoringLocalCacheData
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let sem = DispatchSemaphore(value: 0)
@@ -107,7 +118,8 @@ enum Updater {
             sem.signal()
         }.resume()
         sem.wait()
-        guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        let parsed = data.flatMap { try? JSONSerialization.jsonObject(with: $0) }
+        guard let json = beta ? (parsed as? [[String: Any]]).flatMap(newestRelease) : parsed as? [String: Any],
               let tag = json["tag_name"] as? String else { return nil }
         let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         guard isPlainVersion(version) else { return nil }              // only digits and dots: it ends up in file names and UI text

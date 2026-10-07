@@ -6,7 +6,7 @@ Last updated 7 October 2026. This matches the text in the app under Settings →
 
 ## What stays on your Mac
 
-Your usage history, saved activity, settings and profile photo are stored only in `~/Library/Application Support/ClaudeUsage` (folder mode 700) and the app's preferences. No tokens are ever written there.
+Your usage history, saved activity, settings and profile photo are stored only in `~/Library/Application Support/ClaudeUsage` (folder mode 700) and the app's preferences. No tokens are ever written there. Settings → Data lets you choose how long daily activity (forever by default) and limit readings (up to 90 days) are kept. **Export settings** writes your preferences, and nothing else, to a file you choose.
 
 ## What the app reads
 

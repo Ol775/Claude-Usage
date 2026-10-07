@@ -185,6 +185,54 @@ final class Settings: ObservableObject {
     @Published var criticalThreshold: Int { didSet { if Settings.persist { d.set(criticalThreshold, forKey: "criticalThreshold") } } }
     @Published var refreshMinutes: Int { didSet { if Settings.persist { d.set(refreshMinutes, forKey: "refreshMinutes") }; onChange() } }
     @Published var predictiveAlerts: Bool { didSet { if Settings.persist { d.set(predictiveAlerts, forKey: "predictiveAlerts") } } }
+    @Published var readingsKeepDays: Int { didSet { save(readingsKeepDays, "readingsKeepDays") } }      // limit readings (charts, forecasts): 30–90
+    @Published var activityKeepDays: Int { didSet { save(activityKeepDays, "activityKeepDays") } }      // daily activity; 0 = forever
+    @Published var quietHoursOn: Bool { didSet { save(quietHoursOn, "quietHoursOn") } }
+    @Published var quietStart: Int { didSet { save(quietStart, "quietStart") } }                        // hour of day, 0–23
+    @Published var quietEnd: Int { didSet { save(quietEnd, "quietEnd") } }
+    @Published var betaUpdates: Bool { didSet { save(betaUpdates, "betaUpdates") } }
+    /// Limit alerts are held back until this time ("Snooze 1 hour" on an alert). Not exported.
+    @Published var snoozedUntil: Date? { didSet { if Settings.persist { d.set(snoozedUntil, forKey: "snoozedUntil") } } }
+    var alertsPaused: Bool { inQuietHours() || (snoozedUntil.map { $0 > Clock.now } ?? false) }
+
+    /// Keeps only known keys with plain values (true/false, numbers, short text), for importing a settings file.
+    static func validated(_ raw: [String: Any]) -> [String: Any] {
+        var out: [String: Any] = [:]
+        for k in keys {
+            if let n = raw[k] as? NSNumber, n.doubleValue.isFinite, abs(n.doubleValue) < 10_000 { out[k] = n }
+            else if let t = raw[k] as? String, t.count <= 64 { out[k] = t }
+        }
+        return out
+    }
+
+    /// Re-reads every preference (after an import) so the whole app updates without a restart.
+    func reload() {
+        let f = Settings()
+        appearance = f.appearance; theme = f.theme; showInDock = f.showInDock; notificationsOn = f.notificationsOn
+        predictiveAlerts = f.predictiveAlerts; menuShowIcon = f.menuShowIcon; menuShowSession = f.menuShowSession
+        menuShowWeekly = f.menuShowWeekly; chatgptEnabled = f.chatgptEnabled; menuShowChatGPT = f.menuShowChatGPT
+        menuShowTokens = f.menuShowTokens; menuShowReset = f.menuShowReset; menuIconStyle = f.menuIconStyle; menuIconHex = f.menuIconHex
+        customAccentHex = f.customAccentHex; fontChoice = f.fontChoice; textSize = f.textSize; cardCorners = f.cardCorners
+        displayName = f.displayName; menuLabelStyle = f.menuLabelStyle; menuPercentColour = f.menuPercentColour
+        autoDownloadUpdates = f.autoDownloadUpdates; autoCheckUpdates = f.autoCheckUpdates; importance = f.importance
+        warnThreshold = f.warnThreshold; criticalThreshold = f.criticalThreshold; refreshMinutes = f.refreshMinutes
+        readingsKeepDays = f.readingsKeepDays; activityKeepDays = f.activityKeepDays
+        quietHoursOn = f.quietHoursOn; quietStart = f.quietStart; quietEnd = f.quietEnd; betaUpdates = f.betaUpdates
+    }
+
+    /// Every preference key, for settings export and import (nothing else in UserDefaults is ever exported or accepted).
+    static let keys = ["appearance", "theme", "showInDock", "notificationsOn", "predictiveAlerts", "menuShowIcon", "menuShowSession",
+        "menuShowWeekly", "chatgptEnabled", "menuShowChatGPT", "menuShowTokens", "menuShowReset", "menuIconStyle", "menuIconHex",
+        "customAccentHex", "fontChoice", "textSize", "cardCorners", "displayName", "menuLabelStyle", "menuPercentColour",
+        "autoDownloadUpdates", "autoCheckUpdates", "importance", "warnThreshold", "criticalThreshold", "refreshMinutes",
+        "readingsKeepDays", "activityKeepDays", "quietHoursOn", "quietStart", "quietEnd", "betaUpdates"]
+
+    /// True while quiet hours are on and `now` falls inside them (the window may cross midnight).
+    func inQuietHours(_ now: Date = Clock.now) -> Bool {
+        guard quietHoursOn, quietStart != quietEnd else { return false }
+        let h = Calendar.current.component(.hour, from: now)
+        return quietStart < quietEnd ? (h >= quietStart && h < quietEnd) : (h >= quietStart || h < quietEnd)
+    }
 
     init() {
         appearance = AppearanceMode(rawValue: d.string(forKey: "appearance") ?? "") ?? .system
@@ -221,6 +269,13 @@ final class Settings: ObservableObject {
         warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
         criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95
         refreshMinutes = d.object(forKey: "refreshMinutes") as? Int ?? 1
+        readingsKeepDays = min(max(d.object(forKey: "readingsKeepDays") as? Int ?? 90, 30), 90)
+        activityKeepDays = max(d.object(forKey: "activityKeepDays") as? Int ?? 0, 0)
+        quietHoursOn = d.object(forKey: "quietHoursOn") as? Bool ?? false
+        quietStart = min(max(d.object(forKey: "quietStart") as? Int ?? 22, 0), 23)
+        quietEnd = min(max(d.object(forKey: "quietEnd") as? Int ?? 8, 0), 23)
+        betaUpdates = d.object(forKey: "betaUpdates") as? Bool ?? false
+        snoozedUntil = d.object(forKey: "snoozedUntil") as? Date
         currentTheme = theme
     }
 

@@ -119,6 +119,12 @@ final class ActivityStore {
             if let old = days[k], old.billable == v.billable, old.toolCalls == v.toolCalls, old.prompts == v.prompts, old.responses == v.responses { continue }
             days[k] = v; changed = true
         }
+        if Settings.shared.activityKeepDays > 0 {           // retention setting: drop days older than the cut-off
+            let cutoff = dayKey(Clock.now.addingTimeInterval(-Double(Settings.shared.activityKeepDays) * 86400))
+            let before = days.count
+            days = days.filter { $0.key >= cutoff }
+            changed = changed || days.count != before
+        }
         if changed, let d = try? JSONEncoder().encode(days) { try? d.write(to: url, options: .atomic) }
         return days
     }

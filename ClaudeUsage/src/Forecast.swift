@@ -41,7 +41,7 @@ final class History {
         if let last = samples.last, now.timeIntervalSince(last.t) < 170,
            last.session == new.session, last.weekly == new.weekly { return false }
         samples.append(new)
-        samples.removeAll { now.timeIntervalSince($0.t) > 90 * 86400 }
+        samples.removeAll { now.timeIntervalSince($0.t) > Double(Settings.shared.readingsKeepDays) * 86400 }
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         if let d = try? enc.encode(samples) { try? d.write(to: url, options: .atomic) }
         return true
