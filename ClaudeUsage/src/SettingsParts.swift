@@ -81,13 +81,14 @@ struct SRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(L(title))
+                Text(L(title)).font(AppFont.body)
                 if let s = subtitle { Text(L(s)).font(AppFont.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
             trailing()
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
+        .accessibilityElement(children: .contain).accessibilityLabel(L(title))      // VoiceOver: "Export settings, group" then its "Export…" button
     }
 }
 

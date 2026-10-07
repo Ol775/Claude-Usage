@@ -94,7 +94,7 @@ struct ReportsView: View {
         }
     }
 
-    private var peakLabel: String { range == .month ? "weekly windows" : "sessions" }
+    private var peakLabel: String { range == .month ? "weekly windows" : "5-hour windows" }
 
     // MARK: view
 
@@ -148,6 +148,7 @@ struct ReportsView: View {
                             RuleMark(y: .value("Limit", 100)).foregroundStyle(Color.danger.opacity(0.85)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                                 .annotation(position: .top, alignment: .leading) { Text("Limit").font(AppFont.caption2).foregroundStyle(Color.danger) }
                             RuleMark(y: .value("Warn", warn)).foregroundStyle(Color.orange.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
+                                .annotation(position: .top, alignment: .leading) { Text("Warn at \(Int(warn))%").font(AppFont.caption2).foregroundStyle(.orange) }
                         }
                         .chartForegroundStyleScale(styleScale(pts))
                         .chartXScale(domain: start...end)

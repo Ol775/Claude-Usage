@@ -210,8 +210,20 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         add(appMenu, L("Hide Claude Usage"), #selector(NSApplication.hide(_:)), "h")
         add(appMenu, L("Quit Claude Usage"), #selector(NSApplication.terminate(_:)), "q")
         appItem.submenu = appMenu
+        // Edit menu: without it ⌘A, ⌘C, ⌘V, ⌘X and ⌘Z do nothing in text fields (search, greeting name)
+        let editItem = NSMenuItem(); main.addItem(editItem)
+        let edit = NSMenu(title: L("Edit"))
+        add(edit, L("Undo"), Selector(("undo:")), "z")
+        let redo = edit.addItem(withTitle: L("Redo"), action: Selector(("redo:")), keyEquivalent: "z"); redo.keyEquivalentModifierMask = [.command, .shift]
+        edit.addItem(.separator())
+        add(edit, L("Cut"), #selector(NSText.cut(_:)), "x")
+        add(edit, L("Copy"), #selector(NSText.copy(_:)), "c")
+        add(edit, L("Paste"), #selector(NSText.paste(_:)), "v")
+        add(edit, L("Select All"), #selector(NSText.selectAll(_:)), "a")
+        editItem.submenu = edit
         let winItem = NSMenuItem(); main.addItem(winItem)
         let win = NSMenu(title: L("Window"))
+        add(win, L("Close"), #selector(NSWindow.performClose(_:)), "w")
         add(win, L("Minimize"), #selector(NSWindow.performMiniaturize(_:)), "m")
         add(win, L("Zoom"), #selector(NSWindow.performZoom(_:)), "")
         add(win, L("Dashboard"), #selector(openDashboard), "0", target: self)
@@ -589,9 +601,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         panel.title = "Export settings"; panel.nameFieldStringValue = "Claude Usage settings.json"; panel.allowedContentTypes = [.json]
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        var prefs: [String: Any] = [:]
-        for k in Settings.keys { if let v = UserDefaults.standard.object(forKey: k) { prefs[k] = v } }
-        let doc: [String: Any] = ["app": "Claude Usage", "format": 1, "version": AppInfo.version, "settings": prefs]
+        let doc: [String: Any] = ["app": "Claude Usage", "format": 1, "version": AppInfo.version, "settings": settings.exported]
         do {
             try JSONSerialization.data(withJSONObject: doc, options: [.prettyPrinted, .sortedKeys]).write(to: url, options: .atomic)
             Toast.show("Settings exported", "Saved to \(url.lastPathComponent).")

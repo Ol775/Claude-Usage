@@ -133,7 +133,7 @@ enum Predictor {
             let when = Calendar.current.isDate(at, inSameDayAs: now) ? t.string(from: at) : { let d = DateFormatter(); d.dateFormat = "EEE h:mm a"; return d.string(from: at) }()
             return "On pace to hit the limit at \(when) (in \(rel))"
         case .safe(let p, let r):
-            return r == 0 ? "Idle – on pace for \(Int(p.rounded()))% at reset" : "On pace for \(min(Int(p.rounded()), 99))% at reset – safe"
+            return r == 0 ? "Idle – on pace for \(Int(p.rounded()))% at reset" : "Safe – on pace for \(min(Int(p.rounded()), 99))% at reset"
         }
     }
 }

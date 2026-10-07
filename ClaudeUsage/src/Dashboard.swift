@@ -178,7 +178,7 @@ struct SidebarView: View {
                 Button { store.tab = tab } label: {
                     HStack(spacing: 12) {
                         Image(systemName: tab.icon).font(AppFont.system(size: 17)).foregroundStyle(Color.brand).frame(width: 28)
-                        if !narrow { Text(tab.title).fontWeight(selected ? .semibold : .regular).foregroundStyle(.primary); Spacer(minLength: 0) }
+                        if !narrow { Text(L(tab.title)).font(AppFont.title3).fontWeight(selected ? .semibold : .regular).foregroundStyle(.primary); Spacer(minLength: 0) }
                     }
                     .padding(.horizontal, 8).padding(.vertical, 8)
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? (settings.isOLED ? Color(white: 0.16) : Color.brand.opacity(0.18)) : Color.clear))

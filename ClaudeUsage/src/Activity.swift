@@ -72,8 +72,12 @@ struct Pricing {
     }
 }
 
+/// "$8,042", "$21.39", "$0.65", "<$0.01" – US dollars (API prices are in USD), grouped thousands, never more than 2 decimals.
 func money(_ v: Double) -> String {
-    v >= 100 ? String(format: "$%.0f", v) : (v >= 1 ? String(format: "$%.2f", v) : String(format: "$%.3f", v))
+    if v > 0 && v < 0.01 { return "<$0.01" }
+    let f = NumberFormatter(); f.numberStyle = .currency; f.currencyCode = "USD"; f.locale = Locale(identifier: "en_US")
+    f.maximumFractionDigits = v >= 100 ? 0 : 2; f.minimumFractionDigits = f.maximumFractionDigits
+    return f.string(from: NSNumber(value: v)) ?? String(format: "$%.2f", v)
 }
 
 // MARK: - Permanent daily activity (kept even after Claude Code prunes its own logs)

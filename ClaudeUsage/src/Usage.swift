@@ -23,10 +23,16 @@ struct Snapshot {
 }
 
 /// "1 response", "2 responses".
+/// "opus-5-5" from "claude-opus-5-5"; a trailing release date ("-20251001") is dropped.
+func modelName(_ m: String) -> String {
+    m.replacingOccurrences(of: "claude-", with: "").replacingOccurrences(of: #"-\d{8}$"#, with: "", options: .regularExpression)
+}
+
 func plural(_ n: Int, _ noun: String) -> String { "\(n) \(noun)\(n == 1 ? "" : "s")" }
 
 func fmt(_ n: Int) -> String {
     switch n {
+    case 1_000_000_000...: return String(format: "%.1fB", Double(n) / 1e9)
     case 1_000_000...: return String(format: "%.1fM", Double(n) / 1e6)
     case 1_000...: return String(format: "%.1fK", Double(n) / 1e3)
     default: return "\(n)"

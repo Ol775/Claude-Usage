@@ -81,6 +81,7 @@ struct SettingsPage: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
                 TextField("Search", text: $searchBox.value).textFieldStyle(.plain).accessibilityLabel(L("Search settings"))
+                    .onExitCommand { searchBox.value = "" }          // Escape clears the search
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
             .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.secondary.opacity(0.15)))
@@ -88,6 +89,9 @@ struct SettingsPage: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
                     profileRow
+                        .onChange(of: searchBox.value) { _ in          // show the first match, so the right side follows the search
+                            if let first = matches.first, !matches.contains(store.settingsCategory) { store.settingsCategory = first }
+                        }
                     Divider().padding(.vertical, 6)
                     ForEach(matches) { c in categoryRow(c) }
                     if matches.isEmpty { Text("No results").foregroundStyle(.secondary).padding(8) }
@@ -104,7 +108,7 @@ struct SettingsPage: View {
             HStack(spacing: 10) {
                 AvatarCircle(account: a, photo: store.photo, size: 42).overlay(Circle().stroke(Color.white.opacity(selected ? 0.9 : 0), lineWidth: 2))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(a.loggedIn ? a.name : "Sign in").fontWeight(.semibold).foregroundStyle(selected ? Color.white : Color.primary)
+                    Text(a.loggedIn ? a.name : "Sign in").font(AppFont.headline).lineLimit(1).minimumScaleFactor(0.7).foregroundStyle(selected ? Color.white : Color.primary)
                     Text(a.loggedIn ? (a.plan.isEmpty ? "Claude account" : "Claude \(a.plan)") : "with your Claude account")
                         .font(AppFont.caption).foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
                 }
@@ -125,7 +129,7 @@ struct SettingsPage: View {
                 Image(systemName: c.icon).font(AppFont.system(size: 13, weight: .semibold)).foregroundStyle(.white).accessibilityHidden(true)
                     .frame(width: 26, height: 26)
                     .background(RoundedRectangle(cornerRadius: 6.5, style: .continuous).fill(c.tint.gradient))
-                Text(L(c.title)).foregroundStyle(selected ? Color.white : Color.primary)
+                Text(L(c.title)).font(AppFont.body).lineLimit(1).minimumScaleFactor(0.7).foregroundStyle(selected ? Color.white : Color.primary)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8).padding(.vertical, 5)
@@ -286,7 +290,7 @@ struct SettingsPage: View {
                                 Text(L(t.label)).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(maxWidth: .infinity)
-                        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityLabel(L(t.label)).accessibilityAddTraits(settings.theme == t ? [.isSelected, .isButton] : .isButton)
+                        }.buttonStyle(.plain).accessibilityLabel(L(t.label)).accessibilityAddTraits(settings.theme == t ? .isSelected : [])
                     }
                 }
                 .padding(16).frame(maxWidth: .infinity)
@@ -298,7 +302,7 @@ struct SettingsPage: View {
                     }
                 }
             }
-            SGroup(title: "Font", footer: "\(settings.fontChoice.detail) OpenDyslexic is built in – nothing to install. Applies to the windows; the menu bar and its menu keep the system font.") {
+            SGroup(title: "Font", footer: L(settings.fontChoice.detail) + " " + L("OpenDyslexic is built in – nothing to install. Applies to the windows; the menu bar and its menu keep the system font.")) {
                 HStack(spacing: 12) {
                     ForEach(FontChoice.allCases) { c in
                         Button { settings.fontChoice = c } label: {
@@ -350,7 +354,7 @@ struct SettingsPage: View {
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(selected ? Color.brand : Color.clear, lineWidth: 3).padding(-4))
                 Text(L(m.label)).font(AppFont.caption).fontWeight(selected ? .semibold : .regular)
             }
-        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityLabel(L(m.label)).accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+        }.buttonStyle(.plain).accessibilityLabel(L(m.label)).accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var menuBarPane: some View {
@@ -384,11 +388,12 @@ struct SettingsPage: View {
                         Button { settings.apply(p) } label: {
                             VStack(spacing: 2) {
                                 Text(L(p.label)).fontWeight(.medium)
-                                Text(p.detail).font(AppFont.caption2).foregroundStyle(.secondary)
-                            }.frame(maxWidth: .infinity).padding(.vertical, 6)
+                                Text(L(p.detail)).font(AppFont.caption2).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                            }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, 6)
                         }.buttonStyle(.bordered)
                     }
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(14)
             }
             SGroup(title: "Items", footer: "If you turn everything off, the icon stays so the item never disappears.") {
@@ -656,9 +661,9 @@ struct SettingsPage: View {
             switch store.update {
             case .idle: return "Not checked yet"
             case .checking: return "Checking…"
-            case .upToDate(let d): return "You’re up to date · checked \(d.formatted(date: .omitted, time: .shortened))"
-            case .available(let u): return "Version \(u.version) is available"
-            case .ready(let u, _): return "Version \(u.version) is ready to install"
+            case .upToDate(let d): return String(format: L("You’re up to date · checked %@"), d.formatted(date: .omitted, time: .shortened))
+            case .available(let u): return String(format: L("Version %@ is available"), u.version)
+            case .ready(let u, _): return String(format: L("Version %@ is ready to install"), u.version)
             case .failed(let m): return m
             }
         }()

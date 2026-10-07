@@ -11,7 +11,7 @@ struct UsageView: View {
     private var days: Int { daysBox.value }
     private var modelRange: Int { rangeBox.value }
 
-    private func short(_ m: String) -> String { m.replacingOccurrences(of: "claude-", with: "") }
+    private func short(_ m: String) -> String { modelName(m) }
     private func axis() -> some AxisContent {
         AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Int.self) { Text(fmt(n)) } } }
     }

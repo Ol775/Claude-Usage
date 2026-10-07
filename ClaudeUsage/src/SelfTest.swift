@@ -276,6 +276,9 @@ func runSelfTests() -> Int32 {
 
     check(AppInfo.installCommand.hasPrefix("curl -fsSL https://raw.githubusercontent.com/Ol775/Claude-Usage/main/install.sh"), "the copied update command is the official installer, not a local path")
 
+    check(Set(Settings.shared.exported.keys) == Set(Settings.keys) && Settings.validated(Settings.shared.exported).count == Settings.keys.count,
+          "settings export covers every key, and its own output passes import validation")
+
     // Beta channel: the highest plain version wins, drafts and odd tags are skipped
     let rels: [[String: Any]] = [["tag_name": "v0.12.0"], ["tag_name": "v0.13.0", "prerelease": true], ["tag_name": "v0.14.0", "draft": true],
                                  ["tag_name": "v9.9.9-evil"], ["tag_name": "v0.12.1"]]
@@ -291,7 +294,9 @@ func runSelfTests() -> Int32 {
     check(trimmedToContent(full).size.width == 100, "a picture with no transparent margin is left alone")
 
     // Formatting helpers
-    check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")
+    check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M" && fmt(1_107_400_000) == "1.1B", "token formatting")
+    check(money(8042) == "$8,042" && money(21.391) == "$21.39" && money(0.651) == "$0.65" && money(0.004) == "<$0.01" && money(0) == "$0.00", "money formatting (\(money(8042)), \(money(0.651)))")
+    check(modelName("claude-haiku-4-5-20251001") == "haiku-4-5" && modelName("claude-opus-5-5") == "opus-5-5", "model names drop the prefix and release date")
     check(plural(1, "response") == "1 response" && plural(2, "response") == "2 responses", "plural")
     check(dayKey(Date(timeIntervalSince1970: 0)).count == 10, "day key shape")
 

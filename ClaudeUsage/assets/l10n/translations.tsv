@@ -254,3 +254,27 @@ Snoozed until %@	Geschlummert bis %@	Reporté jusqu’à %@	Pospuesto hasta %@
 macOS hasn’t been asked yet – choose Allow to turn notifications on.	macOS wurde noch nicht gefragt – wähle „Erlauben“, um Mitteilungen einzuschalten.	macOS n’a pas encore été sollicité – choisissez Autoriser pour activer les notifications.	Aún no se ha preguntado a macOS: elige Permitir para activar las notificaciones.
 Search settings	Einstellungen durchsuchen	Rechercher dans les réglages	Buscar en ajustes
 Copy install command	Installationsbefehl kopieren	Copier la commande d’installation	Copiar el comando de instalación
+The standard macOS font.	Die normale macOS-Schrift.	La police standard de macOS.	La fuente estándar de macOS.
+Softer letter shapes.	Weichere Buchstabenformen.	Des lettres aux formes plus douces.	Letras de formas más suaves.
+A traditional serif face.	Eine klassische Serifenschrift.	Une police à empattements classique.	Una tipografía con serifa clásica.
+Every character the same width.	Alle Zeichen gleich breit.	Tous les caractères ont la même largeur.	Todos los caracteres con el mismo ancho.
+Weighted letter bottoms to help tell letters apart; designed for readers with dyslexia.	Beschwerte Buchstabenunterseiten helfen, Buchstaben zu unterscheiden; entwickelt für Menschen mit Legasthenie.	Le bas des lettres est alourdi pour mieux les distinguer ; conçue pour les lecteurs dyslexiques.	La parte inferior de las letras es más gruesa para distinguirlas mejor; diseñada para lectores con dislexia.
+OpenDyslexic is built in – nothing to install. Applies to the windows; the menu bar and its menu keep the system font.	OpenDyslexic ist eingebaut – keine Installation nötig. Gilt für die Fenster; Menüleiste und Menü behalten die Systemschrift.	OpenDyslexic est intégrée – rien à installer. S’applique aux fenêtres ; la barre des menus et son menu gardent la police système.	OpenDyslexic viene incluida: no hay que instalar nada. Se aplica a las ventanas; la barra de menús y su menú mantienen la fuente del sistema.
+Connect ChatGPT in Settings → Account first.	Verbinde zuerst ChatGPT unter Einstellungen → Account.	Connectez d’abord ChatGPT dans Réglages → Compte.	Conecta primero ChatGPT en Ajustes → Cuenta.
+You’re up to date · checked %@	Du bist auf dem neuesten Stand · geprüft %@	Vous êtes à jour · vérifié à %@	Estás al día · comprobado a las %@
+Version %@ is available	Version %@ ist verfügbar	La version %@ est disponible	La versión %@ está disponible
+Version %@ is ready to install	Version %@ ist bereit zur Installation	La version %@ est prête à être installée	La versión %@ está lista para instalarse
+First name	Vorname	Prénom	Nombre
+Overview	Übersicht	Vue d’ensemble	Resumen
+Reports	Berichte	Rapports	Informes
+Insights	Einblicke	Analyses	Estadísticas
+Usage	Nutzung	Utilisation	Uso
+Settings	Einstellungen	Réglages	Ajustes
+Sign in	Anmelden	Se connecter	Iniciar sesión
+Edit	Bearbeiten	Édition	Editar
+Undo	Widerrufen	Annuler	Deshacer
+Redo	Wiederholen	Rétablir	Rehacer
+Cut	Ausschneiden	Couper	Cortar
+Paste	Einsetzen	Coller	Pegar
+Select All	Alles auswählen	Tout sélectionner	Seleccionar todo
+Close	Schließen	Fermer	Cerrar

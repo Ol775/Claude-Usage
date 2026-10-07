@@ -27,7 +27,7 @@ struct InsightsView: View {
     private var range: InsightRange { InsightRange(rawValue: rangeBox.value) ?? .month }
 
     private let cal = Calendar.current
-    private func short(_ m: String) -> String { m.replacingOccurrences(of: "claude-", with: "") }
+    private func short(_ m: String) -> String { modelName(m) }
 
     // MARK: derived
 
@@ -122,7 +122,8 @@ struct InsightsView: View {
                                 .foregroundStyle(color(cls(r)))
                             if avgActive > 0 {
                                 RuleMark(y: .value("Average", avgActive)).foregroundStyle(Color.secondary.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                    .annotation(position: .top, alignment: .leading) { Text("avg active day \(fmt(Int(avgActive)))").font(AppFont.caption2).foregroundStyle(.secondary) }
+                                    .annotation(position: .top, alignment: .leading) { Text("avg active day \(fmt(Int(avgActive)))").font(AppFont.caption2).foregroundStyle(.secondary)
+                                            .padding(.horizontal, 5).padding(.vertical, 1).background(Capsule().fill(Color(nsColor: .windowBackgroundColor).opacity(0.9))) }
                             }
                         }
                         .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let x = v.as(Int.self) { Text(fmt(x)) } } } }
@@ -149,7 +150,7 @@ struct InsightsView: View {
                             StatTile(title: "Tokens per week", value: fmt(Int(Double(total) / weeks)), sub: "\(fmt(total / n)) per day")
                         }
                         HStack(spacing: 16) {
-                            StatTile(title: "Avg session peak", value: sPeaks.isEmpty ? "—" : "\(Int((sPeaks.reduce(0, +) / Double(sPeaks.count)).rounded()))%", sub: sPeaks.isEmpty ? "recorded as you use the app" : "of the 5-hour limit · \(sPeaks.count) session\(sPeaks.count == 1 ? "" : "s")")
+                            StatTile(title: "Avg session peak", value: sPeaks.isEmpty ? "—" : "\(Int((sPeaks.reduce(0, +) / Double(sPeaks.count)).rounded()))%", sub: sPeaks.isEmpty ? "recorded as you use the app" : "of the 5-hour limit · \(sPeaks.count) window\(sPeaks.count == 1 ? "" : "s")")
                             StatTile(title: "Highest session", value: sPeaks.isEmpty ? "—" : "\(Int((sPeaks.max() ?? 0).rounded()))%", sub: "of the 5-hour limit")
                             StatTile(title: "Avg weekly peak", value: wPeaks.isEmpty ? "—" : "\(Int((wPeaks.reduce(0, +) / Double(wPeaks.count)).rounded()))%", sub: wPeaks.isEmpty ? "recorded as you use the app" : "of the weekly limit")
                             StatTile(title: "Active days", value: "\(active.count)", sub: "of \(n)")

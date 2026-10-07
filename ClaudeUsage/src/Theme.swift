@@ -226,6 +226,19 @@ final class Settings: ObservableObject {
         return out
     }
 
+    /// Every current setting under its preference key (for export) – including ones still at their default.
+    var exported: [String: Any] {
+        ["appearance": appearance.rawValue, "theme": theme.rawValue, "showInDock": showInDock, "notificationsOn": notificationsOn,
+         "predictiveAlerts": predictiveAlerts, "menuShowIcon": menuShowIcon, "menuShowSession": menuShowSession, "menuShowWeekly": menuShowWeekly,
+         "chatgptEnabled": chatgptEnabled, "menuShowChatGPT": menuShowChatGPT, "menuShowTokens": menuShowTokens, "menuShowReset": menuShowReset,
+         "menuIconStyle": menuIconStyle.rawValue, "menuIconHex": menuIconHex, "customAccentHex": customAccentHex, "fontChoice": fontChoice.rawValue,
+         "textSize": textSize.rawValue, "cardCorners": cardCorners.rawValue, "displayName": displayName, "menuLabelStyle": menuLabelStyle.rawValue,
+         "menuPercentColour": menuPercentColour.rawValue, "autoDownloadUpdates": autoDownloadUpdates, "autoCheckUpdates": autoCheckUpdates,
+         "importance": importance.rawValue, "warnThreshold": warnThreshold, "criticalThreshold": criticalThreshold, "refreshMinutes": refreshMinutes,
+         "readingsKeepDays": readingsKeepDays, "activityKeepDays": activityKeepDays, "quietHoursOn": quietHoursOn, "quietStart": quietStart,
+         "quietEnd": quietEnd, "betaUpdates": betaUpdates]
+    }
+
     /// Re-reads every preference (after an import) so the whole app updates without a restart.
     func reload() {
         let f = Settings()
