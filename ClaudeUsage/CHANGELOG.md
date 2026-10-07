@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.15.0 – beta (2026-10-07)
+- Accessibility: every switch, stepper, colour picker and text field now has a name for VoiceOver; the menu bar menu’s usage bars, charts and account row are read aloud; on-screen banners are announced; selected tiles say they’re selected; decorative icons are skipped; animations respect Reduce Motion; cards get stronger borders with Increase Contrast; and a custom accent colour is adjusted until it’s readable (WCAG AA)
+
 ## 0.14.0 – beta (2026-10-07)
 - Settings and the menu bar menu are translated into German, French and Spanish (they follow your Mac’s language, or the per-app language in System Settings → General → Language & Region)
 

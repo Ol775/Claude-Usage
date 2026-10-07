@@ -19,6 +19,8 @@ final class Toast {
             panel.contentView = view
             panels.append(panel)
             panel.alphaValue = 0; panel.orderFrontRegardless()
+            NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                                 userInfo: [.announcement: "\(title). \(body)", .priority: important ? NSAccessibilityPriorityLevel.high.rawValue : NSAccessibilityPriorityLevel.medium.rawValue])
             NSAnimationContext.runAnimationGroup { $0.duration = 0.25; panel.animator().alphaValue = 1 }
             if !important { DispatchQueue.main.asyncAfter(deadline: .now() + 7) { dismiss(panel) } }     // important banners stay until clicked
         }
@@ -51,6 +53,7 @@ final class ToastView: NSVisualEffectView {
             tag.font = .boldSystemFont(ofSize: 10); tag.textColor = alertRed; tag.alignment = .right
             tag.frame = NSRect(x: frame.width - 100, y: frame.height - 31, width: 84, height: 14); addSubview(tag)
         }
+        setAccessibilityLabel("\(important ? "Important: " : "")\(title). \(body)")
         let b = NSTextField(wrappingLabelWithString: body)
         b.font = .systemFont(ofSize: 12.5); b.textColor = .secondaryLabelColor; b.maximumNumberOfLines = 2
         b.frame = NSRect(x: 82, y: 12, width: frame.width - 98, height: 38)
@@ -58,4 +61,7 @@ final class ToastView: NSVisualEffectView {
     }
     required init?(coder: NSCoder) { fatalError() }
     override func mouseDown(with event: NSEvent) { onClick() }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityPerformPress() -> Bool { onClick(); return true }
 }

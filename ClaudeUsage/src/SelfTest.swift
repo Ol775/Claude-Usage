@@ -263,6 +263,17 @@ func runSelfTests() -> Int32 {
         check(bad.isEmpty, "\(lang) translations keep their placeholders (\(bad))")
     }
 
+    // Accessibility: every accent meets WCAG AA (4.5:1) as text in light and dark mode, including a pale custom colour
+    Settings.persist = false                       // never write test choices to the real preferences
+    let savedAccent = Settings.shared.customAccentHex
+    Settings.shared.customAccentHex = "#E6FF80"        // pale lime: unreadable on white unless adjusted
+    let darkCard = NSColor(srgbRed: 0.16, green: 0.16, blue: 0.16, alpha: 1)
+    for t in AccentTheme.allCases {
+        check(contrastRatio(t.colors.1, .white) >= 4.5 && contrastRatio(t.colors.0, darkCard) >= 4.5, "\(t.label) accent is readable (\(contrastRatio(t.colors.1, .white)), \(contrastRatio(t.colors.0, darkCard)))")
+    }
+    Settings.shared.customAccentHex = savedAccent
+    Settings.persist = true
+
     // Beta channel: the highest plain version wins, drafts and odd tags are skipped
     let rels: [[String: Any]] = [["tag_name": "v0.12.0"], ["tag_name": "v0.13.0", "prerelease": true], ["tag_name": "v0.14.0", "draft": true],
                                  ["tag_name": "v9.9.9-evil"], ["tag_name": "v0.12.1"]]

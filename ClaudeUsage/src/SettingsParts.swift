@@ -120,7 +120,7 @@ struct SegmentedChoice<T: Hashable>: View {
                 }
             }
             .padding(2).background(Capsule().fill(Color.primary.opacity(0.08))).fixedSize()
-            Picker("", selection: $selection) { ForEach(options, id: \.self) { Text(L(label($0))).tag($0) } }
+            Picker(L(label(selection)), selection: $selection) { ForEach(options, id: \.self) { Text(L(label($0))).tag($0) } }
                 .labelsHidden().frame(width: 150)
         }
     }

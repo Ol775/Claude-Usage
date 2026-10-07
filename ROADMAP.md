@@ -29,7 +29,7 @@ Phases can overlap; the order is by what most reduces risk for real users.
 The biggest gap is that most testing happened on one Mac.
 - Clean-install and update test on a **second Mac** that has never had developer tools (DMG, Homebrew and terminal installers; update from every earlier beta).
 - Run on **macOS 13** hardware or a VM, and on an **Intel** Mac.
-- A hands-on **VoiceOver and keyboard-only pass** by a person (the automated labels exist; the experience is untested), plus Reduce Motion, Increase Contrast and larger text.
+- A hands-on **VoiceOver and keyboard-only pass** by a person. The automated side is done (0.15.0): an accessibility-tree audit (`ClaudeUsage/tests/axaudit.swift`) finds no unnamed controls on any screen, the menu bar menu is readable, Reduce Motion and Increase Contrast are respected, and every accent colour meets WCAG AA. What's left is a real person using it with VoiceOver and the keyboard only.
 - **Paid ChatGPT**: verify with a real paid account. If it can't be verified, remove the feature before 1.0 rather than ship it unproven.
 - Collect real bug reports from beta users and triage them in GitHub issues with labels and a "known issues" list in the README.
 
@@ -46,13 +46,13 @@ The biggest gap is that most testing happened on one Mac.
 - ✅ **Signing-key rotation and recovery procedure** in [RELEASING.md](RELEASING.md); restoring from both backups (iCloud and Proton) and signing a test file was rehearsed.
 - Keep the legacy `.sig` for a few more releases, then remove it.
 - A **third security review** before 1.0, including a fresh look at install scripts and the Homebrew cask. Re-run it after any change to the updater, diagnostics or install scripts.
-- An opt-in **beta/stable update channel** so testers can get betas while everyone else stays on stable.
+- ✅ An opt-in **beta update channel** (Settings → About → Get beta versions; `PRERELEASE=1 ./release.sh` publishes one).
 - ✅ Short privacy statement ([PRIVACY.md](PRIVACY.md)) matching the in-app one. Still to do: a software bill of materials (the app has no third-party dependencies).
 
 ### B4. Product polish ⏳
-- Localisation (starting with the strings in Settings and the menu).
-- ✅ "Delete all my data" button (Settings → Data). Still to do: retention settings and settings export/import.
-- Notification actions (snooze, open dashboard) and quiet hours.
+- ✅ Localisation: Settings and the menu in German, French and Spanish (0.14.0). Still to do: the Overview, Reports and Insights screens, and a review by native speakers.
+- ✅ "Delete all my data" button, retention settings and settings export/import (Settings → Data).
+- ✅ Notification actions (Snooze 1 Hour, Open Dashboard) and quiet hours (0.13.0).
 - ✅ **Personalisation** (0.11.0): five fonts including a built-in OpenDyslexic, four text sizes, a custom accent colour, card corner styles, a greeting name, a menu bar icon in any colour, and your profile picture in the sidebar.
 - ChatGPT graduates from experimental if verified (B1), with a screenshot refresh.
 - Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).

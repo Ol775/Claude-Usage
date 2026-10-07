@@ -16,7 +16,7 @@ struct OverviewView: View {
                         Text(store.account.loggedIn ? "Hi, \(settings.displayName.trimmingCharacters(in: .whitespaces).isEmpty ? (store.account.name.split(separator: " ").first.map(String.init) ?? "there") : settings.displayName.trimmingCharacters(in: .whitespaces))" : "Overview")
                             .font(AppFont.largeTitle.bold())
                         HStack(spacing: 6) {
-                            if store.stale { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                            if store.stale { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).accessibilityHidden(true) }
                             Text(store.stale ? (store.staleReason ?? "Couldn’t reach Anthropic – showing the last reading")
                                  : (store.lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "Loading…"))
                                 .foregroundStyle(.secondary)
@@ -29,7 +29,7 @@ struct OverviewView: View {
                 if store.limits.isEmpty {
                     if store.account.loggedIn {
                         HStack(spacing: 12) {
-                            Image(systemName: "exclamationmark.circle").font(AppFont.title2).foregroundStyle(.secondary)
+                            Image(systemName: "exclamationmark.circle").font(AppFont.title2).foregroundStyle(.secondary).accessibilityHidden(true)
                             Text(store.limitError ?? "Loading limits…")
                             Spacer()
                         }
@@ -117,7 +117,7 @@ struct ChatGPTSection: View {
             }
             if g.limits.isEmpty {
                 HStack(spacing: 12) {
-                    Image(systemName: g.isFree ? "lock.fill" : "bubble.left.and.bubble.right").font(AppFont.title2).foregroundStyle(.secondary)
+                    Image(systemName: g.isFree ? "lock.fill" : "bubble.left.and.bubble.right").font(AppFont.title2).foregroundStyle(.secondary).accessibilityHidden(true)
                     Text(store.chatgptBusy ? "Waiting for your browser…" : (g.error ?? "Loading ChatGPT limits…")).fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     if !g.signedIn && !store.chatgptBusy { Button("Connect") { store.actions.connectChatGPT() }.buttonStyle(.borderedProminent) }
@@ -217,6 +217,7 @@ struct OnboardingCard: View {
     private func step(_ done: Bool, _ title: String, _ detail: String, @ViewBuilder action: () -> some View = { EmptyView() }) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: done ? "checkmark.circle.fill" : "circle").font(AppFont.title3).foregroundStyle(done ? Color.green : Color.secondary)
+                .accessibilityLabel(done ? "Done" : "To do")
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(AppFont.headline)
                 Text(detail).font(AppFont.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

@@ -14,6 +14,24 @@ enum AppInfo {
 
 // MARK: - Themes
 
+/// WCAG contrast ratio between two colours (1–21).
+func contrastRatio(_ a: NSColor, _ b: NSColor) -> Double {
+    func lum(_ c: NSColor) -> Double {
+        guard let s = c.usingColorSpace(.sRGB) else { return 0 }
+        func ch(_ x: CGFloat) -> Double { let v = Double(x); return v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+        return 0.2126 * ch(s.redComponent) + 0.7152 * ch(s.greenComponent) + 0.0722 * ch(s.blueComponent)
+    }
+    let x = lum(a), y = lum(b)
+    return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+}
+
+/// Moves `c` toward `toward` (white or black) until it reaches 4.5:1 against `bg` (WCAG AA for text), so a custom accent stays readable.
+func readable(_ c: NSColor, on bg: NSColor, toward: NSColor) -> NSColor {
+    var out = c, f: CGFloat = 0
+    while contrastRatio(out, bg) < 4.5 && f < 1 { f += 0.05; out = c.blended(withFraction: f, of: toward) ?? c }
+    return out
+}
+
 enum AccentTheme: String, CaseIterable, Identifiable {
     case claude, blue, green, purple, pink, graphite, custom
     var id: String { rawValue }
@@ -35,7 +53,8 @@ enum AccentTheme: String, CaseIterable, Identifiable {
         switch self {
         case .custom:        // your colour, lifted a little for dark mode and deepened for light mode so it stays readable
             let base = colorFromHex(Settings.shared.customAccentHex) ?? c(1.00, 0.55, 0.33)
-            return (base.blended(withFraction: 0.18, of: .white) ?? base, base.blended(withFraction: 0.22, of: .black) ?? base)
+            return (readable(base.blended(withFraction: 0.18, of: .white) ?? base, on: c(0.16, 0.16, 0.16), toward: .white),
+                    readable(base.blended(withFraction: 0.22, of: .black) ?? base, on: .white, toward: .black))
         case .claude: return (c(1.00, 0.55, 0.33), c(0.75, 0.29, 0.09))
         case .blue: return (c(0.36, 0.67, 1.00), c(0.00, 0.37, 0.80))
         case .green: return (c(0.30, 0.85, 0.52), c(0.07, 0.48, 0.24))

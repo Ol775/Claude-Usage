@@ -7,7 +7,7 @@ struct CoffeeButton: View {
     var body: some View {
         Button { NSWorkspace.shared.open(AppInfo.coffeeURL) } label: {
             HStack(spacing: 7) {
-                Image(systemName: "cup.and.saucer.fill").font(AppFont.system(size: 14, weight: .semibold))
+                Image(systemName: "cup.and.saucer.fill").font(AppFont.system(size: 14, weight: .semibold)).accessibilityHidden(true)
                 Text("Buy me a coffee").font(AppFont.system(size: 13, weight: .bold))
             }
             .foregroundStyle(Color.black.opacity(0.85))
@@ -79,8 +79,8 @@ struct SettingsPage: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search", text: $searchBox.value).textFieldStyle(.plain)
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+                TextField("Search", text: $searchBox.value).textFieldStyle(.plain).accessibilityLabel(L("Search settings"))
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
             .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.secondary.opacity(0.15)))
@@ -114,13 +114,15 @@ struct SettingsPage: View {
             .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Color.brand : Color.clear))
             .contentShape(Rectangle())
         }.buttonStyle(.plain)
+        .accessibilityLabel(a.loggedIn ? "Account, \(a.name)\(a.plan.isEmpty ? "" : ", Claude \(a.plan)")" : "Account, sign in")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func categoryRow(_ c: SettingsCategory) -> some View {
         let selected = store.settingsCategory == c
         return Button { store.settingsCategory = c } label: {
             HStack(spacing: 10) {
-                Image(systemName: c.icon).font(AppFont.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                Image(systemName: c.icon).font(AppFont.system(size: 13, weight: .semibold)).foregroundStyle(.white).accessibilityHidden(true)
                     .frame(width: 26, height: 26)
                     .background(RoundedRectangle(cornerRadius: 6.5, style: .continuous).fill(c.tint.gradient))
                 Text(L(c.title)).foregroundStyle(selected ? Color.white : Color.primary)
@@ -129,7 +131,7 @@ struct SettingsPage: View {
             .padding(.horizontal, 8).padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(selected ? Color.brand : Color.clear))
             .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        }.buttonStyle(.plain).accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     // MARK: panes
@@ -151,7 +153,8 @@ struct SettingsPage: View {
         let a = store.account
         return VStack(alignment: .leading, spacing: 22) {
             VStack(spacing: 8) {
-                AvatarCircle(account: a, photo: store.photo, size: 96).onTapGesture { if a.loggedIn { store.actions.choosePhoto() } }
+                Button { store.actions.choosePhoto() } label: { AvatarCircle(account: a, photo: store.photo, size: 96) }
+                    .buttonStyle(.plain).disabled(!a.loggedIn).help("Choose a profile photo").accessibilityLabel(a.loggedIn ? "Profile photo. Choose a new one" : "Not signed in")
                 Text(a.loggedIn ? a.name : "Not signed in").font(AppFont.title2.bold())
                 if a.loggedIn {
                     Text(a.email).foregroundStyle(.secondary)
@@ -174,7 +177,7 @@ struct SettingsPage: View {
                                 Image(nsImage: stockAvatarImage(i)).resizable().frame(width: 62, height: 62).clipShape(Circle())
                                     .overlay(Circle().stroke(store.stockIndex == i ? Color.brand : Color(nsColor: .separatorColor), lineWidth: store.stockIndex == i ? 3 : 1).padding(store.stockIndex == i ? -3 : 0))
                             }
-                            .buttonStyle(.plain).help(stockBots[i].name)
+                            .buttonStyle(.plain).help(stockBots[i].name).accessibilityLabel("\(stockBots[i].name) robot").accessibilityAddTraits(store.stockIndex == i ? .isSelected : [])
                         }
                     }
                     .padding(16).frame(maxWidth: .infinity, alignment: .leading)
@@ -239,10 +242,10 @@ struct SettingsPage: View {
     private var generalPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "Startup") {
-                SRow(title: "Show in Dock", subtitle: "Turn off to keep the app in the menu bar only.") { Toggle("", isOn: $settings.showInDock).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Show in Dock", subtitle: "Turn off to keep the app in the menu bar only.") { Toggle(L("Show in Dock"), isOn: $settings.showInDock).labelsHidden().toggleStyle(.switch) }
                 SDivider()
                 SRow(title: "Launch at login") {
-                    Toggle("", isOn: Binding(
+                    Toggle(L("Launch at login"), isOn: Binding(
                         get: { loginBox.value },
                         set: { on in
                             do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
@@ -253,7 +256,7 @@ struct SettingsPage: View {
             }
             SGroup(title: "Updates") {
                 SRow(title: "Refresh every", subtitle: "How often limits and usage are refreshed.") {
-                    Picker("", selection: $settings.refreshMinutes) {
+                    Picker(L("Refresh every"), selection: $settings.refreshMinutes) {
                         Text("1 minute").tag(1); Text("2 minutes").tag(2); Text("5 minutes").tag(5); Text("10 minutes").tag(10)
                     }.labelsHidden().frame(width: 130)
                 }
@@ -283,14 +286,14 @@ struct SettingsPage: View {
                                 Text(L(t.label)).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(maxWidth: .infinity)
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityLabel(L(t.label)).accessibilityAddTraits(settings.theme == t ? [.isSelected, .isButton] : .isButton)
                     }
                 }
                 .padding(16).frame(maxWidth: .infinity)
                 if settings.theme == .custom {
                     SDivider()
                     SRow(title: "Custom colour", subtitle: "Used for rings, bars, charts and buttons. Lightened in dark mode and deepened in light mode so it stays readable.") {
-                        ColorPicker("", selection: Binding(get: { Color(nsColor: colorFromHex(settings.customAccentHex) ?? .orange) },
+                        ColorPicker(L("Custom colour"), selection: Binding(get: { Color(nsColor: colorFromHex(settings.customAccentHex) ?? .orange) },
                                                            set: { settings.customAccentHex = hexFromColor(NSColor($0)); settings.theme = .custom; currentTheme = .custom }), supportsOpacity: false).labelsHidden()
                     }
                 }
@@ -306,7 +309,7 @@ struct SettingsPage: View {
                             .frame(maxWidth: .infinity, minHeight: 74).padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(settings.fontChoice == c ? 0.12 : 0.05)))
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.brand.opacity(settings.fontChoice == c ? 0.9 : 0), lineWidth: 2))
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).accessibilityLabel(L(c.label)).accessibilityAddTraits(settings.fontChoice == c ? .isSelected : [])
                     }
                 }
                 .padding(16)
@@ -321,7 +324,7 @@ struct SettingsPage: View {
                 }
                 SDivider()
                 SRow(title: "Greeting name", subtitle: "What the Overview calls you. Leave empty to use the first name from your Claude account.") {
-                    TextField("First name", text: $settings.displayName).textFieldStyle(.roundedBorder).frame(width: 180)
+                    TextField("First name", text: $settings.displayName).textFieldStyle(.roundedBorder).frame(width: 180).accessibilityLabel(L("Greeting name"))
                 }
             }
         }
@@ -347,7 +350,7 @@ struct SettingsPage: View {
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(selected ? Color.brand : Color.clear, lineWidth: 3).padding(-4))
                 Text(L(m.label)).font(AppFont.caption).fontWeight(selected ? .semibold : .regular)
             }
-        }.buttonStyle(.plain)
+        }.buttonStyle(.plain).accessibilityElement(children: .ignore).accessibilityLabel(L(m.label)).accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 
     private var menuBarPane: some View {
@@ -372,7 +375,7 @@ struct SettingsPage: View {
                 HStack(spacing: 6) {
                     if showIcon { Image(nsImage: settings.menuIconImage()).foregroundStyle(.primary) }
                     preview.font(AppFont.system(size: 13))
-                }
+                }.accessibilityElement(children: .combine)
                 .padding(18).frame(maxWidth: .infinity)
             }
             SGroup(title: "Presets") {
@@ -389,39 +392,39 @@ struct SettingsPage: View {
                 .padding(14)
             }
             SGroup(title: "Items", footer: "If you turn everything off, the icon stays so the item never disappears.") {
-                SRow(title: "Icon") { Toggle("", isOn: $settings.menuShowIcon).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Icon") { Toggle(L("Icon"), isOn: $settings.menuShowIcon).labelsHidden().toggleStyle(.switch) }
                 SDivider()
-                SRow(title: "Current session", subtitle: "How much of the session limit you’ve used.") { Toggle("", isOn: $settings.menuShowSession).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Current session", subtitle: "How much of the session limit you’ve used.") { Toggle(L("Current session"), isOn: $settings.menuShowSession).labelsHidden().toggleStyle(.switch) }
                 SDivider()
-                SRow(title: "Weekly limit", subtitle: "How much of the weekly limit you’ve used.") { Toggle("", isOn: $settings.menuShowWeekly).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Weekly limit", subtitle: "How much of the weekly limit you’ve used.") { Toggle(L("Weekly limit"), isOn: $settings.menuShowWeekly).labelsHidden().toggleStyle(.switch) }
                 SDivider()
                 SRow(title: "ChatGPT usage (experimental)", subtitle: settings.chatgptEnabled ? "Your ChatGPT limit, shown as G 12%." : "Connect ChatGPT in Settings → Account first.") {
-                    Toggle("", isOn: $settings.menuShowChatGPT).labelsHidden().toggleStyle(.switch).disabled(!settings.chatgptEnabled)
+                    Toggle(L("ChatGPT usage (experimental)"), isOn: $settings.menuShowChatGPT).labelsHidden().toggleStyle(.switch).disabled(!settings.chatgptEnabled)
                 }
                 SDivider()
-                SRow(title: "Tokens today", subtitle: "Input, output and cache-write tokens used today.") { Toggle("", isOn: $settings.menuShowTokens).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Tokens today", subtitle: "Input, output and cache-write tokens used today.") { Toggle(L("Tokens today"), isOn: $settings.menuShowTokens).labelsHidden().toggleStyle(.switch) }
                 SDivider()
-                SRow(title: "Session reset countdown", subtitle: "Time until the session limit resets, such as ↻ 1h 30m.") { Toggle("", isOn: $settings.menuShowReset).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Session reset countdown", subtitle: "Time until the session limit resets, such as ↻ 1h 30m.") { Toggle(L("Session reset countdown"), isOn: $settings.menuShowReset).labelsHidden().toggleStyle(.switch) }
             }
             SGroup(title: "Style", footer: "D is your current session limit and W is the weekly limit.") {
                 SRow(title: "Labels") {
-                    Picker("", selection: $settings.menuLabelStyle) { ForEach(MenuLabelStyle.allCases) { Text(L($0.label)).tag($0) } }
+                    Picker(L("Labels"), selection: $settings.menuLabelStyle) { ForEach(MenuLabelStyle.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 190)
                 }
                 SDivider()
                 SRow(title: "Percentage colour") {
-                    Picker("", selection: $settings.menuPercentColour) { ForEach(MenuPercentColour.allCases) { Text(L($0.label)).tag($0) } }
+                    Picker(L("Percentage colour"), selection: $settings.menuPercentColour) { ForEach(MenuPercentColour.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 190)
                 }
                 SDivider()
                 SRow(title: "Icon colour", subtitle: "The Claude icon in the menu bar.") {
-                    Picker("", selection: $settings.menuIconStyle) { ForEach(MenuIconStyle.allCases) { Text(L($0.label)).tag($0) } }
+                    Picker(L("Icon colour"), selection: $settings.menuIconStyle) { ForEach(MenuIconStyle.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 250)
                 }
                 if settings.menuIconStyle == .custom {
                     SDivider()
                     SRow(title: "Custom icon colour", subtitle: "Pick any colour.") {
-                        ColorPicker("", selection: Binding(get: { Color(nsColor: colorFromHex(settings.menuIconHex) ?? .orange) },
+                        ColorPicker(L("Custom icon colour"), selection: Binding(get: { Color(nsColor: colorFromHex(settings.menuIconHex) ?? .orange) },
                                                            set: { settings.menuIconHex = hexFromColor(NSColor($0)) }), supportsOpacity: false).labelsHidden()
                     }
                 }
@@ -435,27 +438,27 @@ struct SettingsPage: View {
                 SRow(title: String(format: L("Notifications: %@"), L(store.notifStatus)),
                      subtitle: store.notifBlocked ? "Blocked – alerts appear as an on-screen banner with the app icon instead." : (store.notifStatus == "Allowed" ? nil : "macOS hasn’t been asked yet – choose Allow to turn notifications on.")) {
                     HStack {
-                        Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill").foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
+                        Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill").foregroundStyle(store.notifBlocked ? Color.danger : Color.brand).accessibilityHidden(true)
                         if store.notifStatus != "Allowed" { Button("Allow…") { store.actions.requestNotifications() } }
                         else { Button("Open Settings") { store.actions.openNotificationSettings() } }
                     }
                 }
             }
             SGroup(title: "Alerts") {
-                SRow(title: "Alert when a limit gets close") { Toggle("", isOn: $settings.notificationsOn).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Alert when a limit gets close") { Toggle(L("Alert when a limit gets close"), isOn: $settings.notificationsOn).labelsHidden().toggleStyle(.switch) }
                 SDivider()
-                SRow(title: "Warn when on pace to hit a limit early", subtitle: "Uses your current pace and saved history.") { Toggle("", isOn: $settings.predictiveAlerts).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Warn when on pace to hit a limit early", subtitle: "Uses your current pace and saved history.") { Toggle(L("Warn when on pace to hit a limit early"), isOn: $settings.predictiveAlerts).labelsHidden().toggleStyle(.switch) }
                 SDivider()
                 SRow(title: "Warn at") {
-                    HStack { Text("\(settings.warnThreshold)%").monospacedDigit(); Stepper("", value: $settings.warnThreshold, in: 50...95, step: 5).labelsHidden() }
+                    HStack { Text("\(settings.warnThreshold)%").monospacedDigit(); Stepper(L("Warn at"), value: $settings.warnThreshold, in: 50...95, step: 5).labelsHidden() }
                 }
                 SDivider()
                 SRow(title: "Critical at") {
-                    HStack { Text("\(settings.criticalThreshold)%").monospacedDigit(); Stepper("", value: $settings.criticalThreshold, in: 60...99, step: 1).labelsHidden() }
+                    HStack { Text("\(settings.criticalThreshold)%").monospacedDigit(); Stepper(L("Critical at"), value: $settings.criticalThreshold, in: 60...99, step: 1).labelsHidden() }
                 }
             }
             SGroup(title: "Quiet hours", footer: "Limit alerts wait until quiet hours end. If a limit is still high then, you’ll get the alert.") {
-                SRow(title: "Pause alerts overnight") { Toggle("", isOn: $settings.quietHoursOn).labelsHidden().toggleStyle(.switch) }
+                SRow(title: "Pause alerts overnight") { Toggle(L("Pause alerts overnight"), isOn: $settings.quietHoursOn).labelsHidden().toggleStyle(.switch) }
                 if settings.quietHoursOn {
                     SDivider()
                     SRow(title: "From") { hourPicker($settings.quietStart) }
@@ -472,7 +475,7 @@ struct SettingsPage: View {
             SGroup(title: "Importance", footer: settings.importance == .normal ? nil :
                     "Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.") {
                 SRow(title: "Mark as important") {
-                    Picker("", selection: $settings.importance) { ForEach(NotifImportance.allCases) { Text(L($0.label)).tag($0) } }
+                    Picker(L("Mark as important"), selection: $settings.importance) { ForEach(NotifImportance.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 230)
                 }
             }
@@ -485,7 +488,7 @@ struct SettingsPage: View {
     }
 
     private func hourPicker(_ hour: Binding<Int>) -> some View {
-        Picker("", selection: hour) {
+        Picker(L("Send a test as important"), selection: hour) {
             ForEach(0..<24, id: \.self) { h in
                 Text(Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: Clock.now)!.formatted(date: .omitted, time: .shortened)).tag(h)
             }
@@ -504,13 +507,13 @@ struct SettingsPage: View {
                 SRow(title: "Days stored") { Text("\(store.snapshot.days.count)").monospacedDigit().foregroundStyle(.secondary) }
                 SDivider()
                 SRow(title: "Keep daily activity") {
-                    Picker("", selection: $settings.activityKeepDays) {
+                    Picker(L("Keep daily activity"), selection: $settings.activityKeepDays) {
                         Text("Forever").tag(0); Text("2 years").tag(730); Text("1 year").tag(365); Text("6 months").tag(182)
                     }.labelsHidden().frame(width: 130)
                 }
                 SDivider()
                 SRow(title: "Keep limit readings", subtitle: "Used for the limit charts and forecasts.") {
-                    Picker("", selection: $settings.readingsKeepDays) {
+                    Picker(L("Keep limit readings"), selection: $settings.readingsKeepDays) {
                         Text("90 days").tag(90); Text("60 days").tag(60); Text("30 days").tag(30)
                     }.labelsHidden().frame(width: 130)
                 }
@@ -574,7 +577,7 @@ struct SettingsPage: View {
     private var aboutPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(spacing: 8) {
-                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84)
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84).accessibilityHidden(true)
                 Text("Claude Usage").font(AppFont.title2.bold())
                 Text("Version \(AppInfo.version) \(AppInfo.stage)").foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity)
@@ -665,16 +668,16 @@ struct SettingsPage: View {
             }
             SDivider()
             SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and shows a banner in the app.") {
-                Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
+                Toggle(L("Check automatically"), isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
             }
             SDivider()
             SRow(title: "Get beta versions", subtitle: "Also offers test releases before everyone else gets them. They may have more bugs.") {
-                Toggle("", isOn: $settings.betaUpdates).labelsHidden().toggleStyle(.switch)
+                Toggle(L("Get beta versions"), isOn: $settings.betaUpdates).labelsHidden().toggleStyle(.switch)
             }
             if store.canInstall {
                 SDivider()
                 SRow(title: "Download updates in the background", subtitle: "Downloads new versions quietly, then asks you to restart to finish.") {
-                    Toggle("", isOn: $settings.autoDownloadUpdates).labelsHidden().toggleStyle(.switch)
+                    Toggle(L("Download updates in the background"), isOn: $settings.autoDownloadUpdates).labelsHidden().toggleStyle(.switch)
                 }
             }
             if case .ready(let u, _) = store.update {

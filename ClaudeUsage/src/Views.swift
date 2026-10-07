@@ -9,6 +9,12 @@ final class ChartView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 140))
     }
     required init?(coder: NSCoder) { fatalError() }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? {
+        let last = values.last ?? 0
+        return "\(title) chart. Peak \(fmt(values.max() ?? 0)) tokens, latest \(fmt(last)) tokens."
+    }
     override func draw(_ r: NSRect) {
         let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 9), .foregroundColor: NSColor.secondaryLabelColor]
         let mx = max(values.max() ?? 0, 1)
@@ -60,6 +66,12 @@ final class AccountView: NSView {
     let account: Account
     init(_ a: Account) { account = a; super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: 68)) }
     required init?(coder: NSCoder) { fatalError() }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? {
+        account.loggedIn ? [account.name, account.email, account.plan.isEmpty ? "" : "\(account.plan) plan"].filter { !$0.isEmpty }.joined(separator: ", ")
+                         : "Not signed in. Open Settings, Account to sign in"
+    }
     override func draw(_ r: NSRect) {
         drawAvatar(in: NSRect(x: 16, y: 14, width: 40, height: 40), account: account)
         let title = account.loggedIn ? account.name : "Not signed in"
@@ -83,6 +95,11 @@ final class UsageBarView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: menuWidth, height: forecast.isEmpty ? 62 : 80))
     }
     required init?(coder: NSCoder) { fatalError() }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .staticText }
+    override func accessibilityLabel() -> String? {
+        ["\(limit.name), \(Int(limit.percent.rounded())) percent used", untilText(limit.resets), forecast].filter { !$0.isEmpty }.joined(separator: ". ")
+    }
     override func draw(_ r: NSRect) {
         let dy: CGFloat = forecast.isEmpty ? 0 : 18
         let frac = min(max(limit.percent / 100, 0), 1)

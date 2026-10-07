@@ -198,7 +198,7 @@ struct ReportsView: View {
 
     private var emptyNote: some View {
         VStack(spacing: 6) {
-            Image(systemName: "chart.line.uptrend.xyaxis").font(AppFont.title2).foregroundStyle(.secondary)
+            Image(systemName: "chart.line.uptrend.xyaxis").font(AppFont.title2).foregroundStyle(.secondary).accessibilityHidden(true)
             Text("Limit history is recorded while the app runs, so this fills in over time.").font(AppFont.callout).foregroundStyle(.secondary)
             if let first = store.samples.first {
                 Text("Recording since \(first.t.formatted(date: .abbreviated, time: .shortened))").font(AppFont.caption).foregroundStyle(.secondary)

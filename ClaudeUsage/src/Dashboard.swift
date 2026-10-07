@@ -101,12 +101,16 @@ extension Color {
     }
 }
 
+/// Nil when Reduce Motion is on, so movement is replaced by an instant change.
+func motion(_ a: Animation) -> Animation? { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : a }
+
 struct CardStyle: ViewModifier {
     @ObservedObject var settings = Settings.shared
+    @Environment(\.colorSchemeContrast) private var contrast
     func body(content: Content) -> some View {
         content
             .background(RoundedRectangle(cornerRadius: settings.cardCorners.radius, style: .continuous).fill(settings.isOLED ? Color(white: 0.07) : Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: settings.cardCorners.radius, style: .continuous).stroke(settings.isOLED ? Color(white: 0.20) : Color(nsColor: .separatorColor), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: settings.cardCorners.radius, style: .continuous).stroke(contrast == .increased ? Color.primary.opacity(0.6) : (settings.isOLED ? Color(white: 0.20) : Color(nsColor: .separatorColor)), lineWidth: contrast == .increased ? 1.5 : 1))
     }
 }
 
@@ -159,13 +163,14 @@ struct SidebarView: View {
         let narrow = collapsed.value
         VStack(alignment: .leading, spacing: 4) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) { collapsed.value.toggle() }
+                withAnimation(motion(.easeInOut(duration: 0.2))) { collapsed.value.toggle() }
                 UserDefaults.standard.set(collapsed.value, forKey: "sidebarCollapsed")
             } label: {
                 Image(systemName: "sidebar.left").font(AppFont.system(size: 16)).foregroundStyle(.secondary).frame(width: 28, height: 28)
                     .padding(.horizontal, 8).padding(.vertical, 4)
             }
             .buttonStyle(.plain).help(narrow ? "Show sidebar labels" : "Collapse to icons")
+            .accessibilityLabel(narrow ? "Show sidebar labels" : "Collapse sidebar to icons")
             .padding(.bottom, 6)
 
             ForEach(Array(DashTab.allCases.enumerated()), id: \.element.id) { index, tab in
@@ -220,7 +225,7 @@ struct UpdateProgressBar: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.primary.opacity(0.12))
                     Capsule().fill(Color.brand).frame(width: max(8, g.size.width * CGFloat(min(max(store.installProgress, 0), 1))))
-                        .animation(.easeOut(duration: 0.25), value: store.installProgress)
+                        .animation(motion(.easeOut(duration: 0.25)), value: store.installProgress)
                 }
             }.frame(height: 8)
         }
@@ -237,7 +242,7 @@ struct UpdateBanner: View {
 
     private func bar<Content: View>(_ icon: String, @ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).font(AppFont.title3).foregroundStyle(Color.brand)
+            Image(systemName: icon).font(AppFont.title3).foregroundStyle(Color.brand).accessibilityHidden(true)
             content()
         }
         .padding(.horizontal, 16).padding(.vertical, 10)

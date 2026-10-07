@@ -21,3 +21,7 @@ codesign --force --sign - /tmp/test.app
 CUB_DEMO=1 CUB_SUPPORT_DIR=/tmp/cub-s CUB_CACHE_DIR=/tmp/cub-c CUB_NO_RELAUNCH=1 \
   /tmp/test.app/Contents/MacOS/ClaudeUsage --quiet --render-screens /tmp/screens [--compare tests/screens/<major>]
 ```
+
+## Accessibility audit
+
+`tests/axaudit.swift` walks the live accessibility tree of a running test copy and lists every control VoiceOver couldn't name. Build it with `swiftc -O tests/axaudit.swift -o build/axaudit`, start a re-identified test copy with `CUB_DEMO=1` (see above), then run `build/axaudit <pid> Settings Notifications` and so on for each tab and settings pane. Only the system stepper arrows (named by macOS itself) should be listed. It needs Accessibility permission for the terminal, so it doesn't run in CI.

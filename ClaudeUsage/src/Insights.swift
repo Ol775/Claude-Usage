@@ -84,7 +84,7 @@ struct InsightsView: View {
 
                 if total == 0 && prompts == 0 {
                     VStack(spacing: 8) {
-                        Image(systemName: "lightbulb").font(AppFont.largeTitle).foregroundStyle(.secondary)
+                        Image(systemName: "lightbulb").font(AppFont.largeTitle).foregroundStyle(.secondary).accessibilityHidden(true)
                         Text("No activity in this range yet").font(AppFont.headline)
                         Text("Use Claude Code and your insights will appear here.").foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity).padding(40).card()
@@ -293,7 +293,7 @@ struct InsightsView: View {
         let stored = store.snapshot.days.count
         let since = ActivityStore.shared.recordingSince
         return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "externaldrive.badge.checkmark").font(AppFont.title3).foregroundStyle(Color.brand)
+            Image(systemName: "externaldrive.badge.checkmark").font(AppFont.title3).foregroundStyle(Color.brand).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Activity is saved on this Mac").font(AppFont.headline)
                 Text((stored == 1 ? "1 day of activity is stored" : "\(stored) days of activity are stored") + (since.map { " · recording since \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") +
