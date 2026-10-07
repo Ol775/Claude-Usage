@@ -66,7 +66,7 @@ struct SettingsPage: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Text(store.settingsCategory.title).font(AppFont.largeTitle.bold())
+                    Text(L(store.settingsCategory.title)).font(AppFont.largeTitle.bold())
                     detail(store.settingsCategory)
                 }
                 .padding(28).frame(maxWidth: 680, alignment: .leading).frame(maxWidth: .infinity, alignment: .leading)
@@ -123,7 +123,7 @@ struct SettingsPage: View {
                 Image(systemName: c.icon).font(AppFont.system(size: 13, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 26, height: 26)
                     .background(RoundedRectangle(cornerRadius: 6.5, style: .continuous).fill(c.tint.gradient))
-                Text(c.title).foregroundStyle(selected ? Color.white : Color.primary)
+                Text(L(c.title)).foregroundStyle(selected ? Color.white : Color.primary)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8).padding(.vertical, 5)
@@ -280,7 +280,7 @@ struct SettingsPage: View {
                                 Circle().fill(Color(nsColor: NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? t.colors.0 : t.colors.1 }))
                                     .frame(width: 30, height: 30)
                                     .overlay(Circle().stroke(Color.primary.opacity(settings.theme == t ? 0.9 : 0), lineWidth: 2).padding(-4))
-                                Text(t.label).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                                Text(L(t.label)).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(maxWidth: .infinity)
                         }.buttonStyle(.plain)
@@ -301,7 +301,7 @@ struct SettingsPage: View {
                         Button { settings.fontChoice = c } label: {
                             VStack(spacing: 6) {
                                 Text("Aa").font(AppFont.make(c, size: 24, weight: .semibold)).frame(height: 34)         // fixed height: OpenDyslexic is taller than the others
-                                Text(c.label).font(AppFont.make(.system, size: 10)).foregroundStyle(settings.fontChoice == c ? .primary : .secondary)
+                                Text(L(c.label)).font(AppFont.make(.system, size: 10)).foregroundStyle(settings.fontChoice == c ? .primary : .secondary)
                             }
                             .frame(maxWidth: .infinity, minHeight: 74).padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(settings.fontChoice == c ? 0.12 : 0.05)))
@@ -345,7 +345,7 @@ struct SettingsPage: View {
                 }
                 .frame(width: 96, height: 62)
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(selected ? Color.brand : Color.clear, lineWidth: 3).padding(-4))
-                Text(m.label).font(AppFont.caption).fontWeight(selected ? .semibold : .regular)
+                Text(L(m.label)).font(AppFont.caption).fontWeight(selected ? .semibold : .regular)
             }
         }.buttonStyle(.plain)
     }
@@ -380,7 +380,7 @@ struct SettingsPage: View {
                     ForEach(MenuBarPreset.allCases) { p in
                         Button { settings.apply(p) } label: {
                             VStack(spacing: 2) {
-                                Text(p.label).fontWeight(.medium)
+                                Text(L(p.label)).fontWeight(.medium)
                                 Text(p.detail).font(AppFont.caption2).foregroundStyle(.secondary)
                             }.frame(maxWidth: .infinity).padding(.vertical, 6)
                         }.buttonStyle(.bordered)
@@ -405,17 +405,17 @@ struct SettingsPage: View {
             }
             SGroup(title: "Style", footer: "D is your current session limit and W is the weekly limit.") {
                 SRow(title: "Labels") {
-                    Picker("", selection: $settings.menuLabelStyle) { ForEach(MenuLabelStyle.allCases) { Text($0.label).tag($0) } }
+                    Picker("", selection: $settings.menuLabelStyle) { ForEach(MenuLabelStyle.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 190)
                 }
                 SDivider()
                 SRow(title: "Percentage colour") {
-                    Picker("", selection: $settings.menuPercentColour) { ForEach(MenuPercentColour.allCases) { Text($0.label).tag($0) } }
+                    Picker("", selection: $settings.menuPercentColour) { ForEach(MenuPercentColour.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 190)
                 }
                 SDivider()
                 SRow(title: "Icon colour", subtitle: "The Claude icon in the menu bar.") {
-                    Picker("", selection: $settings.menuIconStyle) { ForEach(MenuIconStyle.allCases) { Text($0.label).tag($0) } }
+                    Picker("", selection: $settings.menuIconStyle) { ForEach(MenuIconStyle.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 250)
                 }
                 if settings.menuIconStyle == .custom {
@@ -432,7 +432,7 @@ struct SettingsPage: View {
     private var notificationsPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "macOS permission") {
-                SRow(title: "Notifications: \(store.notifStatus)",
+                SRow(title: String(format: L("Notifications: %@"), L(store.notifStatus)),
                      subtitle: store.notifBlocked ? "Blocked – alerts appear as an on-screen banner with the app icon instead." : (store.notifStatus == "Allowed" ? nil : "macOS hasn’t been asked yet – choose Allow to turn notifications on.")) {
                     HStack {
                         Image(systemName: store.notifBlocked ? "bell.slash.fill" : "bell.badge.fill").foregroundStyle(store.notifBlocked ? Color.danger : Color.brand)
@@ -464,7 +464,7 @@ struct SettingsPage: View {
                 }
                 if let until = settings.snoozedUntil, until > Clock.now {
                     SDivider()
-                    SRow(title: "Snoozed until \(until.formatted(date: .omitted, time: .shortened))", subtitle: "From “Snooze 1 Hour” on an alert.") {
+                    SRow(title: String(format: L("Snoozed until %@"), until.formatted(date: .omitted, time: .shortened)), subtitle: "From “Snooze 1 Hour” on an alert.") {
                         Button("Resume") { settings.snoozedUntil = nil }
                     }
                 }
@@ -472,7 +472,7 @@ struct SettingsPage: View {
             SGroup(title: "Importance", footer: settings.importance == .normal ? nil :
                     "Important alerts are sent as Time Sensitive, so macOS may show them through Focus modes, and the on-screen banner stays until you click it.") {
                 SRow(title: "Mark as important") {
-                    Picker("", selection: $settings.importance) { ForEach(NotifImportance.allCases) { Text($0.label).tag($0) } }
+                    Picker("", selection: $settings.importance) { ForEach(NotifImportance.allCases) { Text(L($0.label)).tag($0) } }
                         .labelsHidden().frame(width: 230)
                 }
             }

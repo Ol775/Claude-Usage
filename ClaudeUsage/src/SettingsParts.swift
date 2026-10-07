@@ -58,15 +58,18 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 }
 
 /// A rounded group of rows with an optional heading and footnote, like a System Settings section.
+/// The translation of an English interface string (from `<language>.lproj/Localizable.strings`), or the English itself.
+func L(_ s: String) -> String { NSLocalizedString(s, comment: "") }
+
 struct SGroup<Content: View>: View {
     var title: String? = nil
     var footer: String? = nil
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let t = title { Text(t).font(AppFont.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8) }
+            if let t = title { Text(L(t)).font(AppFont.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8) }
             VStack(spacing: 0) { content() }.frame(maxWidth: .infinity).card()
-            if let f = footer { Text(f).font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8).fixedSize(horizontal: false, vertical: true) }
+            if let f = footer { Text(L(f)).font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8).fixedSize(horizontal: false, vertical: true) }
         }
     }
 }
@@ -78,8 +81,8 @@ struct SRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                if let s = subtitle { Text(s).font(AppFont.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                Text(L(title))
+                if let s = subtitle { Text(L(s)).font(AppFont.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
             trailing()
@@ -106,7 +109,7 @@ struct SegmentedChoice<T: Hashable>: View {
             HStack(spacing: 2) {
                 ForEach(options, id: \.self) { o in
                     Button { selection = o } label: {
-                        Text(label(o)).font(AppFont.callout).lineLimit(1).fixedSize()
+                        Text(L(label(o))).font(AppFont.callout).lineLimit(1).fixedSize()
                             .padding(.horizontal, 12).padding(.vertical, 5)
                             .foregroundStyle(selection == o ? (scheme == .dark ? Color.black.opacity(0.85) : Color.white) : Color.primary)
                             .background(Capsule().fill(selection == o ? Color.brand : Color.clear))
@@ -117,7 +120,7 @@ struct SegmentedChoice<T: Hashable>: View {
                 }
             }
             .padding(2).background(Capsule().fill(Color.primary.opacity(0.08))).fixedSize()
-            Picker("", selection: $selection) { ForEach(options, id: \.self) { Text(label($0)).tag($0) } }
+            Picker("", selection: $selection) { ForEach(options, id: \.self) { Text(L(label($0))).tag($0) } }
                 .labelsHidden().frame(width: 150)
         }
     }

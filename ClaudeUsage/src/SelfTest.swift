@@ -254,6 +254,15 @@ func runSelfTests() -> Int32 {
                                        "displayName": String(repeating: "a", count: 500), "refreshMinutes": 1e9, "menuIconHex": ["#fff"]])
     check(Set(imported.keys) == ["theme", "warnThreshold", "quietHoursOn"], "settings import drops unknown keys, long text, huge numbers and lists (\(imported.keys.sorted()))")
 
+    // Translations: every language has the same table and keeps the %@ placeholders of the English text
+    for lang in ["de", "fr", "es"] {
+        guard let path = Bundle.main.path(forResource: "Localizable", ofType: "strings", inDirectory: nil, forLocalization: lang),
+              let table = NSDictionary(contentsOfFile: path) as? [String: String] else { check(false, "\(lang) translations are bundled"); continue }
+        check(table.count > 200, "\(lang) has a full table (\(table.count))")
+        let bad = table.filter { $0.key.components(separatedBy: "%@").count != $0.value.components(separatedBy: "%@").count }.map(\.key)
+        check(bad.isEmpty, "\(lang) translations keep their placeholders (\(bad))")
+    }
+
     // Beta channel: the highest plain version wins, drafts and odd tags are skipped
     let rels: [[String: Any]] = [["tag_name": "v0.12.0"], ["tag_name": "v0.13.0", "prerelease": true], ["tag_name": "v0.14.0", "draft": true],
                                  ["tag_name": "v9.9.9-evil"], ["tag_name": "v0.12.1"]]

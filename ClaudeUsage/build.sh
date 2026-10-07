@@ -24,10 +24,18 @@ build/makeicon build/AppIcon.iconset $CUSTOM
 iconutil -c icns build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
 mkdir -p "$APP/Contents/Resources/Fonts" && cp assets/fonts/*.otf assets/fonts/OFL.txt "$APP/Contents/Resources/Fonts/"      # OpenDyslexic (SIL Open Font License)
 cp CHANGELOG.md "$APP/Contents/Resources/CHANGELOG.md"          # shown in Settings → About
+# Translations: one table (assets/l10n/translations.tsv: en, de, fr, es columns) becomes <lang>.lproj/Localizable.strings
+for col in 1 2 3 4; do
+  lang=$(head -1 assets/l10n/translations.tsv | cut -f$col); mkdir -p "$APP/Contents/Resources/$lang.lproj"
+  [ "$lang" = en ] && { : > "$APP/Contents/Resources/en.lproj/Localizable.strings"; continue; }     # English is the key itself
+  tail -n +2 assets/l10n/translations.tsv | awk -F'\t' -v c=$col 'function q(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return "\"" s "\"" } NF == 4 { print q($1) " = " q($c) ";" }' > "$APP/Contents/Resources/$lang.lproj/Localizable.strings"
+done
 cat > "$APP/Contents/Info.plist" <<P
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>de</string><string>fr</string><string>es</string></array>
 <key>CFBundleExecutable</key><string>ClaudeUsage</string>
 <key>CFBundleIdentifier</key><string>local.claudeusage</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>

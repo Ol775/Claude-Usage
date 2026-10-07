@@ -92,8 +92,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             center.setNotificationCategories([
                 UNNotificationCategory(identifier: "UPDATE", actions: [UNNotificationAction(identifier: "update.now", title: "Update Now", options: [.foreground])], intentIdentifiers: [], options: []),
                 UNNotificationCategory(identifier: "READY", actions: [UNNotificationAction(identifier: "restart.now", title: "Restart Now", options: [.foreground])], intentIdentifiers: [], options: []),
-                UNNotificationCategory(identifier: "LIMIT", actions: [UNNotificationAction(identifier: "open.dashboard", title: "Open Dashboard", options: [.foreground]),
-                                                                      UNNotificationAction(identifier: "snooze.1h", title: "Snooze 1 Hour", options: [])], intentIdentifiers: [], options: [])])
+                UNNotificationCategory(identifier: "LIMIT", actions: [UNNotificationAction(identifier: "open.dashboard", title: L("Open Dashboard"), options: [.foreground]),
+                                                                      UNNotificationAction(identifier: "snooze.1h", title: L("Snooze 1 Hour"), options: [])], intentIdentifiers: [], options: [])])
         }
         if App.notificationsEnabled { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, _ in self?.refreshNotifStatus() } }
         item.button?.image = menuBarBotImage(); item.button?.imagePosition = .imageLeft
@@ -203,18 +203,18 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         let appItem = NSMenuItem(); main.addItem(appItem)
         let appMenu = NSMenu()
         func add(_ m: NSMenu, _ t: String, _ a: Selector, _ k: String, target: AnyObject? = nil) { let i = m.addItem(withTitle: t, action: a, keyEquivalent: k); i.target = target }
-        add(appMenu, "About Claude Usage", #selector(showAbout), "", target: self)
+        add(appMenu, L("About Claude Usage"), #selector(showAbout), "", target: self)
         appMenu.addItem(.separator())
-        add(appMenu, "Settings…", #selector(openSettings), ",", target: self)
+        add(appMenu, L("Settings…"), #selector(openSettings), ",", target: self)
         appMenu.addItem(.separator())
-        add(appMenu, "Hide Claude Usage", #selector(NSApplication.hide(_:)), "h")
-        add(appMenu, "Quit Claude Usage", #selector(NSApplication.terminate(_:)), "q")
+        add(appMenu, L("Hide Claude Usage"), #selector(NSApplication.hide(_:)), "h")
+        add(appMenu, L("Quit Claude Usage"), #selector(NSApplication.terminate(_:)), "q")
         appItem.submenu = appMenu
         let winItem = NSMenuItem(); main.addItem(winItem)
-        let win = NSMenu(title: "Window")
-        add(win, "Minimize", #selector(NSWindow.performMiniaturize(_:)), "m")
-        add(win, "Zoom", #selector(NSWindow.performZoom(_:)), "")
-        add(win, "Dashboard", #selector(openDashboard), "0", target: self)
+        let win = NSMenu(title: L("Window"))
+        add(win, L("Minimize"), #selector(NSWindow.performMiniaturize(_:)), "m")
+        add(win, L("Zoom"), #selector(NSWindow.performZoom(_:)), "")
+        add(win, L("Dashboard"), #selector(openDashboard), "0", target: self)
         winItem.submenu = win; NSApp.windowsMenu = win
         NSApp.mainMenu = main
     }
@@ -757,7 +757,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         m.addItem(.separator())
         let main = store.limits.filter { $0.kind != .other }
         if main.isEmpty {
-            add(m, RowView(left: store.limitError ?? "Loading limits…", leftBold: false, size: 12, tint: .secondaryLabelColor))
+            add(m, RowView(left: store.limitError ?? L("Loading limits…"), leftBold: false, size: 12, tint: .secondaryLabelColor))
         } else {
             for l in main {
                 let f = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days)
@@ -778,7 +778,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
         }
         m.addItem(.separator())
-        block(m, "Today", s.today)
+        block(m, L("Today"), s.today)
         add(m, RowView(left: "\(plural(s.messagesToday, "response")) today", leftBold: false, size: 11, tint: .secondaryLabelColor))
         m.addItem(.separator())
         let cal = Calendar.current, df = DateFormatter(); df.dateFormat = "d MMM"
@@ -787,14 +787,14 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             guard [0, 4, 8, 13].contains(i), i < dates14.count else { return "" }
             return df.string(from: dates14[i])
         }
-        let c1 = NSMenuItem(); c1.view = ChartView(title: "Last 14 days", values: days14, labels: dl, highlight: days14.count - 1); m.addItem(c1)
+        let c1 = NSMenuItem(); c1.view = ChartView(title: L("Last 14 days"), values: days14, labels: dl, highlight: days14.count - 1); m.addItem(c1)
         let hl = (0..<24).map { $0 % 6 == 0 ? String(format: "%02d", $0) : "" }
-        let c2 = NSMenuItem(); c2.view = ChartView(title: "Today by hour", values: s.hourly, labels: hl, highlight: cal.component(.hour, from: Date())); m.addItem(c2)
+        let c2 = NSMenuItem(); c2.view = ChartView(title: L("Today by hour"), values: s.hourly, labels: hl, highlight: cal.component(.hour, from: Date())); m.addItem(c2)
         m.addItem(.separator())
-        block(m, "Last 7 days", s.week)
-        block(m, "This month", s.month)
+        block(m, L("Last 7 days"), s.week)
+        block(m, L("This month"), s.month)
         if s.byModelToday.contains(where: { $0.value.billable > 0 }) {
-            m.addItem(.separator()); header(m, "Today by model")
+            m.addItem(.separator()); header(m, L("Today by model"))
             for (k, v) in s.byModelToday.filter({ $0.value.billable > 0 }).sorted(by: { $0.value.billable > $1.value.billable }) {
                 add(m, RowView(left: k, right: fmt(v.billable), leftBold: false, size: 12))
             }
@@ -802,16 +802,16 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         m.addItem(.separator())
         let f = DateFormatter(); f.timeStyle = .short
         add(m, RowView(left: "Updated \(f.string(from: s.updated)) · \(AppInfo.display)", leftBold: false, size: 10, tint: .secondaryLabelColor))
-        let d = NSMenuItem(title: "Open Dashboard…", action: #selector(openDashboard), keyEquivalent: "d"); d.target = self; m.addItem(d)
-        let rp = NSMenuItem(title: "Open Reports…", action: #selector(openReports), keyEquivalent: "e"); rp.target = self; m.addItem(rp)
-        let st = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ","); st.target = self; m.addItem(st)
-        let cs = NSMenuItem(title: "Copy Usage Summary", action: #selector(copySummaryAction), keyEquivalent: "c"); cs.target = self; m.addItem(cs)
-        let r = NSMenuItem(title: "Refresh", action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
-        let cu = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdatesAction), keyEquivalent: ""); cu.target = self; m.addItem(cu)
-        let gh = NSMenuItem(title: "GitHub Repository", action: #selector(openRepo), keyEquivalent: ""); gh.target = self; m.addItem(gh)
-        let rb = NSMenuItem(title: "Report a Bug…", action: #selector(reportBug), keyEquivalent: ""); rb.target = self; m.addItem(rb)
-        let ab = NSMenuItem(title: "About Claude Usage", action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
-        m.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        let d = NSMenuItem(title: L("Open Dashboard…"), action: #selector(openDashboard), keyEquivalent: "d"); d.target = self; m.addItem(d)
+        let rp = NSMenuItem(title: L("Open Reports…"), action: #selector(openReports), keyEquivalent: "e"); rp.target = self; m.addItem(rp)
+        let st = NSMenuItem(title: L("Settings…"), action: #selector(openSettings), keyEquivalent: ","); st.target = self; m.addItem(st)
+        let cs = NSMenuItem(title: L("Copy Usage Summary"), action: #selector(copySummaryAction), keyEquivalent: "c"); cs.target = self; m.addItem(cs)
+        let r = NSMenuItem(title: L("Refresh"), action: #selector(refreshAction), keyEquivalent: "r"); r.target = self; m.addItem(r)
+        let cu = NSMenuItem(title: L("Check for Updates…"), action: #selector(checkUpdatesAction), keyEquivalent: ""); cu.target = self; m.addItem(cu)
+        let gh = NSMenuItem(title: L("GitHub Repository"), action: #selector(openRepo), keyEquivalent: ""); gh.target = self; m.addItem(gh)
+        let rb = NSMenuItem(title: L("Report a Bug…"), action: #selector(reportBug), keyEquivalent: ""); rb.target = self; m.addItem(rb)
+        let ab = NSMenuItem(title: L("About Claude Usage"), action: #selector(showAbout), keyEquivalent: ""); ab.target = self; m.addItem(ab)
+        m.addItem(NSMenuItem(title: L("Quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         item.menu = m
     }
 

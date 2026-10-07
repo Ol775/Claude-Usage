@@ -25,5 +25,6 @@ Screenshot tests and how to refresh their baselines are described in [`ClaudeUsa
 - Run `./bump.sh patch "short note"` when you change anything in `src/` or `build.sh`. It updates the version, change log and README, and a pre-commit hook checks it.
 - Use `AppFont.*` instead of `.font(.headline)` and similar, so personalisation settings apply.
 - Screenshots in the repo use demo data only. Never include real account details.
+- Interface text in Settings and the menu goes through translation: add new strings to `ClaudeUsage/assets/l10n/translations.tsv` (English, German, French, Spanish), and use `L("…")` for text that isn't a SwiftUI literal. Corrections from native speakers are very welcome.
 - No new third-party dependencies without a discussion first.
 - The app is macOS only.

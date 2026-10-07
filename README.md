@@ -7,7 +7,7 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.13.0 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.14.0 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -25,6 +25,7 @@ Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitt
 - CSV export, copy-summary, **settings export/import** to move to another Mac, and a choice of how long history is kept
 - Optional local profile photo
 - Sign in/out through Claude's official login (via Claude Code)
+- Settings and the menu are available in **English, German, French and Spanish**
 - **Help & Legal** in Settings: terms, privacy notes and a Report a Bug button
 - **Updates**: notifies when a newer version is on GitHub, and **Update Now** downloads the signed release with a progress bar, verifies it, swaps it in (keeping a backup) and relaunches – no Terminal needed. `./update.sh` does the same from the command line. Turn on **Get beta versions** in Settings → About to try test releases early
 
