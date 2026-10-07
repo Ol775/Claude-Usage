@@ -4,6 +4,8 @@ import SwiftUI
 // MARK: - App info
 
 enum AppInfo {
+    /// The official terminal install (checks the DMG checksum, installs to /Applications).
+    static let installCommand = "curl -fsSL https://raw.githubusercontent.com/Ol775/Claude-Usage/main/install.sh | zsh"
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0" }
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1" }
     static var stage: String { Bundle.main.infoDictionary?["ClaudeUsageStage"] as? String ?? "beta" }
@@ -285,9 +287,9 @@ final class Settings: ObservableObject {
         autoDownloadUpdates = ud.object(forKey: "autoDownloadUpdates") as? Bool ?? true
         autoCheckUpdates = d.object(forKey: "autoCheckUpdates") as? Bool ?? true
         importance = NotifImportance(rawValue: d.string(forKey: "importance") ?? "") ?? .normal
-        warnThreshold = d.object(forKey: "warnThreshold") as? Int ?? 80
-        criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95
-        refreshMinutes = d.object(forKey: "refreshMinutes") as? Int ?? 1
+        warnThreshold = min(max(d.object(forKey: "warnThreshold") as? Int ?? 80, 50), 95)          // clamped: values can come from an imported file
+        criticalThreshold = min(max(d.object(forKey: "criticalThreshold") as? Int ?? 95, 60), 99)
+        refreshMinutes = min(max(d.object(forKey: "refreshMinutes") as? Int ?? 1, 1), 60)
         readingsKeepDays = min(max(d.object(forKey: "readingsKeepDays") as? Int ?? 90, 30), 90)
         activityKeepDays = max(d.object(forKey: "activityKeepDays") as? Int ?? 0, 0)
         quietHoursOn = d.object(forKey: "quietHoursOn") as? Bool ?? false

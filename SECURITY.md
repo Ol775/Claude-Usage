@@ -29,6 +29,11 @@ The app is ad-hoc signed (no paid Apple Developer ID), so macOS Gatekeeper treat
 - Developer overrides (`CUB_*` variables and test flags) are ignored in the shipped app.
 - The self-test suite (`ClaudeUsage --selftest`) covers signature checks, URL validation and executable checks.
 
+## Security reviews
+
+- **0.9.10** and **0.9.13** (October 2026): updater and supply chain, credentials and data, repository history, diagnostics. Led to offline release signing, version-bound signatures, download limits and log hardening.
+- **0.15.1** (October 2026): install scripts, the Homebrew cask, the updater including the new beta channel, settings import and the release script. Two low-severity fixes: the in-app "copy command" pointed at a developer path instead of the official installer, and imported settings weren't kept to their normal ranges. Accepted as they are: the terminal installer and the cask trust GitHub for the first install (they check the SHA-256 published with the release, and the script itself is served from GitHub, so an offline signature check there would add nothing); the cask clears the quarantine flag because the app isn't notarised; settings import only accepts known keys with short plain values, after you confirm. Nothing medium or above is outstanding.
+
 ## Diagnostics
 
 Settings → Help & Legal shows exactly what "Copy" and "Report a Bug" include before you use them: app version, macOS version, chip, a few yes/no states (Claude Code found/signed in, update state, notifications, ChatGPT on/off) and a short local event log. No account details, file paths, tokens or usage numbers. Nothing is sent automatically.

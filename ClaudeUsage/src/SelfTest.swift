@@ -274,6 +274,8 @@ func runSelfTests() -> Int32 {
     Settings.shared.customAccentHex = savedAccent
     Settings.persist = true
 
+    check(AppInfo.installCommand.hasPrefix("curl -fsSL https://raw.githubusercontent.com/Ol775/Claude-Usage/main/install.sh"), "the copied update command is the official installer, not a local path")
+
     // Beta channel: the highest plain version wins, drafts and odd tags are skipped
     let rels: [[String: Any]] = [["tag_name": "v0.12.0"], ["tag_name": "v0.13.0", "prerelease": true], ["tag_name": "v0.14.0", "draft": true],
                                  ["tag_name": "v9.9.9-evil"], ["tag_name": "v0.12.1"]]

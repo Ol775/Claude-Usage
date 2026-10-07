@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.15.1 – beta (2026-10-07)
+- Security review fixes: “Copy install command” now copies the official installer instead of a developer path, and imported settings are kept within their normal ranges
+
 ## 0.15.0 – beta (2026-10-07)
 - Accessibility: every switch, stepper, colour picker and text field now has a name for VoiceOver; the menu bar menu’s usage bars, charts and account row are read aloud; on-screen banners are announced; selected tiles say they’re selected; decorative icons are skipped; animations respect Reduce Motion; cards get stronger borders with Increase Contrast; and a custom accent colour is adjusted until it’s readable (WCAG AA)
 

@@ -719,7 +719,7 @@ struct SettingsPage: View {
                         HStack {
                             Button("Update Now") { store.actions.installUpdate() }.buttonStyle(.borderedProminent)
                             Button("View on GitHub") { store.actions.openChangelog() }
-                            Button("Copy command") { store.actions.copyUpdateCommand() }
+                            Button("Copy install command") { store.actions.copyUpdateCommand() }
                         }.padding(.top, 4)
                         Text("Update Now downloads version \(u.version) from GitHub, checks its signature, swaps it in and relaunches. Your current version is kept as a backup.")
                             .font(AppFont.caption).foregroundStyle(.secondary)

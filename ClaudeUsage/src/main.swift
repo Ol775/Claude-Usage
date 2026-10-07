@@ -61,7 +61,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             testImportant: { [weak self] in self?.notify("Claude Usage", "This is how an important alert looks.", important: true, system: true) },
             chooseStock: { [weak self] i in setStockAvatar(i); self?.store.stockIndex = i; self?.photoChanged() },
             checkUpdates: { [weak self] in self?.checkForUpdates(manual: true) },
-            copyUpdateCommand: { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("cd ~/Projects/MacApps && ./update.sh", forType: .string); Toast.show("Update command copied", "Paste it into Terminal to update Claude Usage.") },
+            copyUpdateCommand: { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(AppInfo.installCommand, forType: .string); Toast.show("Install command copied", "Paste it into Terminal to install the latest version. It checks the download’s checksum first.") },
             openChangelog: { NSWorkspace.shared.open(URL(string: AppInfo.repoURL.absoluteString + "/blob/main/ClaudeUsage/CHANGELOG.md")!) },
             installUpdate: { [weak self] in self?.installUpdate() },
             applyUpdate: { [weak self] in self?.applyReadyUpdate() },
