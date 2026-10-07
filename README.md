@@ -50,7 +50,7 @@ Unofficial – not affiliated with Anthropic.
 <td width="50%"><img src="docs/screenshots/6-oled.png" alt="OLED black mode: usage by day, hour, model and project"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="docs/screenshots/8-personalise.png" alt="Appearance settings: colour themes with a custom colour, fonts including OpenDyslexic, text size and card corners"></td>
+<td colspan="2"><img src="docs/screenshots/8-personalise.png" alt="Appearance settings: colour themes with a custom colour and fonts including OpenDyslexic; Settings is also available in German, French and Spanish"></td>
 </tr>
 <tr>
 <td colspan="2"><img src="docs/screenshots/7-chatgpt.png" alt="ChatGPT (Codex) limits next to Claude on the Overview, with a combined forecast chart"></td>
