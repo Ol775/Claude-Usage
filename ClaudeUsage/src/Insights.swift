@@ -32,7 +32,7 @@ struct InsightsView: View {
     // MARK: derived
 
     private func rows(_ n: Int) -> [DayRow] {
-        let today = cal.startOfDay(for: Date()), days = store.snapshot.days
+        let today = cal.startOfDay(for: Clock.now), days = store.snapshot.days
         return (0..<n).reversed().map { i in
             let d = cal.date(byAdding: .day, value: -i, to: today)!
             return DayRow(date: d, rec: days[dayKey(d)] ?? DayRecord())
@@ -68,7 +68,7 @@ struct InsightsView: View {
         }
         let heavy = active.filter { cls($0) == .heavy }.sorted { $0.tokens > $1.tokens }
         let light = active.filter { cls($0) == .light }.sorted { $0.tokens < $1.tokens }
-        let start = data.first?.date ?? Date()
+        let start = data.first?.date ?? Clock.now
         let sPeaks = sessionPeaks(since: start, weekly: false), wPeaks = sessionPeaks(since: start, weekly: true)
 
         ScrollView {
@@ -226,7 +226,7 @@ struct InsightsView: View {
     }
 
     private func yearSection() -> some View {
-        let today = cal.startOfDay(for: Date()), days = store.snapshot.days
+        let today = cal.startOfDay(for: Clock.now), days = store.snapshot.days
         let yearStart = cal.date(byAdding: .day, value: -364, to: today)!
         // Grid starts on the first day of the week containing yearStart, following the user's calendar.
         let offset = (cal.component(.weekday, from: yearStart) - cal.firstWeekday + 7) % 7

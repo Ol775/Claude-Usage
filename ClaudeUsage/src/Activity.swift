@@ -54,8 +54,8 @@ struct Pricing {
     /// Blocking; call from a background queue. Checks GitHub at most once a day.
     static func refreshIfStale(force: Bool = false) {
         let key = "pricingCheckedAt"
-        if !force, Date().timeIntervalSince(UserDefaults.standard.object(forKey: key) as? Date ?? .distantPast) < 86400 { return }
-        UserDefaults.standard.set(Date(), forKey: key)
+        if !force, Clock.now.timeIntervalSince(UserDefaults.standard.object(forKey: key) as? Date ?? .distantPast) < 86400 { return }
+        UserDefaults.standard.set(Clock.now, forKey: key)
         guard let text = Updater.fetch("ClaudeUsage/pricing.json"), let d = text.data(using: .utf8),
               let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any], let t = parse(j) else { return }
         lock.lock(); override = t; lock.unlock()
@@ -128,5 +128,5 @@ final class ActivityStore {
         get { UserDefaults.standard.object(forKey: "recordingSince") as? Date }
         set { UserDefaults.standard.set(newValue, forKey: "recordingSince") }
     }
-    func markSignedIn() { if recordingSince == nil { recordingSince = Date() } }
+    func markSignedIn() { if recordingSince == nil { recordingSince = Clock.now } }
 }

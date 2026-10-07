@@ -223,12 +223,12 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         if Demo.enabled {            // screenshots: made-up data, nothing read from or saved to the real history
             let s = Demo.snapshot()
             if Dev.env("CUB_DEMO_SIGNEDOUT") != nil {      // dev aid: preview the first-run screen
-                store.account = Account(); store.limits = []; store.limitError = nil; store.snapshot = s; store.lastUpdated = Date(); build(s); return
+                store.account = Account(); store.limits = []; store.limitError = nil; store.snapshot = s; store.lastUpdated = Clock.now; build(s); return
             }
             store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
             store.chatgpt = settings.chatgptEnabled ? ChatGPT.demo : ChatGPTState()
             store.gptSamples = settings.chatgptEnabled ? ChatGPT.demoSamples() : []
-            store.samples = Demo.samples(); store.snapshot = s; store.lastUpdated = Date()
+            store.samples = Demo.samples(); store.snapshot = s; store.lastUpdated = Clock.now
             build(s); return
         }
         refreshing = true
@@ -267,7 +267,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                         if GPTHistory.shared.record(g.limits) || self.store.gptSamples.isEmpty { self.store.gptSamples = GPTHistory.shared.samples }
                     }
                 } else if !wantGPT, self.store.chatgpt.signedIn || self.store.chatgpt.error != nil { self.store.chatgpt = ChatGPTState() }
-                self.store.snapshot = s; self.store.lastUpdated = Date()
+                self.store.snapshot = s; self.store.lastUpdated = Clock.now
                 self.refreshNotifStatus()
                 self.build(s)
             }
@@ -565,7 +565,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                 once("\(l.name)|\(reset)|\(t)", t >= 100 ? "\(l.name) limit reached" : "\(l.name) at \(t)%", "Usage is \(pct)% – \(when)", critical: t >= settings.criticalThreshold)
             }
             if settings.predictiveAlerts, case .hits(let at, _, _) = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days) {
-                let soon = at.timeIntervalSinceNow < (l.kind == .session ? 3600 : 86400)
+                let soon = Clock.until(at) < (l.kind == .session ? 3600 : 86400)
                 if soon { once("\(l.name)|\(reset)|pace", "On pace to hit your \(l.kind == .session ? "session" : "weekly") limit", Predictor.describe(.hits(at: at, perHour: 0, recent: true)), critical: true) }
             }
         }

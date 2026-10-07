@@ -75,7 +75,7 @@ struct ProjectionCard: View {
             }
             if let l = limit, let resets = l.resets {
                 let start = resets.addingTimeInterval(-l.window)
-                let now = Date()
+                let now = Clock.now
                 let pts = points(l, resets: resets, now: now)
                 let f = Predictor.forecast(l, samples: store.samples, activity: store.snapshot.days, now: now)
                 let proj = projection(f, l: l, resets: resets, now: now)

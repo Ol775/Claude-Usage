@@ -39,7 +39,7 @@ struct TitlePart {
 enum MenuBarTitle {
     /// "1h 30m", "45m", "2d 4h" – time left until `d`.
     static func shortUntil(_ d: Date) -> String {
-        let secs = Int(d.timeIntervalSinceNow)
+        let secs = Int(Clock.until(d))
         guard secs > 0 else { return "now" }
         let days = secs / 86400, h = (secs % 86400) / 3600, m = (secs % 3600) / 60
         return days > 0 ? "\(days)d \(h)h" : (h > 0 ? "\(h)h \(m)m" : "\(max(1, m))m")

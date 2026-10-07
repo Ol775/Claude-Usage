@@ -35,7 +35,7 @@ final class History {
 
     /// Records the current readings. Returns true if a sample was stored.
     @discardableResult
-    func record(_ limits: [Limit], now: Date = Date()) -> Bool {
+    func record(_ limits: [Limit], now: Date = Clock.now) -> Bool {
         guard let s = limits.first(where: { $0.kind == .session }), let w = limits.first(where: { $0.kind == .weekly }) else { return false }
         let new = Sample(t: now, session: s.percent, sessionReset: s.resets, weekly: w.percent, weeklyReset: w.resets)
         if let last = samples.last, now.timeIntervalSince(last.t) < 170,
@@ -60,7 +60,7 @@ enum Forecast {
 enum Predictor {
     /// Estimates when `percent` reaches 100 by extrapolating the burn rate.
     /// Uses the recent pace from stored samples when there are enough, otherwise the average since the window began.
-    static func forecast(_ l: Limit, samples: [Sample], activity: [String: DayRecord] = [:], now: Date = Date()) -> Forecast {
+    static func forecast(_ l: Limit, samples: [Sample], activity: [String: DayRecord] = [:], now: Date = Clock.now) -> Forecast {
         guard l.kind != .other else { return .none("") }
         if l.percent >= 100 { return .reached }
         guard let resets = l.resets, resets > now else { return .none("Waiting for the limit to reset") }
@@ -122,7 +122,7 @@ enum Predictor {
         return hoursLeft > 0 ? pctPerToken * remaining / hoursLeft : nil
     }
 
-    static func describe(_ f: Forecast, now: Date = Date()) -> String {
+    static func describe(_ f: Forecast, now: Date = Clock.now) -> String {
         let t = DateFormatter(); t.dateFormat = "h:mm a"
         switch f {
         case .none(let why): return why

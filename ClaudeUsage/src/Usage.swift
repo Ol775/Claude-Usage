@@ -19,7 +19,7 @@ struct Snapshot {
     var weekday30 = [Int](repeating: 0, count: 7)       // tokens by weekday (0 = Sunday) over 30 days
     var days: [String: DayRecord] = [:]                 // permanent daily activity (up to a year, plus anything saved earlier)
     var unpricedModels: Set<String> = []
-    var updated = Date()
+    var updated = Clock.now
 }
 
 /// "1 response", "2 responses".
@@ -121,7 +121,7 @@ func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], t
 
 func scan() -> Snapshot {
     var snap = Snapshot()
-    let now = Date(), cal = Calendar.current
+    let now = Clock.now, cal = Calendar.current
     let startToday = cal.startOfDay(for: now)
     let start30 = cal.date(byAdding: .day, value: -29, to: startToday)!
     let start7d = now.addingTimeInterval(-7 * 86400)

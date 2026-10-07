@@ -46,7 +46,7 @@ struct UsageView: View {
                         Text("Today by hour").font(.headline)
                         Chart(Array(s.hourly.enumerated()), id: \.offset) { h, v in
                             BarMark(x: .value("Hour", h), y: .value("Tokens", v))
-                                .foregroundStyle(h == Calendar.current.component(.hour, from: Date()) ? Color.brand : Color.brand.opacity(0.7)).cornerRadius(2)
+                                .foregroundStyle(h == Calendar.current.component(.hour, from: Clock.now) ? Color.brand : Color.brand.opacity(0.7)).cornerRadius(2)
                         }
                         .chartXScale(domain: -1...24)
                         .chartXAxis { AxisMarks(values: [0, 6, 12, 18]) { v in AxisGridLine(); AxisValueLabel { if let h = v.as(Int.self) { Text(String(format: "%02d:00", h)) } } } }

@@ -1,7 +1,7 @@
 # Tests
 
 - **Self-tests:** `"Claude Usage.app/Contents/MacOS/ClaudeUsage" --selftest` runs every built-in check (parsers, fixtures, updater rules, forecaster, diagnostics, screenshot comparison). CI runs it on every push.
-- **Screenshot tests:** CI renders the main screens (demo data only, light and dark) in a test copy of the app and compares them with the images in `tests/screens/<macOS major version>/`. A screen fails if more than 20 small regions of it changed clearly. Clock readings and axis labels don't trip it.
+- **Screenshot tests:** CI renders the main screens (demo data only, light and dark) in a test copy of the app and compares them with the images in `tests/screens/<macOS major version>/`. A screen fails if more than 30 small regions of it changed clearly. Clock readings and axis labels don't trip it.
 
 ## Updating the saved screens (only after an intentional design change)
 

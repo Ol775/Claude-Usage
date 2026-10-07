@@ -25,7 +25,7 @@ struct ReportsView: View {
 
     // MARK: derived data
 
-    private var now: Date { Date() }
+    private var now: Date { Clock.now }
     private var start: Date {
         let cal = Calendar.current
         switch range {
@@ -188,14 +188,14 @@ struct ReportsView: View {
 
     private var rangeDescription: String {
         switch range {
-        case .day: return Date().formatted(.dateTime.weekday(.wide).day().month(.wide))
+        case .day: return Clock.now.formatted(.dateTime.weekday(.wide).day().month(.wide))
         case .week: return "Last 7 days"
         case .month: return "Last 30 days"
         }
     }
 
     private func isCurrent(_ i: Int, _ n: Int) -> Bool {
-        range == .day ? i == Calendar.current.component(.hour, from: Date()) : i == n - 1
+        range == .day ? i == Calendar.current.component(.hour, from: Clock.now) : i == n - 1
     }
 
     private var emptyNote: some View {

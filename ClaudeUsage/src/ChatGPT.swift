@@ -54,7 +54,7 @@ enum ChatGPT {
     }
 
     /// Turns one `rate_limit` object from the usage response into limits.
-    static func parseWindows(_ rl: [String: Any]?, prefix: String, now: Date = Date()) -> [Limit] {
+    static func parseWindows(_ rl: [String: Any]?, prefix: String, now: Date = Clock.now) -> [Limit] {
         guard let rl = rl else { return [] }
         var out: [Limit] = []
         for key in ["primary_window", "secondary_window"] {
@@ -69,7 +69,7 @@ enum ChatGPT {
         return out
     }
 
-    static func parse(_ json: [String: Any], now: Date = Date()) -> ChatGPTState {
+    static func parse(_ json: [String: Any], now: Date = Clock.now) -> ChatGPTState {
         var s = ChatGPTState(signedIn: true)
         s.email = json["email"] as? String ?? ""
         s.plan = (json["plan_type"] as? String).map { $0.replacingOccurrences(of: "_", with: " ").capitalized } ?? ""
@@ -112,14 +112,14 @@ enum ChatGPT {
         return parse(json)
     }
 
-    static func demoSamples(now: Date = Date()) -> [GPTSample] {
+    static func demoSamples(now: Date = Clock.now) -> [GPTSample] {
         Demo.samples(now: now, sessionIn: 3 * 3600 + 25 * 60, weeklyIn: 4 * 86400 + 2 * 3600, sessionTarget: 34, weeklyTarget: 18, seed: 5).map {
             GPTSample(t: $0.t, w: [GPTWin(seconds: 18000, percent: $0.session, reset: $0.sessionReset), GPTWin(seconds: 604800, percent: $0.weekly, reset: $0.weeklyReset)])
         }
     }
 
     static var demo: ChatGPTState {
-        let now = Date()
+        let now = Clock.now
         var s = ChatGPTState(signedIn: true); s.email = "alex.morgan@example.com"; s.plan = "Plus"
         s.limits = [Limit(name: "ChatGPT 5-hour", percent: 34, resets: now.addingTimeInterval(3 * 3600 + 25 * 60), seconds: 18000),
                     Limit(name: "ChatGPT weekly", percent: 18, resets: now.addingTimeInterval(4 * 86400 + 2 * 3600), seconds: 604800)]
@@ -152,7 +152,7 @@ final class GPTHistory {
     }
 
     @discardableResult
-    func record(_ limits: [Limit], now: Date = Date()) -> Bool {
+    func record(_ limits: [Limit], now: Date = Clock.now) -> Bool {
         let wins = limits.filter { $0.name.hasPrefix("ChatGPT ") && $0.seconds > 0 }.map { GPTWin(seconds: $0.seconds, percent: $0.percent, reset: $0.resets) }
         guard !wins.isEmpty else { return false }
         if let last = samples.last, now.timeIntervalSince(last.t) < 170, last.w.map(\.percent) == wins.map(\.percent) { return false }

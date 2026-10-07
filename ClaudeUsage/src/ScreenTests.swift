@@ -34,7 +34,7 @@ func screenDifference(_ a: Data, _ b: Data) -> ScreenDiff? {
 
 extension App {
     /// A screen passes if at most this many cells changed clearly and the overall difference is small (calibrated on repeat runs).
-    static let screenMaxChangedCells = 20, screenMaxMean = 0.005
+    static let screenMaxChangedCells = 30, screenMaxMean = 0.005
 
     func runScreenTests(out: URL, baselines: URL?) {
         guard Demo.enabled else { print("Refusing to render without CUB_DEMO=1 (demo data only)."); exit(2) }

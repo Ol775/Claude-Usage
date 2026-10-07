@@ -11,6 +11,15 @@ enum Dev {
     static func flag(_ name: String) -> Bool { !production && CommandLine.arguments.contains(name) }
 }
 
+/// The current time. In a test copy, `CUB_FROZEN_NOW` (seconds since 1970) freezes it so screenshots don't depend on the time of day;
+/// the shipped app always uses the real clock.
+enum Clock {
+    private static let frozen: Date? = Dev.env("CUB_FROZEN_NOW").flatMap(Double.init).map { Date(timeIntervalSince1970: $0) }
+    static var now: Date { frozen ?? Date() }
+    /// Seconds from now until `d` (negative if in the past) – the frozen-clock version of `d.timeIntervalSinceNow`.
+    static func until(_ d: Date) -> TimeInterval { d.timeIntervalSince(now) }
+}
+
 func supportDir() -> URL {
     let base = Dev.env("CUB_SUPPORT_DIR").map { URL(fileURLWithPath: $0) }
         ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ClaudeUsage")

@@ -35,7 +35,7 @@ jobs:
           codesign --force --sign - /tmp/test.app
           BASE="tests/screens/$MAJOR"
           if [ -d "$BASE" ]; then ARGS="--compare $BASE"; else ARGS=""; echo "No saved screens for macOS $MAJOR yet; rendering only."; fi
-          CUB_DEMO=1 CUB_SUPPORT_DIR=/tmp/cub-s CUB_CACHE_DIR=/tmp/cub-c CUB_NO_RELAUNCH=1 /tmp/test.app/Contents/MacOS/ClaudeUsage --quiet --render-screens /tmp/screens $ARGS
+          CUB_FROZEN_NOW=1791367200 CUB_DEMO=1 CUB_SUPPORT_DIR=/tmp/cub-s CUB_CACHE_DIR=/tmp/cub-c CUB_NO_RELAUNCH=1 /tmp/test.app/Contents/MacOS/ClaudeUsage --quiet --render-screens /tmp/screens $ARGS
       - name: Upload rendered screens
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

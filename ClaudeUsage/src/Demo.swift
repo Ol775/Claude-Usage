@@ -36,7 +36,7 @@ enum Demo {
         return r
     }
 
-    static func snapshot(now: Date = Date()) -> Snapshot {
+    static func snapshot(now: Date = Clock.now) -> Snapshot {
         let cal = Calendar.current
         let startToday = cal.startOfDay(for: now)
         var s = Snapshot()
@@ -74,7 +74,7 @@ enum Demo {
     }
 
     /// A week of limit readings every 20 minutes: session fills and resets every 5 hours, weekly climbs steadily.
-    static func samples(now: Date = Date(), sessionIn: TimeInterval = 2 * 3600 + 10 * 60, weeklyIn: TimeInterval = 2 * 86400 + 6 * 3600, sessionTarget: Double = 58, weeklyTarget: Double = 46, seed: Int = 0) -> [Sample] {
+    static func samples(now: Date = Clock.now, sessionIn: TimeInterval = 2 * 3600 + 10 * 60, weeklyIn: TimeInterval = 2 * 86400 + 6 * 3600, sessionTarget: Double = 58, weeklyTarget: Double = 46, seed: Int = 0) -> [Sample] {
         let sessionReset = now.addingTimeInterval(sessionIn)
         let weeklyReset = now.addingTimeInterval(weeklyIn)
         let step: TimeInterval = 20 * 60, cal = Calendar.current
@@ -108,7 +108,7 @@ enum Demo {
         return out
     }
 
-    static func limits(now: Date = Date()) -> [Limit] {
+    static func limits(now: Date = Clock.now) -> [Limit] {
         [Limit(name: "Current session", percent: 58, resets: now.addingTimeInterval(2 * 3600 + 10 * 60)),
          Limit(name: "Weekly – all models", percent: 46, resets: now.addingTimeInterval(2 * 86400 + 6 * 3600)),
          Limit(name: "Weekly – Opus", percent: 31, resets: now.addingTimeInterval(2 * 86400 + 6 * 3600)),

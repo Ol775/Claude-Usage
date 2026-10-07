@@ -59,7 +59,7 @@ func fetchLimits() -> (limits: [Limit], error: String?) {
 
 func untilText(_ d: Date?) -> String {
     guard let d = d else { return "" }
-    let secs = Int(d.timeIntervalSinceNow)
+    let secs = Int(Clock.until(d))
     guard secs > 0 else { return "resetting now" }
     let days = secs / 86400, h = (secs % 86400) / 3600, m = (secs % 3600) / 60
     let rel = days > 0 ? "\(days)d \(h)h" : (h > 0 ? "\(h)h \(m)m" : "\(m)m")
