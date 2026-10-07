@@ -67,11 +67,7 @@ struct ProjectionCard: View {
             HStack {
                 Text("Limit forecast").font(AppFont.headline)
                 Spacer()
-                Picker("", selection: $kindBox.value) {
-                    Text("Session").tag(LimitKind.session)
-                    Text("Weekly").tag(LimitKind.weekly)
-                }
-                .pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                SegmentedChoice(options: [LimitKind.session, LimitKind.weekly], label: { $0 == .session ? "Session" : "Weekly" }, selection: $kindBox.value)
             }
             if let l = limit, let resets = l.resets {
                 let start = resets.addingTimeInterval(-l.window)

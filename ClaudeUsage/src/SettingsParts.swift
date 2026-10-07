@@ -91,3 +91,34 @@ struct SRow<Trailing: View>: View {
 struct SDivider: View {
     var body: some View { Divider().padding(.leading, 14) }
 }
+
+
+/// A segmented choice that is as wide as its labels (so a bigger font or text size never pushes it out of its card). If there still isn't
+/// room, it turns into a drop-down menu instead.
+struct SegmentedChoice<T: Hashable>: View {
+    let options: [T]
+    let label: (T) -> String
+    @Binding var selection: T
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 2) {
+                ForEach(options, id: \.self) { o in
+                    Button { selection = o } label: {
+                        Text(label(o)).font(AppFont.callout).lineLimit(1).fixedSize()
+                            .padding(.horizontal, 12).padding(.vertical, 5)
+                            .foregroundStyle(selection == o ? (scheme == .dark ? Color.black.opacity(0.85) : Color.white) : Color.primary)
+                            .background(Capsule().fill(selection == o ? Color.brand : Color.clear))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selection == o ? .isSelected : [])
+                }
+            }
+            .padding(2).background(Capsule().fill(Color.primary.opacity(0.08))).fixedSize()
+            Picker("", selection: $selection) { ForEach(options, id: \.self) { Text(label($0)).tag($0) } }
+                .labelsHidden().frame(width: 150)
+        }
+    }
+}

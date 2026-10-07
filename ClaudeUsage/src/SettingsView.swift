@@ -273,15 +273,16 @@ struct SettingsPage: View {
                 Text("OLED black uses pure black backgrounds – deepest on OLED displays and easy on the battery.").font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
             }
             SGroup(title: "Colour theme") {
-                HStack(spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10, alignment: .top)], alignment: .center, spacing: 14) {       // wraps to more rows when the text is large
                     ForEach(AccentTheme.allCases) { t in
                         Button { settings.theme = t } label: {
                             VStack(spacing: 6) {
                                 Circle().fill(Color(nsColor: NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? t.colors.0 : t.colors.1 }))
                                     .frame(width: 30, height: 30)
                                     .overlay(Circle().stroke(Color.primary.opacity(settings.theme == t ? 0.9 : 0), lineWidth: 2).padding(-4))
-                                Text(t.label).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary)
+                                Text(t.label).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary).lineLimit(2).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                             }
+                            .frame(maxWidth: .infinity)
                         }.buttonStyle(.plain)
                     }
                 }
@@ -311,14 +312,12 @@ struct SettingsPage: View {
                 .padding(16)
                 SDivider()
                 SRow(title: "Text size") {
-                    Picker("", selection: $settings.textSize) { ForEach(TextSize.allCases) { Text($0.label).tag($0) } }
-                        .pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                    SegmentedChoice(options: TextSize.allCases, label: { $0.label }, selection: $settings.textSize)
                 }
             }
             SGroup(title: "Cards and name") {
                 SRow(title: "Card corners") {
-                    Picker("", selection: $settings.cardCorners) { ForEach(CardCorners.allCases) { Text($0.label).tag($0) } }
-                        .pickerStyle(.segmented).labelsHidden().frame(width: 240)
+                    SegmentedChoice(options: CardCorners.allCases, label: { $0.label }, selection: $settings.cardCorners)
                 }
                 SDivider()
                 SRow(title: "Greeting name", subtitle: "What the Overview calls you. Leave empty to use the first name from your Claude account.") {
@@ -620,7 +619,7 @@ struct SettingsPage: View {
                 Button("Check Now") { store.actions.checkUpdates() }
             }
             SDivider()
-            SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and notifies you.") {
+            SRow(title: "Check automatically", subtitle: "Checks GitHub for a newer version every few hours and shows a banner in the app.") {
                 Toggle("", isOn: $settings.autoCheckUpdates).labelsHidden().toggleStyle(.switch)
             }
             if store.canInstall {
@@ -646,7 +645,8 @@ struct SettingsPage: View {
                 VStack(alignment: .leading, spacing: 8) {
                     notesList(u)
                     if store.installing {
-                        UpdateProgressBar(store: store).padding(.top, 4)
+                        Label("\(store.installMessage) \(Int((store.installProgress * 100).rounded()))% – progress is shown at the top of the window.", systemImage: "arrow.triangle.2.circlepath")
+                            .font(AppFont.callout).foregroundStyle(.secondary).padding(.top, 4)       // one progress bar only (the banner above every page)
                     } else if !store.canInstall {
                         if let f = store.downloadedInstaller {
                             Label("Saved \(f.lastPathComponent) to your Downloads folder", systemImage: "checkmark.circle.fill").font(AppFont.callout).padding(.top, 4)

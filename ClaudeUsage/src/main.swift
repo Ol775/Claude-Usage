@@ -37,9 +37,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         UserDefaults.standard.set(AppInfo.version, forKey: "lastRunVersion")
         if let lastRun = lastRun, isNewer(AppInfo.version, than: lastRun) {          // first launch after an update: say what changed, once
             let first = Changelog.load().first { isNewer($0.version, than: lastRun) }?.items.first
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                self.notify("Updated to Claude Usage \(AppInfo.version)", first ?? "See what’s new in Settings → About.", openAbout: true, system: true)
-            }
+            store.whatsNew = "Updated to version \(AppInfo.version)" + (first.map { " – \($0)" } ?? "")        // shown as a banner inside the app
         }
         // Only one copy should run (a second one would add a second menu bar icon). Test flags (--tour etc.) are exempt.
         if CommandLine.arguments.contains("--quiet") { App.notificationsEnabled = false }
@@ -384,7 +382,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                     if readyVersion != nil { Updater.clearPrepared() }                           // an even newer one exists
                     self.store.update = status
                     if self.settings.autoDownloadUpdates && self.canSelfUpdate && !App.isTour { self.prepareInBackground(info) }
-                    else { self.notifyAvailableOnce(info) }
+                    else { self.store.bannerHidden = false }          // shown as a banner inside the app (no system notification)
                 default:
                     if case .failed(let m) = status { AppLog.write("Update check: \(m)") }
                     if readyVersion == nil { self.store.update = status }
@@ -393,18 +391,6 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                 if Dev.flag("--auto-install") { self.installUpdate() }
             }
         }
-    }
-
-    func notifyAvailableOnce(_ info: UpdateInfo) {
-        guard UserDefaults.standard.string(forKey: "notifiedUpdate") != info.version else { return }
-        UserDefaults.standard.set(info.version, forKey: "notifiedUpdate")
-        notify("Claude Usage \(info.version) is available", info.notes.first ?? "Open Settings → About to see what’s new.", openAbout: true, system: true)
-    }
-
-    func notifyReadyOnce(_ info: UpdateInfo) {
-        guard UserDefaults.standard.string(forKey: "notifiedReady") != info.version else { return }
-        UserDefaults.standard.set(info.version, forKey: "notifiedReady")
-        notify("Claude Usage \(info.version) is ready to install", "Restart to finish updating. " + (info.notes.first ?? ""), openAbout: true, system: true, ready: true)
     }
 
     /// Downloads and builds the new version quietly (low priority), then asks for a restart to install it.
@@ -419,26 +405,15 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
                 if let app = r.app {
                     Updater.savePrepared(info, app: app)
                     self.store.update = .ready(info, app); self.store.bannerHidden = false
-                    self.notifyReadyOnce(info); self.promptRestart(info)
                     if Dev.flag("--auto-apply") { self.applyReadyUpdate() }
                 } else {
                     self.store.installError = r.error
                     AppLog.write("Update download: \(r.error ?? "failed")")
-                    self.notifyAvailableOnce(info)               // couldn’t get it quietly – at least say that one exists
+                    self.store.bannerHidden = false              // couldn’t get it quietly – the banner still says one exists
                 }
                 self.build(self.store.snapshot)
             }
         }
-    }
-
-    /// If you’re looking at the app when an update becomes ready, ask right away; otherwise the notification, menu and banner do.
-    func promptRestart(_ info: UpdateInfo) {
-        guard App.notificationsEnabled, let w = dashboard, w.isVisible, NSApp.isActive else { return }
-        let a = NSAlert()
-        a.messageText = "Claude Usage \(info.version) is ready"
-        a.informativeText = "Restart now to finish updating, or choose Later. Your current version is kept as a backup."
-        a.addButton(withTitle: "Restart Now"); a.addButton(withTitle: "Later")
-        a.beginSheetModal(for: w) { r in if r == .alertFirstButtonReturn { self.applyReadyUpdate() } }
     }
 
     /// Installs the downloaded update: a helper swaps it in once this app has quit, then reopens it.

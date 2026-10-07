@@ -79,8 +79,7 @@ struct InsightsView: View {
                         Text("Your habits, costs and trends – built from saved daily activity").foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Picker("", selection: $rangeBox.value) { ForEach(InsightRange.allCases) { Text($0.title).tag($0.rawValue) } }
-                        .pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                    SegmentedChoice(options: InsightRange.allCases.map { $0.rawValue }, label: { v in InsightRange(rawValue: v)?.title ?? "" }, selection: $rangeBox.value)
                 }
 
                 if total == 0 && prompts == 0 {

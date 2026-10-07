@@ -110,9 +110,7 @@ struct ReportsView: View {
                         Text(rangeDescription).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Picker("", selection: $rangeBox.value) {
-                        ForEach(ReportRange.allCases) { Text($0.title).tag($0) }
-                    }.pickerStyle(.segmented).labelsHidden().frame(width: 240)
+                    SegmentedChoice(options: ReportRange.allCases, label: { $0.title }, selection: $rangeBox.value)
                 }
 
                 HStack(spacing: 16) {

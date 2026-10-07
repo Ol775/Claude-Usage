@@ -71,6 +71,7 @@ final class Store: ObservableObject {
     @Published var update: UpdateStatus = .idle
     @Published var installing = false
     @Published var installMessage = ""
+    @Published var whatsNew: String?                    // one-time banner after an update
     @Published var installProgress = 0.0                // 0...1 while an update downloads, verifies and installs
     @Published var downloadOnly = false                 // this copy can't replace itself, so the update is saved to Downloads instead
     @Published var downloadedInstaller: URL?
@@ -226,32 +227,52 @@ struct UpdateProgressBar: View {
     }
 }
 
-/// Shown above every page while an update downloads/installs, and once it is ready: asks for a restart to finish installing it.
+/// The one place updates show up, inside the app (no system notifications or pop-up alerts): above every page it shows an update that
+/// is available, one that is downloading, one that is ready to restart, and – once, after updating – what's new.
 struct UpdateBanner: View {
     @ObservedObject var store: Store
+
+    private func bar<Content: View>(_ icon: String, @ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).font(AppFont.title3).foregroundStyle(Color.brand)
+            content()
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(Color.brand.opacity(0.14))
+        .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
+    }
+
+    private func titled(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title).fontWeight(.semibold)
+            Text(detail).font(AppFont.caption).foregroundStyle(.secondary).lineLimit(2)
+        }
+    }
+
     var body: some View {
         if store.installing {
-            HStack(spacing: 12) {
-                Image(systemName: store.downloadOnly ? "arrow.down.circle.fill" : "arrow.triangle.2.circlepath.circle.fill").font(AppFont.title3).foregroundStyle(Color.brand)
-                UpdateProgressBar(store: store)
-            }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .background(Color.brand.opacity(0.14))
-            .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
+            bar(store.downloadOnly ? "arrow.down.circle.fill" : "arrow.triangle.2.circlepath.circle.fill") { UpdateProgressBar(store: store) }
         } else if case .ready(let u, _) = store.update, !store.bannerHidden {
-            HStack(spacing: 12) {
-                Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(AppFont.title3).foregroundStyle(Color.brand)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Version \(u.version) is ready to install").fontWeight(.semibold)
-                    Text("Restart Claude Usage to finish updating.").font(AppFont.caption).foregroundStyle(.secondary)
-                }
+            bar("arrow.triangle.2.circlepath.circle.fill") {
+                titled("Version \(u.version) is ready to install", "Restart Claude Usage to finish updating. Your current version is kept as a backup.")
                 Spacer()
                 Button("Later") { store.actions.postponeUpdate() }
                 Button("Restart Now") { store.actions.applyUpdate() }.buttonStyle(.borderedProminent)
             }
-            .padding(.horizontal, 16).padding(.vertical, 10)
-            .background(Color.brand.opacity(0.14))
-            .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
+        } else if case .available(let u) = store.update, !store.bannerHidden {
+            bar("arrow.down.circle.fill") {
+                titled("Version \(u.version) is available", store.canInstall ? (u.notes.first ?? "A newer version is ready to download.") : "This copy can’t replace itself, so it saves the installer to Downloads.")
+                Spacer()
+                Button("Later") { store.actions.postponeUpdate() }
+                Button(store.canInstall ? "Update Now" : "Download") { store.canInstall ? store.actions.installUpdate() : store.actions.downloadInstaller() }.buttonStyle(.borderedProminent)
+            }
+        } else if let text = store.whatsNew {
+            bar("sparkles") {
+                Text(text).lineLimit(2)
+                Spacer()
+                Button("What’s new") { store.settingsCategory = .about; store.tab = .settings; store.whatsNew = nil }
+                Button { store.whatsNew = nil } label: { Image(systemName: "xmark") }.buttonStyle(.plain).help("Dismiss").accessibilityLabel("Dismiss")
+            }
         }
     }
 }

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.11.2 – beta (2026-10-07)
+- Fixes: the settings choices (text size, card corners and the chart range pickers) now fit inside their cards at any font or text size, and colour theme tiles wrap instead of breaking words; the update progress bar appears once (above the window) instead of twice; update notices, the restart prompt and the what's-new notice now stay inside the app as banners instead of system notifications or pop-ups
+
 ## 0.11.1 – beta (2026-10-07)
 - Screenshot tests use the Appearance settings pane (the About pane changes with every release)
 

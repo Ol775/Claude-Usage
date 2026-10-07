@@ -25,8 +25,7 @@ struct UsageView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Text("Daily tokens").font(AppFont.headline); Spacer()
-                        Picker("", selection: $daysBox.value) { Text("14 days").tag(14); Text("30 days").tag(30) }
-                            .pickerStyle(.segmented).labelsHidden().frame(width: 170)
+                        SegmentedChoice(options: [14, 30], label: { "\($0) days" }, selection: $daysBox.value)
                     }
                     let n = min(days, s.daily.count)
                     let data = Array(zip(s.dailyDates.suffix(n), s.daily.suffix(n)))
@@ -59,8 +58,7 @@ struct UsageView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("By model").font(AppFont.headline); Spacer()
-                            Picker("", selection: $rangeBox.value) { Text("Today").tag(0); Text("7 days").tag(1) }
-                                .pickerStyle(.segmented).labelsHidden().frame(width: 130)
+                            SegmentedChoice(options: [0, 1], label: { $0 == 0 ? "Today" : "7 days" }, selection: $rangeBox.value)
                         }
                         let models = (modelRange == 0 ? s.byModelToday : s.byModelWeek).map { ($0.key, $0.value.billable) }.filter { $0.1 > 0 }.sorted { $0.1 > $1.1 }
                         if models.isEmpty {
