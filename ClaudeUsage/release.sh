@@ -1,19 +1,28 @@
 #!/bin/zsh
 # Publishes the current VERSION: builds the universal DMG, signs it with the release key, creates the GitHub release
 # (DMG + .sha256 + .sig) and updates the Homebrew tap. Run after ./bump.sh, a build, and pushing the commit.
-# Usage: ./release.sh "short release note"
+# Usage: ./release.sh ["extra note"]   – the release notes are this version's CHANGELOG entry (plus the optional note)
+# Key rotation (see ../RELEASING.md): ROTATING=1 SIGNING_KEY=<old key> ./release.sh  signs with the old key a build that embeds the new one.
 # The signing key (never committed, back it up!) lives at ~/.config/claude-usage/signing.key; its public half is built into the app.
 set -e
 cd "$(dirname "$0")"
-note="${1:?usage: ./release.sh \"short release note\"}"
 ver=$(cat VERSION)
+changes=$(awk -v v="## $ver " 'index($0, v) == 1 {on = 1; next} /^## / {on = 0} on' CHANGELOG.md | sed '/^$/d')
+[ -n "$changes" ] || { echo "No CHANGELOG entry for $ver."; exit 1; }
+note="$changes${1:+
+
+$1}
+
+**Install or update:** the app updates itself, or see [Install](https://github.com/Ol775/Claude-Usage#install). Every DMG is signed with the offline release key and has a SHA-256 checksum; see [how updates are verified](https://github.com/Ol775/Claude-Usage/blob/main/SECURITY.md#how-updates-are-trusted)."
 tap="${TAP_DIR:-$HOME/Projects/homebrew-tap}"
 key="${SIGNING_KEY:-$HOME/.config/claude-usage/signing.key}"
 [ -f "$key" ] || { echo "No signing key at $key. Releases must be signed (see sign-tool.swift)."; exit 1; }
 [ -z "$(git -C .. status --porcelain)" ] || { echo "Commit your changes first."; exit 1; }
 git fetch -q origin main; [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || { echo "Push main first."; exit 1; }
 mkdir -p build && swiftc -O sign-tool.swift -o build/sign-tool 2>/dev/null
-[ "$(build/sign-tool public "$key")" = "$(grep -o 'publicKey = "[^"]*"' src/Updater.swift | cut -d'"' -f2)" ] || { echo "The signing key doesn't match the public key built into the app."; exit 1; }
+if [ "$(build/sign-tool public "$key")" != "$(grep -o 'publicKey = "[^"]*"' src/Updater.swift | cut -d'"' -f2)" ] && [ "${ROTATING:-}" != 1 ]; then
+  echo "The signing key doesn't match the public key built into the app (set ROTATING=1 only for a key-rotation release)."; exit 1
+fi
 ./make-dmg.sh >/dev/null 2>&1
 dmg="dist/Claude-Usage-$ver.dmg"
 build/sign-tool sign "$key" "$dmg" > "$dmg.sig"                      # legacy (DMG bytes only): installs from 0.9.10-0.9.12 still need it

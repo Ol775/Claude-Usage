@@ -7,9 +7,10 @@ import CryptoKit
 //   sign-tool sign <private-key-file> <file> prints the base64 signature of the file
 //   sign-tool sign-update <key> <file> <ver> prints the version-bound signature the app requires (label + version + file bytes)
 //   sign-tool public <private-key-file>      prints the public key
+//   sign-tool verify <public-key> <file> <sig> [ver]  checks a signature (version-bound when ver is given), exit 0 if valid
 let a = CommandLine.arguments
 func fail(_ m: String) -> Never { FileHandle.standardError.write(Data((m + "\n").utf8)); exit(1) }
-guard a.count >= 3 else { fail("usage: sign-tool keygen|sign|public <private-key-file> [file]") }
+guard a.count >= 3 else { fail("usage: sign-tool keygen|sign|sign-update|public|verify …") }
 let keyURL = URL(fileURLWithPath: a[2])
 func loadKey() -> Curve25519.Signing.PrivateKey {
     guard let t = try? String(contentsOf: keyURL, encoding: .utf8), let d = Data(base64Encoded: t.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -31,5 +32,13 @@ case "sign-update":
     guard a.count >= 5, let d = try? Data(contentsOf: URL(fileURLWithPath: a[3]), options: .mappedIfSafe),
           let s = try? loadKey().signature(for: Data("claude-usage-update\nv\(a[4])\n".utf8) + d) else { fail("couldn't sign") }
     print(s.base64EncodedString())
+case "verify":
+    guard a.count >= 5, let pk = Data(base64Encoded: a[2]), let key = try? Curve25519.Signing.PublicKey(rawRepresentation: pk),
+          let d = try? Data(contentsOf: URL(fileURLWithPath: a[3]), options: .mappedIfSafe),
+          let sigText = try? String(contentsOfFile: a[4], encoding: .utf8),
+          let sig = Data(base64Encoded: sigText.trimmingCharacters(in: .whitespacesAndNewlines)) else { fail("couldn't read the inputs") }
+    let msg = a.count >= 6 ? Data("claude-usage-update\nv\(a[5])\n".utf8) + d : d
+    guard key.isValidSignature(sig, for: msg) else { fail("INVALID signature") }
+    print("valid")
 default: fail("unknown command")
 }

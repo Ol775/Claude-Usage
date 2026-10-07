@@ -92,7 +92,7 @@ The terminal and Homebrew installs do this for you. Every release also ships a `
 
 ### Updating
 
-The app checks GitHub releases for new versions and downloads the disk image in the background with a progress bar, verifies its signature and checksum, then asks you to restart. If a copy can't replace itself (for example it's running from the disk image), it downloads the verified installer to your Downloads folder instead. No developer tools needed (if a release download fails it falls back to building from source). You can also run `./update.sh` from a clone, or just re-run the install command above.
+The app checks GitHub releases for new versions and downloads the disk image in the background with a progress bar, verifies its signature and checksum, then asks you to restart. If a copy can't replace itself (for example it's running from the disk image), it downloads the verified installer to your Downloads folder instead. No developer tools needed. You can also run `./update.sh` from a clone, or just re-run the install command above.
 
 ## Reporting bugs
 
@@ -130,7 +130,18 @@ It checks for new versions, downloads them in the background and asks you to res
 
 ## Security
 
-Updates are signed with an offline key and verified before they install; the app reads only your own Claude Code login and logs. Details, and how to report a problem privately, are in [SECURITY.md](SECURITY.md).
+The app reads only your own Claude Code login and logs. Details, and how to report a problem privately, are in [SECURITY.md](SECURITY.md).
+
+### How updates are verified
+
+Each release is signed with a key that is kept offline, never on GitHub. Before installing an update, the app checks that:
+
+1. it was downloaded from this repo's GitHub releases over HTTPS;
+2. its signature is valid for exactly that version number, so an old release can't pose as a new one;
+3. its SHA-256 checksum matches;
+4. the app inside has the right bundle id, version and an intact code signature.
+
+If any check fails, the download is thrown away. So even someone who took over this GitHub account couldn't push a trusted update without the offline key. More in [SECURITY.md](SECURITY.md#how-updates-are-trusted).
 
 ## Privacy and legal
 

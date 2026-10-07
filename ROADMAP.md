@@ -43,7 +43,7 @@ The biggest gap is that most testing happened on one Mac.
 
 ### B3. Trust, security and distribution ⏳
 - **Decide on a paid Apple Developer ID and notarisation** at 1.0 (removes the first-launch prompt; costs $99/yr). Until then the free path stays: Homebrew tap, checksums, offline signature.
-- Document a **signing-key rotation and recovery procedure**, with the second backup tested (restore the key from iCloud/Proton and sign a test file).
+- ✅ **Signing-key rotation and recovery procedure** in [RELEASING.md](RELEASING.md); restoring from both backups (iCloud and Proton) and signing a test file was rehearsed.
 - Keep the legacy `.sig` for a few more releases, then remove it.
 - A **third security review** before 1.0, including a fresh look at install scripts and the Homebrew cask. Re-run it after any change to the updater, diagnostics or install scripts.
 - An opt-in **beta/stable update channel** so testers can get betas while everyone else stays on stable.
@@ -58,9 +58,9 @@ The biggest gap is that most testing happened on one Mac.
 - Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).
 
 ### B5. Community and project hygiene ⏳
-- ✅ `CONTRIBUTING.md` and bug/feature issue templates. Still to do: a pull-request template and `CODE_OF_CONDUCT.md`.
-- Release notes written for people, generated from the change log, and a support policy (latest release only, how fast security fixes ship).
-- A short "how updates are verified" explainer in the README linking to `SECURITY.md`.
+- ✅ `CONTRIBUTING.md`, bug/feature issue templates, a pull-request template and `CODE_OF_CONDUCT.md`.
+- ✅ Release notes come from the change log (`release.sh`), and the support policy is in [SECURITY.md](SECURITY.md#supported-versions).
+- ✅ A short "how updates are verified" explainer in the README linking to `SECURITY.md`.
 
 ## 1.0 production gates
 
