@@ -5,7 +5,7 @@ import AppKit
 enum Legal {
     struct Section: Identifiable { let id: String, title: String, body: [String] }
 
-    static let updated = "6 October 2026"
+    static let updated = "7 October 2026"
 
     static let sections: [Section] = [
         Section(id: "about", title: "About this app", body: [
@@ -32,7 +32,7 @@ enum Legal {
             "ChatGPT usage is experimental, optional and off until you connect it in Settings → Account. It needs a paid ChatGPT plan, and it shows your Codex usage limits. When it’s on, the app reads the sign-in that OpenAI’s Codex CLI saves in ~/.codex/auth.json and uses it only to ask ChatGPT for your usage limits. It never changes, refreshes, copies or stores that login, and it does not read your chats.",
             "The app makes up to three kinds of network request: to Anthropic, for your usage limits; to ChatGPT, for your ChatGPT limits, only if you connect it; and to GitHub, to check for and download updates. The developer runs no servers, receives no analytics, and collects no data about you.",
             "Reports and diagnostics leave your Mac only when you choose to send them. “Report a Bug” opens a pre-filled GitHub page that you review and submit yourself.",
-            "You can delete everything the app stores by quitting it and removing the ClaudeUsage folder in ~/Library/Application Support.",
+            "You can delete everything the app stores with Settings → Data → Delete all my data, or by quitting it and removing the ClaudeUsage folder in ~/Library/Application Support.",
         ]),
         Section(id: "updates", title: "Updates and open source", body: [
             "Updates are downloaded from the project’s GitHub releases. Each release is signed with a key held only by the developer, and the app installs an update only if its signature, checksum and contents check out. Installing one replaces the app with the new version and keeps the old one as a backup in your Caches folder.",

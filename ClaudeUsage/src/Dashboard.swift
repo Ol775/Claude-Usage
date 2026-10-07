@@ -31,6 +31,7 @@ struct Actions {
     var requestNotifications: () -> Void = {}
     var exportData: () -> Void = {}
     var copySummary: () -> Void = {}
+    var deleteAllData: () -> Void = {}
 }
 
 enum DashTab: String, CaseIterable, Identifiable {

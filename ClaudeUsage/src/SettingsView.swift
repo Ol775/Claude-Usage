@@ -480,6 +480,11 @@ struct SettingsPage: View {
             SGroup(title: "Saved activity", footer: "Daily activity is stored on this Mac so insights and the yearly view outlast Claude Code’s own log clean-up.") {
                 SRow(title: "Days stored") { Text("\(store.snapshot.days.count)").monospacedDigit().foregroundStyle(.secondary) }
             }
+            SGroup(title: "Delete", footer: "Erases everything this app stores on your Mac and quits. Your Claude Code and ChatGPT sign-ins and logs are not touched.") {
+                SRow(title: "Delete all my data", subtitle: "History, activity, settings, profile photo and event log.") {
+                    Button("Delete…", role: .destructive) { store.actions.deleteAllData() }
+                }
+            }
         }
     }
 

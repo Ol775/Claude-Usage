@@ -74,7 +74,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             },
             requestNotifications: { [weak self] in self?.requestNotifications() },
             exportData: { [weak self] in self?.exportData() },
-            copySummary: { [weak self] in self?.copySummary() })
+            copySummary: { [weak self] in self?.copySummary() },
+            deleteAllData: { [weak self] in self?.deleteAllData() })
         installMainMenu()
         let prepared = Updater.restorePrepared()                         // an update downloaded earlier and not yet installed
         if let (info, app) = prepared { store.update = .ready(info, app) }
@@ -573,6 +574,19 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
         }
         do { try p.run(); loginProcess = p; store.loginBusy = true } catch { NSSound.beep() }
+    }
+
+    /// Erases the app's own folder and preferences, then quits. Claude Code's and Codex's logins and logs are never touched.
+    func deleteAllData() {
+        let a = NSAlert(); a.messageText = "Delete all Claude Usage data?"
+        a.informativeText = "This erases your saved history, activity, settings, profile photo and event log from this Mac, then quits the app. It can’t be undone. Your Claude Code and ChatGPT sign-ins and logs aren’t touched."
+        a.alertStyle = .warning
+        a.addButton(withTitle: "Delete and quit"); a.addButton(withTitle: "Cancel")
+        NSApp.activate(ignoringOtherApps: true)
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        try? FileManager.default.removeItem(at: supportDir())
+        if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: id) }
+        NSApp.terminate(nil)
     }
 
     func signOut() {

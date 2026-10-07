@@ -28,7 +28,7 @@ Nothing is sent automatically. "Copy" and "Report a Bug" show exactly what they 
 
 ## Deleting your data
 
-Quit the app and remove the `ClaudeUsage` folder in `~/Library/Application Support`. A one-click delete button is planned (see the [roadmap](ROADMAP.md)).
+Quit the app and remove the `ClaudeUsage` folder in `~/Library/Application Support`. Or use Settings → Data → Delete all my data, which erases the folder and the app's preferences and quits. Your Claude Code and ChatGPT sign-ins and logs are never touched.
 
 ## Questions
 

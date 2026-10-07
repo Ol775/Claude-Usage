@@ -51,7 +51,7 @@ The biggest gap is that most testing happened on one Mac.
 
 ### B4. Product polish ⏳
 - Localisation (starting with the strings in Settings and the menu).
-- Data controls: a "delete all my data" button, retention settings and settings export/import.
+- ✅ "Delete all my data" button (Settings → Data). Still to do: retention settings and settings export/import.
 - Notification actions (snooze, open dashboard) and quiet hours.
 - ✅ **Personalisation** (0.11.0): five fonts including a built-in OpenDyslexic, four text sizes, a custom accent colour, card corner styles, a greeting name, a menu bar icon in any colour, and your profile picture in the sidebar.
 - ChatGPT graduates from experimental if verified (B1), with a screenshot refresh.
