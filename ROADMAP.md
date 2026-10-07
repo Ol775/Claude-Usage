@@ -47,7 +47,7 @@ The biggest gap is that most testing happened on one Mac.
 - Keep the legacy `.sig` for a few more releases, then remove it.
 - A **third security review** before 1.0, including a fresh look at install scripts and the Homebrew cask. Re-run it after any change to the updater, diagnostics or install scripts.
 - An opt-in **beta/stable update channel** so testers can get betas while everyone else stays on stable.
-- Publish a short privacy statement (`PRIVACY.md`) matching the in-app one, and a software bill of materials (the app has no third-party dependencies).
+- ✅ Short privacy statement ([PRIVACY.md](PRIVACY.md)) matching the in-app one. Still to do: a software bill of materials (the app has no third-party dependencies).
 
 ### B4. Product polish ⏳
 - Localisation (starting with the strings in Settings and the menu).
@@ -58,7 +58,7 @@ The biggest gap is that most testing happened on one Mac.
 - Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).
 
 ### B5. Community and project hygiene ⏳
-- `CONTRIBUTING.md`, issue and pull-request templates, and a `CODE_OF_CONDUCT.md`.
+- ✅ `CONTRIBUTING.md` and bug/feature issue templates. Still to do: a pull-request template and `CODE_OF_CONDUCT.md`.
 - Release notes written for people, generated from the change log, and a support policy (latest release only, how fast security fixes ship).
 - A short "how updates are verified" explainer in the README linking to `SECURITY.md`.
 
