@@ -47,7 +47,7 @@ extension App {
             ("reports", { AnyView(ReportsView(store: self.store)) }),
             ("insights", { AnyView(InsightsView(store: self.store)) }),
             ("usage", { AnyView(UsageView(store: self.store)) }),
-            ("settings", { self.store.settingsCategory = .about; return AnyView(SettingsPage(store: self.store, settings: self.settings)) }),
+            ("settings", { self.store.settingsCategory = .appearance; return AnyView(SettingsPage(store: self.store, settings: self.settings)) }),
         ]
         let modes: [(String, AppearanceMode)] = [("dark", .dark), ("light", .light)]
         let jobs = modes.flatMap { m in screens.map { (name: "\($0.0)-\(m.0)", mode: m.1, view: $0.1) } }

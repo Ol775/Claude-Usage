@@ -35,7 +35,7 @@ The biggest gap is that most testing happened on one Mac.
 
 ### B2. Quality and maintainability ✅ (done in 0.10.1–0.10.4)
 - ✅ **Real-shaped fixtures.** The Claude and ChatGPT response samples in `Fixtures.swift` copy the shapes of the live responses (captured as keys and types only, every value made up). The real Claude response had already grown to 26 top-level fields, so the parser also reads the newer `limits` list as a fallback if the classic `five_hour` and `seven_day` fields ever disappear.
-- ✅ **Screenshot regression tests.** CI renders ten screens (five screens, light and dark) with demo data and a frozen clock, and compares them with saved images per macOS version (14, 15, 26). A screen fails if more than 30 small regions changed; repeat runs differ by 0. See `ClaudeUsage/tests/README.md` for how to refresh the images after a design change.
+- ✅ **Screenshot regression tests.** CI renders ten screens (five screens, light and dark; the settings screen is the Appearance pane, which does not change with each release) with demo data and a frozen clock, and compares them with saved images per macOS version (14, 15, 26). A screen fails if more than 30 small regions changed; repeat runs differ by 0. See `ClaudeUsage/tests/README.md` for how to refresh the images after a design change.
 - ✅ **`Dashboard.swift` split** from 1,512 lines into `Dashboard`, `Overview`, `ProjectionChart`, `UsageView`, `SettingsView` and `SettingsParts`.
 - ✅ **Incremental log parsing.** A growing Claude Code log is read from where it stopped last time (same totals on real data, checked against the previous build).
 - ✅ **GitHub Actions pinned by commit** with Dependabot keeping them current.
