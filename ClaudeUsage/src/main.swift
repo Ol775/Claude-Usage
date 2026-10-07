@@ -117,6 +117,11 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             }
             return
         }
+        if Dev.flag("--render-screens"), let i = CommandLine.arguments.firstIndex(of: "--render-screens"), i + 1 < CommandLine.arguments.count {
+            let args = CommandLine.arguments
+            let base = args.firstIndex(of: "--compare").flatMap { $0 + 1 < args.count ? URL(fileURLWithPath: args[$0 + 1]) : nil }
+            runScreenTests(out: URL(fileURLWithPath: args[i + 1]), baselines: base); return
+        }
         if CommandLine.arguments.contains("--tour") { startTour(); return }
         if !UserDefaults.standard.bool(forKey: "launchedBefore") {
             UserDefaults.standard.set(true, forKey: "launchedBefore")

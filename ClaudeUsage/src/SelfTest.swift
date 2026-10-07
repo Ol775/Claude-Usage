@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import CryptoKit
 
 // Built-in checks for the logic that must not silently break: version compare, response parsing, pricing, forecasting.
@@ -195,6 +195,24 @@ func runSelfTests() -> Int32 {
     check(stableWindow(previous: 1000, new: 1001) == 1000 && stableWindow(previous: 1000, new: 999) == 1000, "a minute of wobble is the same window")
     check(stableWindow(previous: 1000, new: 1000 + 300) == 1300, "a new session window (hours later) is a new id")
     check(stableWindow(previous: 1000, new: 1000 + 7 * 24 * 60) == 1000 + 7 * 24 * 60, "a new weekly window is a new id")
+
+    // Screenshot comparison: a clock-sized change passes, a missing card or a different theme fails
+    func pagePNG(card: Bool, clock: Bool) -> Data {
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 600, pixelsHigh: 900, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+        NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSColor(white: 0.12, alpha: 1).setFill(); NSRect(x: 0, y: 0, width: 600, height: 900).fill()
+        if card { NSColor(white: 0.55, alpha: 1).setFill(); NSRect(x: 40, y: 500, width: 520, height: 180).fill() }       // a bright card
+        if clock { NSColor(white: 0.9, alpha: 1).setFill(); NSRect(x: 40, y: 800, width: 70, height: 12).fill() }        // a small text change
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .png, properties: [:]) ?? Data()
+    }
+    let basePage = pagePNG(card: true, clock: false)
+    let same = screenDifference(basePage, basePage)
+    check(same?.changedCells == 0 && same?.mean == 0, "identical screenshots show no difference")
+    let clockChange = screenDifference(basePage, pagePNG(card: true, clock: true))
+    check((clockChange?.changedCells ?? 99) <= App.screenMaxChangedCells && (clockChange?.mean ?? 1) <= App.screenMaxMean, "a small text-sized change stays within the limits")
+    let noCard = screenDifference(basePage, pagePNG(card: false, clock: false))
+    check((noCard?.changedCells ?? 0) > App.screenMaxChangedCells, "a missing card is caught (\(noCard?.changedCells ?? 0) cells)")
 
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")

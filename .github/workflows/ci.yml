@@ -24,6 +24,25 @@ jobs:
       - name: Self-tests
         working-directory: ClaudeUsage
         run: "./Claude\\ Usage.app/Contents/MacOS/ClaudeUsage --selftest"
+      - name: Screenshot tests
+        working-directory: ClaudeUsage
+        # Renders the main screens with demo data in a test copy of the app and compares them with the saved images for this
+        # macOS version (tests/screens/<major>). With no saved images yet it only renders them, and the next step uploads them.
+        run: |
+          MAJOR=$(sw_vers -productVersion | cut -d. -f1)
+          cp -R "Claude Usage.app" /tmp/test.app
+          plutil -replace CFBundleIdentifier -string local.claudeusage.test /tmp/test.app/Contents/Info.plist
+          codesign --force --sign - /tmp/test.app
+          BASE="tests/screens/$MAJOR"
+          if [ -d "$BASE" ]; then ARGS="--compare $BASE"; else ARGS=""; echo "No saved screens for macOS $MAJOR yet; rendering only."; fi
+          CUB_DEMO=1 CUB_SUPPORT_DIR=/tmp/cub-s CUB_CACHE_DIR=/tmp/cub-c CUB_NO_RELAUNCH=1 /tmp/test.app/Contents/MacOS/ClaudeUsage --quiet --render-screens /tmp/screens $ARGS
+      - name: Upload rendered screens
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: screens-${{ matrix.os }}
+          path: /tmp/screens
+          if-no-files-found: ignore
       - name: Check the disk image builds
         working-directory: ClaudeUsage
         run: ./make-dmg.sh

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.10.2 – beta (2026-10-07)
+- Screenshot regression tests: the main screens are rendered with demo data and compared with saved images in CI
+
 ## 0.10.1 – beta (2026-10-07)
 - Quality work: the app reads only the new part of a growing Claude Code log (same totals, less work), reads your limits from Claude's newer limits list if the older fields ever disappear, and the code is split into smaller files; GitHub Actions are pinned by commit with Dependabot updates
 
