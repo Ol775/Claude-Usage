@@ -11,6 +11,7 @@ enum Legal {
         Section(id: "about", title: "About this app", body: [
             "Claude Usage is an independent, unofficial app. It is not made, endorsed or supported by Anthropic.",
             "“Claude”, “Claude Code” and “Anthropic” are trademarks of Anthropic, PBC. “ChatGPT”, “Codex” and “OpenAI” are trademarks of OpenAI. They are used here only to say what the app works with, and the app isn’t affiliated with either company.",
+            "The OpenDyslexic font is included under the SIL Open Font License 1.1 (© Abbie Gonzalez). Its licence ships inside the app and is listed in THIRD_PARTY.md in the repository.",
         ]),
         Section(id: "terms", title: "Terms of use", body: [
             "By using Claude Usage you agree to these terms. If you don’t agree, please stop using the app and delete it.",

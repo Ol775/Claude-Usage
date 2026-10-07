@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.11.0 – beta (2026-10-07)
+- Personalisation: five fonts including a built-in OpenDyslexic, four text sizes, a custom accent colour, card corner styles, your own greeting name, and a menu bar icon in any colour. Your profile picture now shows in the sidebar (transparent margins are trimmed so it fills the circle). Changing the accent colour now updates every chart and bar instead of leaving some in the old colour
+
 ## 0.10.4 – beta (2026-10-07)
 - Test runs can freeze the clock so the screenshot tests don't depend on the time of day (the shipped app always uses the real clock)
 

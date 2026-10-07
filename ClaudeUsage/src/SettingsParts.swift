@@ -64,9 +64,9 @@ struct SGroup<Content: View>: View {
     @ViewBuilder var content: () -> Content
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let t = title { Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8) }
+            if let t = title { Text(t).font(AppFont.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.leading, 8) }
             VStack(spacing: 0) { content() }.frame(maxWidth: .infinity).card()
-            if let f = footer { Text(f).font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8).fixedSize(horizontal: false, vertical: true) }
+            if let f = footer { Text(f).font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8).fixedSize(horizontal: false, vertical: true) }
         }
     }
 }
@@ -79,7 +79,7 @@ struct SRow<Trailing: View>: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                if let s = subtitle { Text(s).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                if let s = subtitle { Text(s).font(AppFont.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
             Spacer(minLength: 12)
             trailing()

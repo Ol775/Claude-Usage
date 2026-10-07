@@ -15,10 +15,11 @@ enum AppInfo {
 // MARK: - Themes
 
 enum AccentTheme: String, CaseIterable, Identifiable {
-    case claude, blue, green, purple, pink, graphite
+    case claude, blue, green, purple, pink, graphite, custom
     var id: String { rawValue }
     var label: String {
         switch self {
+        case .custom: return "Custom"
         case .claude: return "Claude orange"
         case .blue: return "Ocean blue"
         case .green: return "Forest green"
@@ -32,6 +33,9 @@ enum AccentTheme: String, CaseIterable, Identifiable {
     var colors: (NSColor, NSColor) {
         func c(_ r: Double, _ g: Double, _ b: Double) -> NSColor { NSColor(srgbRed: r, green: g, blue: b, alpha: 1) }
         switch self {
+        case .custom:        // your colour, lifted a little for dark mode and deepened for light mode so it stays readable
+            let base = colorFromHex(Settings.shared.customAccentHex) ?? c(1.00, 0.55, 0.33)
+            return (base.blended(withFraction: 0.18, of: .white) ?? base, base.blended(withFraction: 0.22, of: .black) ?? base)
         case .claude: return (c(1.00, 0.55, 0.33), c(0.75, 0.29, 0.09))
         case .blue: return (c(0.36, 0.67, 1.00), c(0.00, 0.37, 0.80))
         case .green: return (c(0.30, 0.85, 0.52), c(0.07, 0.48, 0.24))
@@ -40,6 +44,69 @@ enum AccentTheme: String, CaseIterable, Identifiable {
         case .graphite: return (c(0.78, 0.80, 0.84), c(0.30, 0.32, 0.36))
         }
     }
+}
+
+/// The typeface used across the dashboard windows. OpenDyslexic is bundled (SIL Open Font License) so it works without installing it.
+enum FontChoice: String, CaseIterable, Identifiable {
+    case system, rounded, serif, mono, dyslexic
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .rounded: return "Rounded"
+        case .serif: return "Serif"
+        case .mono: return "Monospaced"
+        case .dyslexic: return "OpenDyslexic"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .system: return "The standard macOS font."
+        case .rounded: return "Softer letter shapes."
+        case .serif: return "A traditional serif face."
+        case .mono: return "Every character the same width."
+        case .dyslexic: return "Weighted letter bottoms to help tell letters apart; designed for readers with dyslexia."
+        }
+    }
+}
+
+enum TextSize: String, CaseIterable, Identifiable {
+    case small, standard, large, xlarge
+    var id: String { rawValue }
+    var label: String { switch self { case .small: return "Small"; case .standard: return "Standard"; case .large: return "Large"; case .xlarge: return "Extra large" } }
+    var scale: CGFloat { switch self { case .small: return 0.9; case .standard: return 1; case .large: return 1.15; case .xlarge: return 1.3 } }
+}
+
+enum CardCorners: String, CaseIterable, Identifiable {
+    case sharp, standard, round
+    var id: String { rawValue }
+    var label: String { switch self { case .sharp: return "Sharp"; case .standard: return "Standard"; case .round: return "Round" } }
+    var radius: CGFloat { switch self { case .sharp: return 6; case .standard: return 14; case .round: return 24 } }
+}
+
+/// Colour of the menu bar icon.
+enum MenuIconStyle: String, CaseIterable, Identifiable {
+    case follow, claude, match, custom
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .follow: return "Follow the colour theme"
+        case .claude: return "Claude orange"
+        case .match: return "Match the menu bar (black or white)"
+        case .custom: return "Custom colour"
+        }
+    }
+}
+
+/// "#RRGGBB" <-> NSColor, for colours the user picks.
+func colorFromHex(_ hex: String) -> NSColor? {
+    var h = hex.trimmingCharacters(in: .whitespaces); if h.hasPrefix("#") { h.removeFirst() }
+    guard h.count == 6, let v = UInt32(h, radix: 16) else { return nil }
+    return NSColor(srgbRed: CGFloat((v >> 16) & 255) / 255, green: CGFloat((v >> 8) & 255) / 255, blue: CGFloat(v & 255) / 255, alpha: 1)
+}
+func hexFromColor(_ c: NSColor) -> String {
+    let s = c.usingColorSpace(.sRGB) ?? c
+    return String(format: "#%02X%02X%02X", Int((s.redComponent * 255).rounded()), Int((s.greenComponent * 255).rounded()), Int((s.blueComponent * 255).rounded()))
 }
 
 enum AppearanceMode: String, CaseIterable, Identifiable {
@@ -66,9 +133,17 @@ enum NotifImportance: String, CaseIterable, Identifiable {
 var currentTheme: AccentTheme = .claude
 
 /// The accent colour. Dynamic: resolves per appearance and follows the selected theme.
-let claudeOrange = NSColor(name: nil) { a in
-    a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? currentTheme.colors.0 : currentTheme.colors.1
+/// There is one colour object per theme (and per custom colour), so when the theme changes SwiftUI sees a different colour and redraws;
+/// a single shared dynamic colour would leave some views, and the charts, showing the old accent.
+var claudeOrange: NSColor {
+    let key = currentTheme.rawValue + (currentTheme == .custom ? Settings.shared.customAccentHex : "")
+    if let c = accentColours[key] { return c }
+    let (dark, light) = currentTheme.colors
+    let c = NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light }
+    accentColours[key] = c
+    return c
 }
+private var accentColours: [String: NSColor] = [:]
 let alertRed = NSColor(name: nil) { a in
     a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         ? NSColor(srgbRed: 1.00, green: 0.36, blue: 0.33, alpha: 1)
@@ -94,7 +169,13 @@ final class Settings: ObservableObject {
     @Published var menuShowChatGPT: Bool { didSet { save(menuShowChatGPT, "menuShowChatGPT"); onChange() } }
     @Published var menuShowTokens: Bool { didSet { save(menuShowTokens, "menuShowTokens"); onChange() } }
     @Published var menuShowReset: Bool { didSet { save(menuShowReset, "menuShowReset"); onChange() } }
-    @Published var menuIconMono: Bool { didSet { save(menuIconMono, "menuIconMono"); onChange() } }
+    @Published var menuIconStyle: MenuIconStyle { didSet { save(menuIconStyle.rawValue, "menuIconStyle"); onChange() } }
+    @Published var menuIconHex: String { didSet { save(menuIconHex, "menuIconHex"); onChange() } }
+    @Published var customAccentHex: String { didSet { save(customAccentHex, "customAccentHex"); onChange() } }
+    @Published var fontChoice: FontChoice { didSet { save(fontChoice.rawValue, "fontChoice") } }
+    @Published var textSize: TextSize { didSet { save(textSize.rawValue, "textSize") } }
+    @Published var cardCorners: CardCorners { didSet { save(cardCorners.rawValue, "cardCorners") } }
+    @Published var displayName: String { didSet { save(displayName, "displayName") } }
     @Published var menuLabelStyle: MenuLabelStyle { didSet { save(menuLabelStyle.rawValue, "menuLabelStyle"); onChange() } }
     @Published var menuPercentColour: MenuPercentColour { didSet { save(menuPercentColour.rawValue, "menuPercentColour"); onChange() } }
     @Published var autoDownloadUpdates: Bool { didSet { save(autoDownloadUpdates, "autoDownloadUpdates") } }
@@ -125,7 +206,13 @@ final class Settings: ObservableObject {
         menuShowChatGPT = flag("menuShowChatGPT", false)
         menuShowTokens = flag("menuShowTokens", false, from: ["tokens"])
         menuShowReset = flag("menuShowReset", false)
-        menuIconMono = flag("menuIconMono", false)
+        menuIconStyle = MenuIconStyle(rawValue: ud.string(forKey: "menuIconStyle") ?? "") ?? (flag("menuIconMono", false) ? .match : .follow)     // 0.9 had one "match the menu bar" switch
+        menuIconHex = ud.string(forKey: "menuIconHex") ?? "#FF8C54"
+        customAccentHex = ud.string(forKey: "customAccentHex") ?? "#7C5CFF"
+        fontChoice = FontChoice(rawValue: ud.string(forKey: "fontChoice") ?? "") ?? .system
+        textSize = TextSize(rawValue: ud.string(forKey: "textSize") ?? "") ?? .standard
+        cardCorners = CardCorners(rawValue: ud.string(forKey: "cardCorners") ?? "") ?? .standard
+        displayName = ud.string(forKey: "displayName") ?? ""
         menuLabelStyle = MenuLabelStyle(rawValue: ud.string(forKey: "menuLabelStyle") ?? "") ?? .letters
         menuPercentColour = MenuPercentColour(rawValue: ud.string(forKey: "menuPercentColour") ?? "") ?? .critical
         autoDownloadUpdates = ud.object(forKey: "autoDownloadUpdates") as? Bool ?? true
@@ -135,6 +222,16 @@ final class Settings: ObservableObject {
         criticalThreshold = d.object(forKey: "criticalThreshold") as? Int ?? 95
         refreshMinutes = d.object(forKey: "refreshMinutes") as? Int ?? 1
         currentTheme = theme
+    }
+
+    /// The menu bar icon in the chosen colour.
+    func menuIconImage() -> NSImage {
+        switch menuIconStyle {
+        case .follow: return menuBarBotImage()
+        case .claude: return menuBarBotImage(colour: NSColor(srgbRed: 1.00, green: 0.55, blue: 0.33, alpha: 1))
+        case .match: return menuBarBotImage(mono: true)
+        case .custom: return menuBarBotImage(colour: colorFromHex(menuIconHex) ?? claudeOrange)
+        }
     }
 
     func applyAppearance() {
@@ -155,6 +252,6 @@ final class Settings: ObservableObject {
         case .minimal: menuShowIcon = true; menuShowSession = false; menuShowWeekly = false; menuShowTokens = false; menuShowReset = false; menuShowChatGPT = false
         case .everything: menuShowIcon = true; menuShowSession = true; menuShowWeekly = true; menuShowTokens = true; menuShowReset = true; menuShowChatGPT = chatgptEnabled
         }
-        menuLabelStyle = .letters; menuPercentColour = .critical; menuIconMono = false
+        menuLabelStyle = .letters; menuPercentColour = .critical
     }
 }

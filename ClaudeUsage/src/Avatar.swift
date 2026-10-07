@@ -33,7 +33,25 @@ func supportDir() -> URL {
     return base
 }
 func avatarURL() -> URL { supportDir().appendingPathComponent("avatar.png") }
-var avatarImage: NSImage? = NSImage(contentsOf: avatarURL())
+var avatarImage: NSImage? = NSImage(contentsOf: avatarURL()).map(trimmedToContent)
+
+/// Crops transparent margins (an app icon or logo usually has padding) and makes the result square, so the picture fills the round frame
+/// instead of floating in it. Pictures with no transparent border are returned unchanged.
+func trimmedToContent(_ img: NSImage) -> NSImage {
+    guard let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), rep.hasAlpha, let cg = rep.cgImage else { return img }
+    let w = rep.pixelsWide, h = rep.pixelsHigh
+    var minX = w, minY = h, maxX = -1, maxY = -1
+    for y in 0..<h { for x in 0..<w where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.1 {
+        minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+    } }
+    guard maxX >= minX, maxY >= minY else { return img }
+    let bw = maxX - minX + 1, bh = maxY - minY + 1
+    guard Double(max(bw, bh)) < Double(max(w, h)) * 0.96 else { return img }          // already fills the frame
+    let side = min(max(bw, bh), min(w, h))
+    let x0 = min(max(0, minX + bw / 2 - side / 2), w - side), y0 = min(max(0, minY + bh / 2 - side / 2), h - side)
+    guard let cropped = cg.cropping(to: CGRect(x: x0, y: y0, width: side, height: side)) else { return img }
+    return NSImage(cgImage: cropped, size: NSSize(width: side, height: side))
+}
 
 /// Centre-crops to a square, scales to 256px and saves. Returns false if the file isn't a usable image.
 func saveAvatar(from url: URL) -> Bool {
@@ -47,7 +65,7 @@ func saveAvatar(from url: URL) -> Bool {
     out.unlockFocus()
     guard let tiff = out.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
           (try? png.write(to: avatarURL())) != nil else { return false }
-    avatarImage = NSImage(data: png)
+    avatarImage = NSImage(data: png).map(trimmedToContent)
     stockAvatarIndex = nil
     return true
 }
@@ -64,7 +82,7 @@ func setStockAvatar(_ i: Int) {
     let img = stockAvatarImage(i)
     guard let tiff = img.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]),
           (try? png.write(to: avatarURL())) != nil else { return }
-    avatarImage = NSImage(data: png)
+    avatarImage = NSImage(data: png).map(trimmedToContent)
     stockAvatarIndex = i
 }
 

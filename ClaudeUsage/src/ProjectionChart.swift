@@ -9,7 +9,7 @@ struct Pt: Identifiable { let t: Date; let v: Double; var id: TimeInterval { t.t
 /// A small coloured dot followed by the text, for chart legends.
 struct LegendLabel: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 5) { configuration.icon.font(.system(size: 7)); configuration.title.foregroundStyle(.secondary) }
+        HStack(spacing: 5) { configuration.icon.font(AppFont.system(size: 7)); configuration.title.foregroundStyle(.secondary) }
     }
 }
 
@@ -65,7 +65,7 @@ struct ProjectionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Limit forecast").font(.headline)
+                Text("Limit forecast").font(AppFont.headline)
                 Spacer()
                 Picker("", selection: $kindBox.value) {
                     Text("Session").tag(LimitKind.session)
@@ -87,7 +87,7 @@ struct ProjectionCard: View {
                     HStack(spacing: 14) {
                         Label("Claude", systemImage: "circle.fill").foregroundStyle(Color.brand)
                         Label("ChatGPT", systemImage: "circle.fill").foregroundStyle(Color.gpt)
-                    }.labelStyle(LegendLabel()).font(.caption)
+                    }.labelStyle(LegendLabel()).font(AppFont.caption)
                 }
                 Chart {
                     ForEach(gSeries, id: \.id) { s in
@@ -119,9 +119,9 @@ struct ProjectionCard: View {
                         PointMark(x: .value("Time", end), y: .value("Used", v)).foregroundStyle(v >= 100 ? Color.danger : Color.brand)
                     }
                     RuleMark(y: .value("Limit", 100)).foregroundStyle(Color.danger.opacity(0.8)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                        .annotation(position: .top, alignment: .leading) { Text("Limit").font(.caption2).foregroundStyle(Color.danger) }
+                        .annotation(position: .top, alignment: .leading) { Text("Limit").font(AppFont.caption2).foregroundStyle(Color.danger) }
                     RuleMark(x: .value("Reset", resets)).foregroundStyle(Color.secondary.opacity(0.6)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                        .annotation(position: .top, alignment: .trailing) { Text("Resets").font(.caption2).foregroundStyle(.secondary) }
+                        .annotation(position: .top, alignment: .trailing) { Text("Resets").font(AppFont.caption2).foregroundStyle(.secondary) }
                     PointMark(x: .value("Time", now), y: .value("Used", l.percent)).foregroundStyle(Color.brand).symbolSize(70)
                 }
                 .chartXScale(domain: start...resets)
@@ -133,11 +133,11 @@ struct ProjectionCard: View {
                 }
                 .padding(.top, 16)
                 .frame(height: 246)
-                Text(gl == nil ? Predictor.describe(f) : "Claude: " + Predictor.describe(f)).font(.callout).foregroundStyle(.secondary)
-                if let g = gl, let gf = gf { Text("ChatGPT: " + Predictor.describe(gf)).font(.callout).foregroundStyle(Color.gpt).help(g.name) }
+                Text(gl == nil ? Predictor.describe(f) : "Claude: " + Predictor.describe(f)).font(AppFont.callout).foregroundStyle(.secondary)
+                if let g = gl, let gf = gf { Text("ChatGPT: " + Predictor.describe(gf)).font(AppFont.callout).foregroundStyle(Color.gpt).help(g.name) }
                 if store.samples.count < 3 {
                     Text("The line fills in as the app runs – predictions improve after a few minutes of data.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(AppFont.caption).foregroundStyle(.secondary)
                 }
             } else {
                 Text("No data for this limit yet.").foregroundStyle(.secondary).frame(height: 120)

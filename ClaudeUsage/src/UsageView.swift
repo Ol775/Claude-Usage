@@ -20,11 +20,11 @@ struct UsageView: View {
         let s = store.snapshot
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Usage").font(.largeTitle.bold())
+                Text("Usage").font(AppFont.largeTitle.bold())
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Daily tokens").font(.headline); Spacer()
+                        Text("Daily tokens").font(AppFont.headline); Spacer()
                         Picker("", selection: $daysBox.value) { Text("14 days").tag(14); Text("30 days").tag(30) }
                             .pickerStyle(.segmented).labelsHidden().frame(width: 170)
                     }
@@ -36,14 +36,14 @@ struct UsageView: View {
                     }
                     .chartYAxis { axis() }
                     .frame(height: 220)
-                    Text("Input + output + cache-write tokens from Claude Code on this Mac.").font(.caption).foregroundStyle(.secondary)
+                    Text("Input + output + cache-write tokens from Claude Code on this Mac.").font(AppFont.caption).foregroundStyle(.secondary)
                 }
                 .padding(18).card()
         .accessibilityElement(children: .contain).accessibilityLabel("Daily tokens chart")
 
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Today by hour").font(.headline)
+                        Text("Today by hour").font(AppFont.headline)
                         Chart(Array(s.hourly.enumerated()), id: \.offset) { h, v in
                             BarMark(x: .value("Hour", h), y: .value("Tokens", v))
                                 .foregroundStyle(h == Calendar.current.component(.hour, from: Clock.now) ? Color.brand : Color.brand.opacity(0.7)).cornerRadius(2)
@@ -58,7 +58,7 @@ struct UsageView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("By model").font(.headline); Spacer()
+                            Text("By model").font(AppFont.headline); Spacer()
                             Picker("", selection: $rangeBox.value) { Text("Today").tag(0); Text("7 days").tag(1) }
                                 .pickerStyle(.segmented).labelsHidden().frame(width: 130)
                         }
@@ -69,7 +69,7 @@ struct UsageView: View {
                             Chart(models, id: \.0) { m in
                                 BarMark(x: .value("Tokens", m.1), y: .value("Model", short(m.0)), height: .fixed(18)).foregroundStyle(Color.brand).cornerRadius(3)
                                     .annotation(position: .top, alignment: .leading, spacing: 3) {
-                                        (Text(short(m.0)).foregroundColor(.secondary) + Text("  \(fmt(m.1))").fontWeight(.semibold)).font(.caption)
+                                        (Text(short(m.0)).foregroundColor(.secondary) + Text("  \(fmt(m.1))").fontWeight(.semibold)).font(AppFont.caption)
                                     }
                             }
                             .chartXAxis(.hidden)
@@ -83,14 +83,14 @@ struct UsageView: View {
 
                 let projects = s.byProjectWeek.map { ($0.key, $0.value.billable) }.filter { $0.1 > 0 }.sorted { $0.1 > $1.1 }.prefix(8)
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("By project (7 days)").font(.headline)
+                    Text("By project (7 days)").font(AppFont.headline)
                     if projects.isEmpty {
                         Text("No usage yet").foregroundStyle(.secondary).frame(height: 80)
                     } else {
                         Chart(Array(projects), id: \.0) { m in
                             BarMark(x: .value("Tokens", m.1), y: .value("Project", m.0), height: .fixed(16)).foregroundStyle(Color.brand).cornerRadius(3)
                                 .annotation(position: .top, alignment: .leading, spacing: 3) {
-                                    (Text(m.0).foregroundColor(.secondary) + Text("  \(fmt(m.1))").fontWeight(.semibold)).font(.caption)
+                                    (Text(m.0).foregroundColor(.secondary) + Text("  \(fmt(m.1))").fontWeight(.semibold)).font(AppFont.caption)
                                 }
                         }
                         .chartXAxis(.hidden).chartYAxis(.hidden)
@@ -111,11 +111,11 @@ struct UsageView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Token breakdown").font(.headline)
+                    Text("Token breakdown").font(AppFont.headline)
                     Grid(alignment: .trailing, horizontalSpacing: 24, verticalSpacing: 10) {
                         GridRow {
                             Text("").gridColumnAlignment(.leading)
-                            ForEach(["Input", "Output", "Cache write", "Cache read"], id: \.self) { Text($0).foregroundStyle(.secondary).font(.subheadline) }
+                            ForEach(["Input", "Output", "Cache write", "Cache read"], id: \.self) { Text($0).foregroundStyle(.secondary).font(AppFont.subheadline) }
                         }
                         Divider()
                         ForEach([("Today", s.today), ("Last 7 days", s.week), ("This month", s.month)], id: \.0) { row in

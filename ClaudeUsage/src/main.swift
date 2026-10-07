@@ -29,6 +29,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
     // MARK: lifecycle
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        AppFont.registerBundled()                  // OpenDyslexic ships inside the app
         store.canInstall = canSelfUpdate
         Legal.stateProvider = { [weak self] in self?.diagnosticState() ?? [] }
         Pricing.loadCached()          // prices fetched earlier (see Pricing.refreshIfStale) apply from the first scan
@@ -225,6 +226,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
             if Dev.env("CUB_DEMO_SIGNEDOUT") != nil {      // dev aid: preview the first-run screen
                 store.account = Account(); store.limits = []; store.limitError = nil; store.snapshot = s; store.lastUpdated = Clock.now; build(s); return
             }
+            store.photo = stockAvatarImage(0)          // demo account: the Claude robot as the profile picture
             store.account = Demo.account; store.limits = Demo.limits(); store.limitError = nil; store.stale = false
             store.chatgpt = settings.chatgptEnabled ? ChatGPT.demo : ChatGPTState()
             store.gptSamples = settings.chatgptEnabled ? ChatGPT.demoSamples() : []
@@ -695,7 +697,7 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         }
         let showIcon = settings.menuShowIcon || parts.isEmpty                       // never leave the status item blank
         if !showIcon, t.length > 0 { t.deleteCharacters(in: NSRange(location: 0, length: 1)) }
-        item.button?.image = showIcon ? menuBarBotImage(mono: settings.menuIconMono) : nil
+        item.button?.image = showIcon ? settings.menuIconImage() : nil
         item.button?.imagePosition = .imageLeft
         item.button?.toolTip = settings.menuLabelStyle == .letters ? "Claude Usage – D = current session, W = weekly limit" : "Claude Usage"
         item.button?.attributedTitle = t
@@ -787,6 +789,10 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         Settings.persist = false
         App.notificationsEnabled = false
         App.isTour = true
+        if let f = Dev.env("CUB_FONT").flatMap(FontChoice.init(rawValue:)) { settings.fontChoice = f }          // dev aids: preview a font / text size / menu icon colour
+        if let t = Dev.env("CUB_TEXT_SIZE").flatMap(TextSize.init(rawValue:)) { settings.textSize = t }
+        if let t = Dev.env("CUB_THEME").flatMap(AccentTheme.init(rawValue:)) { settings.theme = t }
+        if let c = Dev.env("CUB_ACCENT_HEX") { settings.customAccentHex = c; settings.theme = .custom }
         if let v = Dev.env("CUB_FAKE_PROGRESS").flatMap(Double.init) {      // dev aid: freeze the UI mid-download (CUB_FAKE_NOINSTALL=1 for the download-only flavour)
             store.update = .available(UpdateInfo(version: "9.9.9", notes: ["A new feature, described in one sentence."]))
             store.installing = true; store.installProgress = v; store.installMessage = "Downloading version 9.9.9…"
@@ -826,8 +832,8 @@ final class App: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelega
         func next() {
             guard i < steps.count else { tall(); return }
             let (a, t, th) = steps[i]; i += 1
-            settings.appearance = a; settings.theme = th; store.tab = t
-            if t == .settings { store.settingsCategory = a == .dark ? .menuBar : (a == .light ? .menuBar : .notifications) }
+            settings.appearance = a; if Dev.env("CUB_THEME") == nil && Dev.env("CUB_ACCENT_HEX") == nil { settings.theme = th }; store.tab = t
+            if t == .settings { store.settingsCategory = Dev.env("CUB_TALL_CAT").flatMap(SettingsCategory.init(rawValue:)) ?? (a == .dark ? .menuBar : (a == .light ? .menuBar : .notifications)) }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 try? "\(i) \(a.rawValue)-\(t.rawValue)-\(th.rawValue) \(self.dashboard?.windowNumber ?? 0)".write(toFile: "/tmp/cub_tour.txt", atomically: true, encoding: .utf8)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { next() }
@@ -872,6 +878,28 @@ if CommandLine.arguments.contains("--selftest") { exit(runSelfTests()) }
 if CommandLine.arguments.contains("--refresh-pricing") {      // dev aid: fetches pricing.json now and reports what was applied
     Pricing.refreshIfStale(force: true)
     print("cached:", FileManager.default.fileExists(atPath: Pricing.cacheURL.path), "models:", Pricing.table.count, "opus-5-5 input:", Pricing.forModel("claude-opus-5-5")?.input ?? -1)
+    exit(0)
+}
+
+if Dev.flag("--render-menu-icons"), let i = CommandLine.arguments.firstIndex(of: "--render-menu-icons"), i + 1 < CommandLine.arguments.count {
+    // Dev aid: draws the menu bar icon in every colour choice, large, on dark and light bars, to check it fits and looks clean.
+    let out = URL(fileURLWithPath: CommandLine.arguments[i + 1]); let scale: CGFloat = 8
+    let styles: [(String, MenuIconStyle)] = [("follow", .follow), ("claude", .claude), ("match", .match), ("custom", .custom)]
+    let W = Int(24 * scale) * styles.count + 12 * Int(scale), H = Int(18 * scale) * 2 + 30 * Int(scale)
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: W, pixelsHigh: H, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+    NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    for (row, dark) in [true, false].enumerated() {
+        (dark ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.93, alpha: 1)).setFill()
+        NSRect(x: 0, y: CGFloat(row) * (CGFloat(H) / 2), width: CGFloat(W), height: CGFloat(H) / 2).fill()
+        for (col, st) in styles.enumerated() {
+            Settings.persist = false; Settings.shared.menuIconStyle = st.1; Settings.shared.menuIconHex = "#4DA3FF"
+            var img = Settings.shared.menuIconImage()
+            if img.isTemplate { img = img.copy() as! NSImage; img.lockFocus(); (dark ? NSColor.white : NSColor.black).set(); NSRect(origin: .zero, size: img.size).fill(using: .sourceAtop); img.unlockFocus() }   // what macOS does to a template
+            img.draw(in: NSRect(x: CGFloat(10 + col * 24) * scale / 1, y: CGFloat(row) * (CGFloat(H) / 2) + (CGFloat(H) / 4 - 9 * scale), width: 18 * scale, height: 18 * scale))
+        }
+    }
+    NSGraphicsContext.restoreGraphicsState()
+    try? rep.representation(using: .png, properties: [:])?.write(to: out)
     exit(0)
 }
 

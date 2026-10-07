@@ -75,7 +75,7 @@ struct InsightsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Insights").font(.largeTitle.bold())
+                        Text("Insights").font(AppFont.largeTitle.bold())
                         Text("Your habits, costs and trends – built from saved daily activity").foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -85,8 +85,8 @@ struct InsightsView: View {
 
                 if total == 0 && prompts == 0 {
                     VStack(spacing: 8) {
-                        Image(systemName: "lightbulb").font(.largeTitle).foregroundStyle(.secondary)
-                        Text("No activity in this range yet").font(.headline)
+                        Image(systemName: "lightbulb").font(AppFont.largeTitle).foregroundStyle(.secondary)
+                        Text("No activity in this range yet").font(AppFont.headline)
                         Text("Use Claude Code and your insights will appear here.").foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity).padding(40).card()
                 } else {
@@ -109,10 +109,10 @@ struct InsightsView: View {
                             StatTile(title: "Per session", value: sessions > 0 ? money(cost / Double(sessions)) : "—", sub: "average")
                         }
                         Text("What this usage would cost at pay-as-you-go API prices (cache reads included). Your Claude plan isn’t billed this way – it’s a guide to the value you’re getting.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(AppFont.caption).foregroundStyle(.secondary)
                         if !store.snapshot.unpricedModels.isEmpty {
                             Text("No price known for: \(store.snapshot.unpricedModels.sorted().joined(separator: ", ")) – excluded from cost.")
-                                .font(.caption).foregroundStyle(Color.danger)
+                                .font(AppFont.caption).foregroundStyle(Color.danger)
                         }
                     }
 
@@ -123,7 +123,7 @@ struct InsightsView: View {
                                 .foregroundStyle(color(cls(r)))
                             if avgActive > 0 {
                                 RuleMark(y: .value("Average", avgActive)).foregroundStyle(Color.secondary.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                    .annotation(position: .top, alignment: .leading) { Text("avg active day \(fmt(Int(avgActive)))").font(.caption2).foregroundStyle(.secondary) }
+                                    .annotation(position: .top, alignment: .leading) { Text("avg active day \(fmt(Int(avgActive)))").font(AppFont.caption2).foregroundStyle(.secondary) }
                             }
                         }
                         .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let x = v.as(Int.self) { Text(fmt(x)) } } } }
@@ -133,7 +133,7 @@ struct InsightsView: View {
                             legend(Color.brand.opacity(0.55), "Normal · \(plural(active.count - heavy.count - light.count, "day"))")
                             legend(Color.secondary.opacity(0.55), "Light · \(plural(light.count, "day"))")
                             legend(Color.secondary.opacity(0.2), "Idle · \(plural(n - active.count, "day"))")
-                        }.font(.caption)
+                        }.font(AppFont.caption)
                     }
 
                     HStack(alignment: .top, spacing: 16) {
@@ -182,7 +182,7 @@ struct InsightsView: View {
                 Chart(models, id: \.key) { m in
                     BarMark(x: .value("Tokens", m.value), y: .value("Model", short(m.key)), height: .fixed(18)).foregroundStyle(Color.brand).cornerRadius(3)
                         .annotation(position: .top, alignment: .leading, spacing: 3) {
-                            (Text(short(m.key)).foregroundColor(.secondary) + Text("  \(fmt(m.value))").fontWeight(.semibold)).font(.caption)
+                            (Text(short(m.key)).foregroundColor(.secondary) + Text("  \(fmt(m.value))").fontWeight(.semibold)).font(AppFont.caption)
                         }
                 }
                 .chartXAxis(.hidden).chartYAxis(.hidden)
@@ -191,7 +191,7 @@ struct InsightsView: View {
                     GridRow {
                         Text("Model").gridColumnAlignment(.leading)
                         Text("Tokens"); Text("Share"); Text("API cost")
-                    }.font(.subheadline).foregroundStyle(.secondary)
+                    }.font(AppFont.subheadline).foregroundStyle(.secondary)
                     Divider()
                     ForEach(models, id: \.key) { m in
                         GridRow {
@@ -216,7 +216,7 @@ struct InsightsView: View {
                     BarMark(x: .value("Tokens", p.value), y: .value("Project", p.key), height: .fixed(16)).foregroundStyle(Color.brand).cornerRadius(3)
                         .annotation(position: .top, alignment: .leading, spacing: 3) {
                             (Text(p.key).foregroundColor(.secondary) + Text("  \(fmt(p.value))" + (total > 0 ? String(format: " · %.0f%%", Double(p.value) / Double(total) * 100) : ""))
-                                .fontWeight(.semibold)).font(.caption)
+                                .fontWeight(.semibold)).font(AppFont.caption)
                         }
                 }
                 .chartXAxis(.hidden).chartYAxis(.hidden)
@@ -274,12 +274,12 @@ struct InsightsView: View {
                 AxisValueLabel { if let w = v.as(Double.self), let m = monthMarks.first(where: { Double($0.0) == w }) { Text(m.1) } } } }
             .frame(height: 150)
             HStack(spacing: 5) {
-                Text("Less").font(.caption2).foregroundStyle(.secondary)
+                Text("Less").font(AppFont.caption2).foregroundStyle(.secondary)
                 ForEach(0..<5) { l in RoundedRectangle(cornerRadius: 2).fill(l == 0 ? Color.secondary.opacity(0.15) : Color.brand.opacity(0.22 + 0.2 * Double(l))).frame(width: 12, height: 12) }
-                Text("More").font(.caption2).foregroundStyle(.secondary)
+                Text("More").font(AppFont.caption2).foregroundStyle(.secondary)
             }
             Divider().padding(.vertical, 4)
-            Text("By month").font(.subheadline.weight(.semibold))
+            Text("By month").font(AppFont.subheadline.weight(.semibold))
             Chart(Array(months.enumerated()), id: \.offset) { i, m in
                 BarMark(x: .value("Month", m.0, unit: .month), y: .value("Tokens", m.1))
                     .foregroundStyle(i == months.count - 1 ? Color.brand : Color.brand.opacity(0.7)).cornerRadius(3)
@@ -294,12 +294,12 @@ struct InsightsView: View {
         let stored = store.snapshot.days.count
         let since = ActivityStore.shared.recordingSince
         return HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "externaldrive.badge.checkmark").font(.title3).foregroundStyle(Color.brand)
+            Image(systemName: "externaldrive.badge.checkmark").font(AppFont.title3).foregroundStyle(Color.brand)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Activity is saved on this Mac").font(.headline)
+                Text("Activity is saved on this Mac").font(AppFont.headline)
                 Text((stored == 1 ? "1 day of activity is stored" : "\(stored) days of activity are stored") + (since.map { " · recording since \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "") +
                      ". They keep these insights and the yearly view going even after Claude Code clears its own logs, and your usual week is used to sharpen the weekly-limit forecast.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(AppFont.callout).foregroundStyle(.secondary)
             }
             Spacer()
         }
@@ -325,8 +325,8 @@ struct InsightsView: View {
 
     private func dayList(_ title: String, _ rows: [DayRow]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
-            if rows.isEmpty { Text("None in this range").foregroundStyle(.secondary).font(.callout) }
+            Text(title).font(AppFont.headline)
+            if rows.isEmpty { Text("None in this range").foregroundStyle(.secondary).font(AppFont.callout) }
             ForEach(rows) { r in
                 HStack {
                     Text(r.date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))).fontWeight(.medium)
@@ -334,7 +334,7 @@ struct InsightsView: View {
                     Text(fmt(r.tokens)).monospacedDigit().foregroundStyle(Color.brand).fontWeight(.semibold)
                     Text(money(r.rec.cost)).monospacedDigit().foregroundStyle(.secondary).frame(width: 64, alignment: .trailing)
                 }
-                .font(.callout)
+                .font(AppFont.callout)
             }
         }
         .padding(18).frame(maxWidth: .infinity, alignment: .topLeading).card()
@@ -343,8 +343,8 @@ struct InsightsView: View {
     private func section<Content: View>(_ title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                if let s = subtitle { Text(s).font(.caption).foregroundStyle(.secondary) }
+                Text(title).font(AppFont.headline)
+                if let s = subtitle { Text(s).font(AppFont.caption).foregroundStyle(.secondary) }
             }
             content()
         }

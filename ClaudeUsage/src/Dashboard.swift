@@ -101,8 +101,8 @@ struct CardStyle: ViewModifier {
     @ObservedObject var settings = Settings.shared
     func body(content: Content) -> some View {
         content
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(settings.isOLED ? Color(white: 0.07) : Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(settings.isOLED ? Color(white: 0.20) : Color(nsColor: .separatorColor), lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: settings.cardCorners.radius, style: .continuous).fill(settings.isOLED ? Color(white: 0.07) : Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: settings.cardCorners.radius, style: .continuous).stroke(settings.isOLED ? Color(white: 0.20) : Color(nsColor: .separatorColor), lineWidth: 1))
     }
 }
 
@@ -139,6 +139,8 @@ struct DashboardView: View {
         }
         .background(settings.isOLED ? Color.black : Color(nsColor: .windowBackgroundColor))
         .tint(.brand)
+        .font(AppFont.body)
+        .id("\(settings.fontChoice.rawValue)-\(settings.textSize.rawValue)-\(settings.theme.rawValue)-\(settings.theme == .custom ? settings.customAccentHex : "")")      // rebuild everything when the typeface, text size or accent colour changes (dynamic colours are otherwise cached by SwiftUI)
         .frame(minWidth: 860, minHeight: 600)
     }
 }
@@ -156,7 +158,7 @@ struct SidebarView: View {
                 withAnimation(.easeInOut(duration: 0.2)) { collapsed.value.toggle() }
                 UserDefaults.standard.set(collapsed.value, forKey: "sidebarCollapsed")
             } label: {
-                Image(systemName: "sidebar.left").font(.system(size: 16)).foregroundStyle(.secondary).frame(width: 28, height: 28)
+                Image(systemName: "sidebar.left").font(AppFont.system(size: 16)).foregroundStyle(.secondary).frame(width: 28, height: 28)
                     .padding(.horizontal, 8).padding(.vertical, 4)
             }
             .buttonStyle(.plain).help(narrow ? "Show sidebar labels" : "Collapse to icons")
@@ -166,7 +168,7 @@ struct SidebarView: View {
                 let selected = store.tab == tab
                 Button { store.tab = tab } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: tab.icon).font(.system(size: 17)).foregroundStyle(Color.brand).frame(width: 28)
+                        Image(systemName: tab.icon).font(AppFont.system(size: 17)).foregroundStyle(Color.brand).frame(width: 28)
                         if !narrow { Text(tab.title).fontWeight(selected ? .semibold : .regular).foregroundStyle(.primary); Spacer(minLength: 0) }
                     }
                     .padding(.horizontal, 8).padding(.vertical, 8)
@@ -179,11 +181,17 @@ struct SidebarView: View {
             }
             Spacer()
             if narrow {
-                Text("v\(AppInfo.version)").font(.system(size: 9)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                VStack(spacing: 6) {
+                    AvatarCircle(account: store.account, photo: store.photo, size: 34)
+                    Text("v\(AppInfo.version)").font(AppFont.system(size: 9)).foregroundStyle(.secondary)
+                }.frame(maxWidth: .infinity)
             } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Claude Usage").font(.caption.weight(.semibold))
-                    Text("\(AppInfo.display) · build \(AppInfo.build)").font(.caption2).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    AvatarCircle(account: store.account, photo: store.photo, size: 48)        // your profile picture, above the app name
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Claude Usage").font(AppFont.caption.weight(.semibold))
+                        Text("\(AppInfo.display) · build \(AppInfo.build)").font(AppFont.caption2).foregroundStyle(.secondary)
+                    }
                 }.padding(.horizontal, 8).padding(.bottom, 4)
             }
         }
@@ -200,9 +208,9 @@ struct UpdateProgressBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(store.installMessage).font(.callout)
+                Text(store.installMessage).font(AppFont.callout)
                 Spacer()
-                Text("\(Int((store.installProgress * 100).rounded()))%").font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                Text("\(Int((store.installProgress * 100).rounded()))%").font(AppFont.callout.monospacedDigit()).foregroundStyle(.secondary)
             }
             GeometryReader { g in
                 ZStack(alignment: .leading) {
@@ -224,7 +232,7 @@ struct UpdateBanner: View {
     var body: some View {
         if store.installing {
             HStack(spacing: 12) {
-                Image(systemName: store.downloadOnly ? "arrow.down.circle.fill" : "arrow.triangle.2.circlepath.circle.fill").font(.title3).foregroundStyle(Color.brand)
+                Image(systemName: store.downloadOnly ? "arrow.down.circle.fill" : "arrow.triangle.2.circlepath.circle.fill").font(AppFont.title3).foregroundStyle(Color.brand)
                 UpdateProgressBar(store: store)
             }
             .padding(.horizontal, 16).padding(.vertical, 10)
@@ -232,10 +240,10 @@ struct UpdateBanner: View {
             .overlay(Rectangle().fill(Color.brand.opacity(0.4)).frame(height: 1), alignment: .bottom)
         } else if case .ready(let u, _) = store.update, !store.bannerHidden {
             HStack(spacing: 12) {
-                Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(.title3).foregroundStyle(Color.brand)
+                Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(AppFont.title3).foregroundStyle(Color.brand)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Version \(u.version) is ready to install").fontWeight(.semibold)
-                    Text("Restart Claude Usage to finish updating.").font(.caption).foregroundStyle(.secondary)
+                    Text("Restart Claude Usage to finish updating.").font(AppFont.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button("Later") { store.actions.postponeUpdate() }

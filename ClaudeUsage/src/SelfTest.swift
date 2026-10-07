@@ -214,6 +214,38 @@ func runSelfTests() -> Int32 {
     let noCard = screenDifference(basePage, pagePNG(card: false, clock: false))
     check((noCard?.changedCells ?? 0) > App.screenMaxChangedCells, "a missing card is caught (\(noCard?.changedCells ?? 0) cells)")
 
+    // Personalisation
+    AppFont.registerBundled()
+    if Bundle.main.resourceURL?.appendingPathComponent("Fonts/OpenDyslexic-Regular.otf") != nil, FileManager.default.fileExists(atPath: Bundle.main.resourceURL!.appendingPathComponent("Fonts/OpenDyslexic-Regular.otf").path) {
+        check(NSFont(name: "OpenDyslexic-Regular", size: 12) != nil && NSFont(name: "OpenDyslexic-Bold", size: 12) != nil, "the bundled OpenDyslexic fonts register and load")
+        check(FileManager.default.fileExists(atPath: Bundle.main.resourceURL!.appendingPathComponent("Fonts/OFL.txt").path), "the OpenDyslexic licence ships with the app")
+    }
+    check(hexFromColor(colorFromHex("#7C5CFF")!) == "#7C5CFF" && colorFromHex("nonsense") == nil && colorFromHex("#12345") == nil, "colour hex round-trips and bad values are refused")
+    check(TextSize.standard.scale == 1 && TextSize.small.scale < 1 && TextSize.xlarge.scale > TextSize.large.scale, "text sizes scale up and down from standard")
+    check(FontChoice.allCases.count == 5 && FontChoice.dyslexic.label == "OpenDyslexic", "OpenDyslexic is one of the font choices")
+
+    // Menu bar icon colour: the picture really takes the chosen colour
+    Settings.persist = false                       // never write test choices to the real preferences
+    func centrePixel(_ img: NSImage) -> (r: CGFloat, g: CGFloat, b: CGFloat)? {
+        guard let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let c = rep.colorAt(x: rep.pixelsWide / 2, y: rep.pixelsHigh / 2 + 3)?.usingColorSpace(.sRGB) else { return nil }
+        return (c.redComponent, c.greenComponent, c.blueComponent)
+    }
+    let savedStyle = Settings.shared.menuIconStyle, savedHex = Settings.shared.menuIconHex
+    Settings.shared.menuIconStyle = .custom; Settings.shared.menuIconHex = "#00C040"
+    if let px = centrePixel(Settings.shared.menuIconImage()) { check(px.g > 0.5 && px.g > px.r && px.g > px.b, "a custom menu icon colour is drawn (centre pixel \(px))") }
+    Settings.shared.menuIconStyle = .match
+    check(Settings.shared.menuIconImage().isTemplate, "'match the menu bar' makes a template icon macOS tints")
+    Settings.shared.menuIconStyle = savedStyle; Settings.shared.menuIconHex = savedHex
+    Settings.persist = true
+
+    // Profile picture: transparent padding is trimmed so the picture fills the round frame
+    let padded = NSImage(size: NSSize(width: 100, height: 100), flipped: false) { r in
+        NSColor(srgbRed: 1, green: 0.5, blue: 0.2, alpha: 1).setFill(); NSBezierPath(roundedRect: NSRect(x: 20, y: 20, width: 60, height: 60), xRadius: 10, yRadius: 10).fill(); return true }
+    let fitted = trimmedToContent(padded)
+    check(fitted.size.width <= 62 && fitted.size.width >= 58 && fitted.size.height == fitted.size.width, "a padded picture is trimmed to its content and made square (\(fitted.size))")
+    let full = NSImage(size: NSSize(width: 100, height: 100), flipped: false) { r in NSColor.red.setFill(); r.fill(); return true }
+    check(trimmedToContent(full).size.width == 100, "a picture with no transparent margin is left alone")
+
     // Formatting helpers
     check(fmt(999) == "999" && fmt(1500) == "1.5K" && fmt(2_500_000) == "2.5M", "token formatting")
     check(plural(1, "response") == "1 response" && plural(2, "response") == "2 responses", "plural")

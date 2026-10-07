@@ -7,7 +7,7 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.10.4 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.11.0 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -19,11 +19,12 @@ Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitt
 - **Insights**: heavy and light days, sessions per day/week, messages, tool calls, API-equivalent cost, per-model and per-project usage, and a yearly heatmap
 - Optional, **experimental** **ChatGPT (Codex) usage** for paid plans: connect through OpenAI's Codex CLI sign-in to see your Codex limits next to Claude's – on the Overview, in the menu bar menu, as a menu bar item (`G 34%`) and on the forecast and report charts
 - Activity is saved on your Mac, so history outlives Claude Code's own log clean-up
-- Light / Dark / **OLED black** / Follow system, six colour themes (Claude orange by default)
+- Light / Dark / **OLED black** / Follow system, six colour themes plus **any custom colour** (Claude orange by default)
+- **Make it yours**: five fonts including the built-in **OpenDyslexic**, four text sizes, card corners, your own greeting name, a **menu bar icon in any colour**, and your profile picture in the sidebar
 - Menu bar display options, configurable alert thresholds, CSV export, copy-summary, optional local profile photo
 - Sign in/out through Claude's official login (via Claude Code)
 - **Help & Legal** in Settings: terms, privacy notes and a Report a Bug button
-- **Updates**: notifies when a newer version is on GitHub, and **Update Now** downloads it, builds it, swaps it in (keeping a backup) and relaunches – no Terminal needed. `./update.sh` does the same from the command line
+- **Updates**: notifies when a newer version is on GitHub, and **Update Now** downloads the signed release with a progress bar, verifies it, swaps it in (keeping a backup) and relaunches – no Terminal needed. `./update.sh` does the same from the command line
 
 Limits come from Claude Code's login in your own keychain; nothing is stored in this repo.
 API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way.
@@ -43,6 +44,9 @@ Unofficial – not affiliated with Anthropic.
 <tr>
 <td width="50%"><img src="docs/screenshots/5-light.png" alt="Light mode in Claude orange"></td>
 <td width="50%"><img src="docs/screenshots/6-oled.png" alt="OLED black mode: usage by day, hour, model and project"></td>
+</tr>
+<tr>
+<td colspan="2"><img src="docs/screenshots/8-personalise.png" alt="Appearance settings: colour themes with a custom colour, fonts including OpenDyslexic, text size and card corners"></td>
 </tr>
 <tr>
 <td colspan="2"><img src="docs/screenshots/7-chatgpt.png" alt="ChatGPT (Codex) limits next to Claude on the Overview, with a combined forecast chart"></td>

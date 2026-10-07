@@ -104,12 +104,12 @@ final class UsageBarView: NSView {
 }
 
 /// The menu bar icon: the custom image if one was bundled, otherwise the drawn bot in the accent colour.
-func menuBarBotImage(mono: Bool = false) -> NSImage {
+func menuBarBotImage(mono: Bool = false, colour: NSColor? = nil) -> NSImage {
     if let url = Bundle.main.url(forResource: "Bot", withExtension: "png"), let img = NSImage(contentsOf: url) {
         img.size = NSSize(width: 18, height: 18); return img
     }
     let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
-        drawBot(in: rect.insetBy(dx: 0.5, dy: 0.5), body: mono ? .black : claudeOrange, eyes: nil)
+        drawBot(in: rect.insetBy(dx: 0.5, dy: 0.5), body: mono ? .black : (colour ?? claudeOrange), eyes: nil)
         return true
     }
     img.isTemplate = mono          // monochrome: macOS tints it to match the menu bar

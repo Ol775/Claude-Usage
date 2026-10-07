@@ -7,8 +7,8 @@ struct CoffeeButton: View {
     var body: some View {
         Button { NSWorkspace.shared.open(AppInfo.coffeeURL) } label: {
             HStack(spacing: 7) {
-                Image(systemName: "cup.and.saucer.fill").font(.system(size: 14, weight: .semibold))
-                Text("Buy me a coffee").font(.system(size: 13, weight: .bold))
+                Image(systemName: "cup.and.saucer.fill").font(AppFont.system(size: 14, weight: .semibold))
+                Text("Buy me a coffee").font(AppFont.system(size: 13, weight: .bold))
             }
             .foregroundStyle(Color.black.opacity(0.85))
             .padding(.horizontal, 14).padding(.vertical, 7)
@@ -27,17 +27,21 @@ struct AvatarCircle: View {
     var body: some View {
         ZStack {
             if account.loggedIn, let p = photo {
-                Image(nsImage: p).resizable().scaledToFill()
+                // an accent-coloured backing, so a picture with soft or transparent edges never shows a grey gap inside the circle
+                Circle().fill(LinearGradient(colors: [Color.brand.opacity(0.75), Color.brand], startPoint: .top, endPoint: .bottom))
+                Image(nsImage: p).resizable().interpolation(.high).scaledToFill()
             } else if account.loggedIn {
                 Circle().fill(LinearGradient(colors: [Color.brand.opacity(0.8), Color.brand], startPoint: .top, endPoint: .bottom))
-                Text(account.initials).font(.system(size: size * 0.38, weight: .semibold)).foregroundColor(.white)
+                Text(account.initials).font(AppFont.system(size: size * 0.38, weight: .semibold)).foregroundColor(.white)
             } else {
                 Circle().fill(Color.secondary.opacity(0.2))
-                Text("?").font(.system(size: size * 0.38, weight: .semibold)).foregroundStyle(.secondary)
+                Text("?").font(AppFont.system(size: size * 0.38, weight: .semibold)).foregroundStyle(.secondary)
             }
         }
         .frame(width: size, height: size).clipShape(Circle())
-        .overlay(Circle().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+        .overlay(Circle().strokeBorder(Color.primary.opacity(0.18), lineWidth: max(1, size / 48)))      // a fine ring, drawn inside the edge
+        .shadow(color: .black.opacity(size >= 40 ? 0.22 : 0), radius: size / 24, x: 0, y: size / 48)
+        .accessibilityLabel(account.loggedIn ? "Profile picture" : "Not signed in")
     }
 }
 
@@ -62,7 +66,7 @@ struct SettingsPage: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Text(store.settingsCategory.title).font(.largeTitle.bold())
+                    Text(store.settingsCategory.title).font(AppFont.largeTitle.bold())
                     detail(store.settingsCategory)
                 }
                 .padding(28).frame(maxWidth: 680, alignment: .leading).frame(maxWidth: .infinity, alignment: .leading)
@@ -102,7 +106,7 @@ struct SettingsPage: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(a.loggedIn ? a.name : "Sign in").fontWeight(.semibold).foregroundStyle(selected ? Color.white : Color.primary)
                     Text(a.loggedIn ? (a.plan.isEmpty ? "Claude account" : "Claude \(a.plan)") : "with your Claude account")
-                        .font(.caption).foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
+                        .font(AppFont.caption).foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
                 }
                 Spacer(minLength: 0)
             }
@@ -116,7 +120,7 @@ struct SettingsPage: View {
         let selected = store.settingsCategory == c
         return Button { store.settingsCategory = c } label: {
             HStack(spacing: 10) {
-                Image(systemName: c.icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                Image(systemName: c.icon).font(AppFont.system(size: 13, weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 26, height: 26)
                     .background(RoundedRectangle(cornerRadius: 6.5, style: .continuous).fill(c.tint.gradient))
                 Text(c.title).foregroundStyle(selected ? Color.white : Color.primary)
@@ -148,11 +152,11 @@ struct SettingsPage: View {
         return VStack(alignment: .leading, spacing: 22) {
             VStack(spacing: 8) {
                 AvatarCircle(account: a, photo: store.photo, size: 96).onTapGesture { if a.loggedIn { store.actions.choosePhoto() } }
-                Text(a.loggedIn ? a.name : "Not signed in").font(.title2.bold())
+                Text(a.loggedIn ? a.name : "Not signed in").font(AppFont.title2.bold())
                 if a.loggedIn {
                     Text(a.email).foregroundStyle(.secondary)
                     if !a.plan.isEmpty {
-                        Text("Claude \(a.plan) plan").font(.caption.weight(.semibold)).foregroundStyle(Color.brand)
+                        Text("Claude \(a.plan) plan").font(AppFont.caption.weight(.semibold)).foregroundStyle(Color.brand)
                             .padding(.horizontal, 10).padding(.vertical, 4).background(Capsule().fill(Color.brand.opacity(0.15)))
                     }
                 } else {
@@ -266,7 +270,7 @@ struct SettingsPage: View {
                 .padding(16).frame(maxWidth: .infinity)
             }
             if settings.appearance == .oled {
-                Text("OLED black uses pure black backgrounds – deepest on OLED displays and easy on the battery.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+                Text("OLED black uses pure black backgrounds – deepest on OLED displays and easy on the battery.").font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
             }
             SGroup(title: "Colour theme") {
                 HStack(spacing: 16) {
@@ -276,12 +280,50 @@ struct SettingsPage: View {
                                 Circle().fill(Color(nsColor: NSColor(name: nil) { a in a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? t.colors.0 : t.colors.1 }))
                                     .frame(width: 30, height: 30)
                                     .overlay(Circle().stroke(Color.primary.opacity(settings.theme == t ? 0.9 : 0), lineWidth: 2).padding(-4))
-                                Text(t.label).font(.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary)
+                                Text(t.label).font(AppFont.caption2).foregroundStyle(settings.theme == t ? .primary : .secondary)
                             }
                         }.buttonStyle(.plain)
                     }
                 }
                 .padding(16).frame(maxWidth: .infinity)
+                if settings.theme == .custom {
+                    SDivider()
+                    SRow(title: "Custom colour", subtitle: "Used for rings, bars, charts and buttons. Lightened in dark mode and deepened in light mode so it stays readable.") {
+                        ColorPicker("", selection: Binding(get: { Color(nsColor: colorFromHex(settings.customAccentHex) ?? .orange) },
+                                                           set: { settings.customAccentHex = hexFromColor(NSColor($0)); settings.theme = .custom; currentTheme = .custom }), supportsOpacity: false).labelsHidden()
+                    }
+                }
+            }
+            SGroup(title: "Font", footer: "\(settings.fontChoice.detail) OpenDyslexic is built in – nothing to install. Applies to the windows; the menu bar and its menu keep the system font.") {
+                HStack(spacing: 12) {
+                    ForEach(FontChoice.allCases) { c in
+                        Button { settings.fontChoice = c } label: {
+                            VStack(spacing: 6) {
+                                Text("Aa").font(AppFont.make(c, size: 24, weight: .semibold)).frame(height: 34)         // fixed height: OpenDyslexic is taller than the others
+                                Text(c.label).font(AppFont.make(.system, size: 10)).foregroundStyle(settings.fontChoice == c ? .primary : .secondary)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 74).padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(settings.fontChoice == c ? 0.12 : 0.05)))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.brand.opacity(settings.fontChoice == c ? 0.9 : 0), lineWidth: 2))
+                        }.buttonStyle(.plain)
+                    }
+                }
+                .padding(16)
+                SDivider()
+                SRow(title: "Text size") {
+                    Picker("", selection: $settings.textSize) { ForEach(TextSize.allCases) { Text($0.label).tag($0) } }
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 300)
+                }
+            }
+            SGroup(title: "Cards and name") {
+                SRow(title: "Card corners") {
+                    Picker("", selection: $settings.cardCorners) { ForEach(CardCorners.allCases) { Text($0.label).tag($0) } }
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 240)
+                }
+                SDivider()
+                SRow(title: "Greeting name", subtitle: "What the Overview calls you. Leave empty to use the first name from your Claude account.") {
+                    TextField("First name", text: $settings.displayName).textFieldStyle(.roundedBorder).frame(width: 180)
+                }
             }
         }
     }
@@ -304,7 +346,7 @@ struct SettingsPage: View {
                 }
                 .frame(width: 96, height: 62)
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(selected ? Color.brand : Color.clear, lineWidth: 3).padding(-4))
-                Text(m.label).font(.caption).fontWeight(selected ? .semibold : .regular)
+                Text(m.label).font(AppFont.caption).fontWeight(selected ? .semibold : .regular)
             }
         }.buttonStyle(.plain)
     }
@@ -329,8 +371,8 @@ struct SettingsPage: View {
         return VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "Preview", footer: "How the menu bar item looks right now.") {
                 HStack(spacing: 6) {
-                    if showIcon { Image(nsImage: menuBarBotImage(mono: settings.menuIconMono)).foregroundStyle(.primary) }
-                    preview.font(.system(size: 13))
+                    if showIcon { Image(nsImage: settings.menuIconImage()).foregroundStyle(.primary) }
+                    preview.font(AppFont.system(size: 13))
                 }
                 .padding(18).frame(maxWidth: .infinity)
             }
@@ -340,7 +382,7 @@ struct SettingsPage: View {
                         Button { settings.apply(p) } label: {
                             VStack(spacing: 2) {
                                 Text(p.label).fontWeight(.medium)
-                                Text(p.detail).font(.caption2).foregroundStyle(.secondary)
+                                Text(p.detail).font(AppFont.caption2).foregroundStyle(.secondary)
                             }.frame(maxWidth: .infinity).padding(.vertical, 6)
                         }.buttonStyle(.bordered)
                     }
@@ -373,8 +415,16 @@ struct SettingsPage: View {
                         .labelsHidden().frame(width: 190)
                 }
                 SDivider()
-                SRow(title: "Match the menu bar colour", subtitle: "Draws the icon in black or white like other menu bar icons.") {
-                    Toggle("", isOn: $settings.menuIconMono).labelsHidden().toggleStyle(.switch)
+                SRow(title: "Icon colour", subtitle: "The Claude icon in the menu bar.") {
+                    Picker("", selection: $settings.menuIconStyle) { ForEach(MenuIconStyle.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().frame(width: 250)
+                }
+                if settings.menuIconStyle == .custom {
+                    SDivider()
+                    SRow(title: "Custom icon colour", subtitle: "Pick any colour.") {
+                        ColorPicker("", selection: Binding(get: { Color(nsColor: colorFromHex(settings.menuIconHex) ?? .orange) },
+                                                           set: { settings.menuIconHex = hexFromColor(NSColor($0)) }), supportsOpacity: false).labelsHidden()
+                    }
                 }
             }
         }
@@ -446,12 +496,12 @@ struct SettingsPage: View {
                     Button("Copy") { Legal.copyDiagnostics() }
                 }
                 if showDiagnostics.value {
-                    Text(Legal.diagnostics).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                    Text(Legal.diagnostics).font(AppFont.system(size: 11, design: .monospaced)).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(12)
                         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06)))
                         .padding(.horizontal, 14).padding(.bottom, 10)
                     Text("This is exactly what “Copy” and “Report a Bug” include. It isn’t sent anywhere unless you paste or submit it yourself.")
-                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 10)
+                        .font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 10)
                 }
                 SDivider()
                 SRow(title: "Known issues and requests") { Button("View on GitHub") { NSWorkspace.shared.open(Legal.issuesURL) } }
@@ -464,7 +514,7 @@ struct SettingsPage: View {
                         set: { on in if on { openLegal.value.insert(sec.id) } else { openLegal.value.remove(sec.id) } })) {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(Array(sec.body.enumerated()), id: \.offset) { _, line in
-                                Text(line).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                Text(line).font(AppFont.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         .padding(.top, 6).frame(maxWidth: .infinity, alignment: .leading)
@@ -473,7 +523,7 @@ struct SettingsPage: View {
                 }
             }
             Text("Claude Usage is unofficial and not affiliated with or endorsed by Anthropic. Figures and forecasts are estimates.")
-                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+                .font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
         }
     }
 
@@ -481,7 +531,7 @@ struct SettingsPage: View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(spacing: 8) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 84, height: 84)
-                Text("Claude Usage").font(.title2.bold())
+                Text("Claude Usage").font(AppFont.title2.bold())
                 Text("Version \(AppInfo.version) \(AppInfo.stage)").foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity)
             SGroup {
@@ -497,7 +547,7 @@ struct SettingsPage: View {
             updatesGroup
             changelogGroup
             Text("Beta – there may still be rough edges. Limit numbers come from the same source as Claude Code’s /usage. Unofficial – not affiliated with Anthropic.")
-                .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
+                .font(AppFont.caption).foregroundStyle(.secondary).padding(.horizontal, 8)
             HStack(spacing: 14) {
                 Button("Terms & Legal") { store.settingsCategory = .support }
                 Button("Report a Bug…") { NSWorkspace.shared.open(Legal.newIssueURL) }
@@ -520,7 +570,7 @@ struct SettingsPage: View {
                         VStack(alignment: .leading, spacing: 6) {
                             ForEach(Array(e.items.enumerated()), id: \.offset) { _, item in
                                 HStack(alignment: .top, spacing: 8) { Text("•"); Text(item).fixedSize(horizontal: false, vertical: true) }
-                                    .font(.callout).foregroundStyle(.secondary)
+                                    .font(AppFont.callout).foregroundStyle(.secondary)
                             }
                         }
                         .padding(.top, 6).padding(.leading, 2).frame(maxWidth: .infinity, alignment: .leading)
@@ -528,11 +578,11 @@ struct SettingsPage: View {
                         HStack(spacing: 8) {
                             Text("Version \(e.version)").fontWeight(.semibold)
                             if e.version == AppInfo.version {
-                                Text("CURRENT").font(.system(size: 9, weight: .bold)).foregroundStyle(Color.brand)
+                                Text("CURRENT").font(AppFont.system(size: 9, weight: .bold)).foregroundStyle(Color.brand)
                                     .padding(.horizontal, 6).padding(.vertical, 2).background(Capsule().fill(Color.brand.opacity(0.18)))
                             }
                             Spacer()
-                            Text([e.stage, e.date].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+                            Text([e.stage, e.date].filter { !$0.isEmpty }.joined(separator: " · ")).font(AppFont.caption).foregroundStyle(.secondary)
                         }
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
@@ -548,9 +598,9 @@ struct SettingsPage: View {
     private var updatePending: Bool { switch store.update { case .available, .ready: return true; default: return false } }
 
     @ViewBuilder private func notesList(_ u: UpdateInfo) -> some View {
-        Text("What’s new").font(.subheadline.weight(.semibold))
+        Text("What’s new").font(AppFont.subheadline.weight(.semibold))
         ForEach(Array(u.notes.prefix(6).enumerated()), id: \.offset) { _, n in
-            HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(.callout).foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 8) { Text("•"); Text(n).fixedSize(horizontal: false, vertical: true) }.font(AppFont.callout).foregroundStyle(.secondary)
         }
     }
 
@@ -587,8 +637,8 @@ struct SettingsPage: View {
                         Button("Restart & Update") { store.actions.applyUpdate() }.buttonStyle(.borderedProminent)
                         Button("View on GitHub") { store.actions.openChangelog() }
                     }.padding(.top, 4)
-                    Text("Claude Usage will close and reopen. Your current version is kept as a backup.").font(.caption).foregroundStyle(.secondary)
-                    if let e = store.installError { Text(e).font(.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
+                    Text("Claude Usage will close and reopen. Your current version is kept as a backup.").font(AppFont.caption).foregroundStyle(.secondary)
+                    if let e = store.installError { Text(e).font(AppFont.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
                 }
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             } else if case .available(let u) = store.update {
@@ -599,19 +649,19 @@ struct SettingsPage: View {
                         UpdateProgressBar(store: store).padding(.top, 4)
                     } else if !store.canInstall {
                         if let f = store.downloadedInstaller {
-                            Label("Saved \(f.lastPathComponent) to your Downloads folder", systemImage: "checkmark.circle.fill").font(.callout).padding(.top, 4)
+                            Label("Saved \(f.lastPathComponent) to your Downloads folder", systemImage: "checkmark.circle.fill").font(AppFont.callout).padding(.top, 4)
                             HStack {
                                 Button("Open Installer") { store.actions.openInstaller() }.buttonStyle(.borderedProminent)
                                 Button("Show in Finder") { store.actions.showInstaller() }
                             }
-                            Text("Drag Claude Usage onto Applications to finish updating.").font(.caption).foregroundStyle(.secondary)
+                            Text("Drag Claude Usage onto Applications to finish updating.").font(AppFont.caption).foregroundStyle(.secondary)
                         } else {
                             HStack {
                                 Button("Download Update") { store.actions.downloadInstaller() }.buttonStyle(.borderedProminent)
                                 Button("View on GitHub") { store.actions.openChangelog() }
                             }.padding(.top, 4)
                             Text("This copy can’t replace itself (it isn’t in a folder it can write to, such as Applications), so it downloads the verified installer for version \(u.version) to your Downloads folder instead.")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(AppFont.caption).foregroundStyle(.secondary)
                         }
                     } else {
                         HStack {
@@ -620,9 +670,9 @@ struct SettingsPage: View {
                             Button("Copy command") { store.actions.copyUpdateCommand() }
                         }.padding(.top, 4)
                         Text("Update Now downloads version \(u.version) from GitHub, checks its signature, swaps it in and relaunches. Your current version is kept as a backup.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(AppFont.caption).foregroundStyle(.secondary)
                     }
-                    if let e = store.installError { Text(e).font(.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
+                    if let e = store.installError { Text(e).font(AppFont.caption).foregroundStyle(Color.danger).fixedSize(horizontal: false, vertical: true) }
                 }
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             }

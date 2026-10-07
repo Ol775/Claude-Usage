@@ -9,7 +9,7 @@ BUILD="${BUILD:-$( [ -d ../.git ] && git rev-list --count HEAD 2>/dev/null || ca
 APP="Claude Usage.app"
 rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" build
 # UNIVERSAL=1 builds Apple silicon + Intel (used for releases); the default builds only for this Mac, which is faster.
-SRC="src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/ScreenTests.swift src/Fixtures.swift src/SelfTest.swift src/Updater.swift src/Dashboard.swift src/Overview.swift src/ProjectionChart.swift src/UsageView.swift src/SettingsView.swift src/SettingsParts.swift src/Reports.swift src/Insights.swift"
+SRC="src/main.swift src/Model.swift src/Usage.swift src/Forecast.swift src/Theme.swift src/Avatar.swift src/BotArt.swift src/Views.swift src/Toast.swift src/Activity.swift src/MenuBar.swift src/Changelog.swift src/Legal.swift src/Demo.swift src/ChatGPT.swift src/ScreenTests.swift src/Fixtures.swift src/SelfTest.swift src/Updater.swift src/Fonts.swift src/Dashboard.swift src/Overview.swift src/ProjectionChart.swift src/UsageView.swift src/SettingsView.swift src/SettingsParts.swift src/Reports.swift src/Insights.swift"
 if [ "${UNIVERSAL:-0}" = "1" ]; then
   for arch in arm64 x86_64; do swiftc -O -target "$arch-apple-macos13.0" ${=SRC} -o "build/ClaudeUsage-$arch"; done
   lipo -create build/ClaudeUsage-arm64 build/ClaudeUsage-x86_64 -output "$APP/Contents/MacOS/ClaudeUsage"
@@ -22,6 +22,7 @@ swiftc build/iconsrc/main.swift src/BotArt.swift -o build/makeicon
 CUSTOM=""; [ -f assets/bot.png ] && CUSTOM="assets/bot.png" && cp assets/bot.png "$APP/Contents/Resources/Bot.png"
 build/makeicon build/AppIcon.iconset $CUSTOM
 iconutil -c icns build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
+mkdir -p "$APP/Contents/Resources/Fonts" && cp assets/fonts/*.otf assets/fonts/OFL.txt "$APP/Contents/Resources/Fonts/"      # OpenDyslexic (SIL Open Font License)
 cp CHANGELOG.md "$APP/Contents/Resources/CHANGELOG.md"          # shown in Settings → About
 cat > "$APP/Contents/Info.plist" <<P
 <?xml version="1.0" encoding="UTF-8"?>

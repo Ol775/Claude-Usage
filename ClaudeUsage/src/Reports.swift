@@ -106,7 +106,7 @@ struct ReportsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Reports").font(.largeTitle.bold())
+                        Text("Reports").font(AppFont.largeTitle.bold())
                         Text(rangeDescription).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -148,7 +148,7 @@ struct ReportsView: View {
                                     .foregroundStyle(by: .value("Limit", p.name)).lineStyle(StrokeStyle(lineWidth: 2.2))
                             }
                             RuleMark(y: .value("Limit", 100)).foregroundStyle(Color.danger.opacity(0.85)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                .annotation(position: .top, alignment: .leading) { Text("Limit").font(.caption2).foregroundStyle(Color.danger) }
+                                .annotation(position: .top, alignment: .leading) { Text("Limit").font(AppFont.caption2).foregroundStyle(Color.danger) }
                             RuleMark(y: .value("Warn", warn)).foregroundStyle(Color.orange.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
                         }
                         .chartForegroundStyleScale(styleScale(pts))
@@ -200,10 +200,10 @@ struct ReportsView: View {
 
     private var emptyNote: some View {
         VStack(spacing: 6) {
-            Image(systemName: "chart.line.uptrend.xyaxis").font(.title2).foregroundStyle(.secondary)
-            Text("Limit history is recorded while the app runs, so this fills in over time.").font(.callout).foregroundStyle(.secondary)
+            Image(systemName: "chart.line.uptrend.xyaxis").font(AppFont.title2).foregroundStyle(.secondary)
+            Text("Limit history is recorded while the app runs, so this fills in over time.").font(AppFont.callout).foregroundStyle(.secondary)
             if let first = store.samples.first {
-                Text("Recording since \(first.t.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                Text("Recording since \(first.t.formatted(date: .abbreviated, time: .shortened))").font(AppFont.caption).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity).frame(height: 120)
@@ -224,8 +224,8 @@ struct ReportsView: View {
     private func chartCard<Content: View>(title: String, subtitle: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                Text(title).font(AppFont.headline)
+                Text(subtitle).font(AppFont.caption).foregroundStyle(.secondary)
             }
             content()
         }
