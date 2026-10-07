@@ -5,7 +5,7 @@ import SwiftUI
 // adding `--compare <baselineDir>` checks them against saved images and exits non-zero if one has changed noticeably.
 // Only runs in test copies (see Dev) and only with CUB_DEMO=1, so real account data can never end up in an image.
 
-/// How two PNGs differ: the picture is cut into a grid of small cells (about 30 px each), and each cell's average colour is compared.
+/// How two PNGs differ: both are cut into the same 68×100 grid of cells (about 30 px each on a full-size render), and each cell's average colour is compared.
 /// `changedCells` counts cells that differ clearly, `mean` is the overall average difference (0...1).
 /// A clock reading or an anti-aliased edge touches one or two cells; a missing card, a broken layout or wrong colours touch dozens.
 struct ScreenDiff { var mean: Double; var changedCells: Int }
@@ -13,7 +13,7 @@ struct ScreenDiff { var mean: Double; var changedCells: Int }
 func screenDifference(_ a: Data, _ b: Data) -> ScreenDiff? {
     func grid(_ d: Data) -> (px: [UInt8], w: Int, h: Int)? {
         guard let rep = NSBitmapImageRep(data: d), let cg = rep.cgImage else { return nil }
-        let w = max(1, cg.width / 30), h = max(1, cg.height / 30)
+        let w = 68, h = 100          // a fixed grid, so images of different pixel sizes (full-size renders vs smaller saved copies) compare
         var px = [UInt8](repeating: 0, count: w * h * 4)
         guard let ctx = CGContext(data: &px, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **alpha**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.10.3 – beta (2026-10-07)
+- Saved screenshots for the regression tests are stored at a smaller size (the comparison scales both images to the same grid)
+
 ## 0.10.2 – beta (2026-10-07)
 - Screenshot regression tests: the main screens are rendered with demo data and compared with saved images in CI
 
