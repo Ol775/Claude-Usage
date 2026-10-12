@@ -6,6 +6,7 @@ import Foundation
 
 struct Pricing {
     let input: Double, output: Double, cacheRead: Double
+    var longMultiplier = 1.0          // all prices x this when one prompt is over 100k tokens (Haiku 5.5 only; 1 = flat)
     var cacheWrite: Double { input * 1.25 }
 
     /// Longest-prefix match so dated snapshot ids ("claude-haiku-4-5-20251001") resolve too.
@@ -19,6 +20,7 @@ struct Pricing {
         ("claude-opus-4", Pricing(input: 5, output: 25, cacheRead: 0.50)),
         ("claude-sonnet-5", Pricing(input: 2, output: 10, cacheRead: 0.20)),
         ("claude-sonnet-4", Pricing(input: 3, output: 15, cacheRead: 0.30)),
+        ("claude-haiku-5", Pricing(input: 0.10, output: 0.50, cacheRead: 0.01, longMultiplier: 5)),
         ("claude-haiku-4", Pricing(input: 1, output: 5, cacheRead: 0.10)),
     ]
 
@@ -41,7 +43,9 @@ struct Pricing {
                   let i = (m["input"] as? NSNumber)?.doubleValue, let o = (m["output"] as? NSNumber)?.doubleValue,
                   let c = (m["cacheRead"] as? NSNumber)?.doubleValue,
                   [i, o, c].allSatisfy({ $0 >= 0 && $0 <= 1000 }), i > 0, o > 0 else { return nil }
-            out.append((prefix, Pricing(input: i, output: o, cacheRead: c)))
+            let lm = (m["longMultiplier"] as? NSNumber)?.doubleValue ?? 1
+            guard lm >= 1 && lm <= 10 else { return nil }
+            out.append((prefix, Pricing(input: i, output: o, cacheRead: c, longMultiplier: lm)))
         }
         return out
     }
@@ -68,7 +72,8 @@ struct Pricing {
 
     static func cost(model: String, _ u: Usage) -> Double? {
         guard let p = forModel(model) else { return nil }
-        return (Double(u.input) * p.input + Double(u.output) * p.output + Double(u.cacheWrite) * p.cacheWrite + Double(u.cacheRead) * p.cacheRead) / 1_000_000
+        let long = u.input + u.cacheWrite + u.cacheRead > 100_000 ? p.longMultiplier : 1
+        return long * (Double(u.input) * p.input + Double(u.output) * p.output + Double(u.cacheWrite) * p.cacheWrite + Double(u.cacheRead) * p.cacheRead) / 1_000_000
     }
 }
 

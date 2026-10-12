@@ -85,6 +85,8 @@ func runSelfTests() -> Int32 {
     check(Pricing.parse(json("{\"models\":[{\"prefix\":\"claude-x\",\"input\":99999,\"output\":15,\"cacheRead\":0}]}")) == nil, "absurd price rejected")
     check(Pricing.parse(json("{\"models\":[{\"prefix\":\"evil\",\"input\":1,\"output\":1,\"cacheRead\":0}]}")) == nil, "non-claude prefix rejected")
     check(Pricing.parse(json("{}")) == nil && Pricing.parse(json("{\"models\":[]}")) == nil, "empty pricing file rejected")
+    let hs = Pricing.cost(model: "claude-haiku-5-5", Usage(input: 50_000, output: 1_000_000)), hl = Pricing.cost(model: "claude-haiku-5-5", Usage(input: 200_000, output: 1_000_000))
+    check(abs((hs ?? 0) - 0.505) < 1e-9 && abs((hl ?? 0) - 2.6) < 1e-9, "haiku-5-5 priced, x5 over 100k prompt")
     check(Pricing.builtIn.count >= 8, "built-in prices present")
 
     // Forecasting

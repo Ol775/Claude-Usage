@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.15.3 – beta (2026-10-12)
+- Cost estimates now price Claude Haiku 5.5 ($0.10 in / $0.50 out per M tokens, x5 for prompts over 100k)
+
 ## 0.15.2 – beta (2026-10-07)
 - Fixes from a hands-on test pass: Edit menu (⌘A, ⌘C, ⌘V, ⌘X, ⌘Z now work in text fields) and ⌘W closes the window; Settings search opens the first match and Escape clears it; Export Settings now saves every setting (it used to save only the ones you had changed); colour theme and mode tiles work with VoiceOver again; settings rows follow your font and text size; more of Settings is translated; costs show as $8,042 / $0.65 and big totals as 1.1B; '5-hour windows' instead of 'sessions' where limit windows are meant; model names without release dates; the warning line on the limit chart is labelled
 
