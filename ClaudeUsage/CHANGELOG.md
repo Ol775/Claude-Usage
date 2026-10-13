@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.1 – beta (2026-10-13)
+- Settings → Data → Other computers links to the Windows helper guide. The guide (windows/README.md) explains setup step by step; the helper script now asks for the folder if you don't give one and copies every 5 minutes by default (-IntervalMinutes to change)
+
 ## 0.16.0 – beta (2026-10-13)
 - Count Claude Code usage from other computers: Settings → Data → Other computers adds a log folder (for example a synced Windows .claude/projects) whose tokens and costs are included. Folders are only read; the setting isn't part of settings export. A PowerShell helper for Windows (`windows/Sync-ClaudeLogs.ps1`) copies Claude Code's logs into a folder that syncs to your Mac, once or every 15 minutes
 

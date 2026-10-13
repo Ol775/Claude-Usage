@@ -540,6 +540,10 @@ struct SettingsPage: View {
                     SDivider()
                 }
                 SRow(title: "Add a log folder") { Button("Add…") { addLogFolder() } }
+                SDivider()
+                SRow(title: "Windows helper", subtitle: "A script that copies a Windows PC's logs into a synced folder.") {
+                    Button("Open guide") { NSWorkspace.shared.open(AppInfo.repoURL.appendingPathComponent("tree/main/windows")) }
+                }
             }
             SGroup(title: "Settings file", footer: "Moves your preferences to another Mac. The file holds settings only: no history, account details or photo.") {
                 SRow(title: "Export settings") { Button("Export…") { store.actions.exportSettings() } }
