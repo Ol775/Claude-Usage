@@ -13,7 +13,7 @@ Your limit percentages (session and weekly) already include Windows usage, becau
    powershell -ExecutionPolicy Bypass -File .\Sync-ClaudeLogs.ps1
    ```
 
-   It asks for the folder from step 1, then whether to keep copying every 15 minutes in the background (answer `y`). The `-ExecutionPolicy Bypass` part is only needed if Windows blocks downloaded scripts.
+   It asks for the folder from step 1, then whether to keep copying every 5 minutes in the background (answer `y`). The `-ExecutionPolicy Bypass` part is only needed if Windows blocks downloaded scripts.
 3. **On the Mac**, open Claude Usage → Settings → Data → **Other computers** → **Add…** and choose the same synced folder as it appears on the Mac.
 
 The Mac app picks the folder up at its next refresh (within a minute or so). Windows tokens are then included in Overview, Reports, Insights and Usage.
@@ -22,7 +22,8 @@ The Mac app picks the folder up at its next refresh (within a minute or so). Win
 
 ```powershell
 .\Sync-ClaudeLogs.ps1 -Destination "C:\Users\you\iCloudDrive\ClaudeLogs"            # copy once, no questions
-.\Sync-ClaudeLogs.ps1 -Destination "C:\Users\you\iCloudDrive\ClaudeLogs" -Install   # copy now, then every 15 minutes
+.\Sync-ClaudeLogs.ps1 -Destination "C:\Users\you\iCloudDrive\ClaudeLogs" -Install   # copy now, then every 5 minutes
+.\Sync-ClaudeLogs.ps1 -Destination "C:\Users\you\iCloudDrive\ClaudeLogs" -Install -IntervalMinutes 30   # ... or every 30
 .\Sync-ClaudeLogs.ps1 -Uninstall                                                    # remove the scheduled copy
 .\Sync-ClaudeLogs.ps1 -Source "D:\somewhere\.claude\projects" ...                   # logs live somewhere unusual
 ```

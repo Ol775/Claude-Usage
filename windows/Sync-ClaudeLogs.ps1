@@ -32,7 +32,7 @@ if ($Uninstall) {
 if (-not $Destination) {
     $Destination = (Read-Host "Folder that syncs to your Mac (e.g. C:\Users\you\iCloudDrive\ClaudeLogs)").Trim().Trim('"')
     if (-not $Destination) { throw "No folder given." }
-    if (-not $Install) { $Install = (Read-Host "Also copy every 15 minutes in the background? (y/N)") -match '^[yY]' }
+    if (-not $Install) { $Install = (Read-Host "Also copy every $IntervalMinutes minutes in the background? (y/N)") -match '^[yY]' }
 }
 if (-not (Test-Path -LiteralPath $Source -PathType Container)) { throw "Claude Code logs not found at $Source (use -Source if they live elsewhere)." }
 
