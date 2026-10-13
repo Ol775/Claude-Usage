@@ -64,7 +64,7 @@ final class Store: ObservableObject {
     @Published var chatgpt = ChatGPTState()
     @Published var chatgptBusy = false
     @Published var gptSamples: [GPTSample] = GPTHistory.shared.samples
-    @Published var samples: [Sample] = []
+    @Published var samples: [Sample] = History.shared.samples
     @Published var loginBusy = false
     @Published var photo: NSImage? = avatarImage
     @Published var lastUpdated: Date?

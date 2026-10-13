@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.15.4 – beta (2026-10-13)
+- Reports: saved limit history now loads at launch, so the Day, Week and Month limit charts no longer sit empty until the first successful Claude fetch (e.g. after a login-expired or offline start)
+
 ## 0.15.3 – beta (2026-10-12)
 - Cost estimates now price Claude Haiku 5.5 ($0.10 in / $0.50 out per M tokens, x5 for prompts over 100k)
 
