@@ -500,6 +500,15 @@ struct SettingsPage: View {
         }.labelsHidden().frame(width: 130)
     }
 
+    private func addLogFolder() {
+        let panel = NSOpenPanel()
+        panel.title = L("Choose a folder of Claude Code logs"); panel.prompt = L("Add")
+        panel.canChooseFiles = false; panel.canChooseDirectories = true; panel.canCreateDirectories = false
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let dir = panel.url?.standardizedFileURL.path, !settings.extraLogFolders.contains(dir) else { return }
+        settings.extraLogFolders.append(dir); store.actions.refresh()
+    }
+
     private var dataPane: some View {
         VStack(alignment: .leading, spacing: 22) {
             SGroup(title: "Export", footer: "Daily tokens and your limit history are saved as two CSV files in a folder you choose.") {
@@ -522,6 +531,15 @@ struct SettingsPage: View {
                         Text("90 days").tag(90); Text("60 days").tag(60); Text("30 days").tag(30)
                     }.labelsHidden().frame(width: 130)
                 }
+            }
+            SGroup(title: "Other computers", footer: "Claude Code on another computer (for example Windows) keeps its logs on that machine. Sync its .claude/projects folder to this Mac, then add the folder here and its tokens are counted too. Folders are only read.") {
+                ForEach(settings.extraLogFolders, id: \.self) { f in
+                    SRow(title: (f as NSString).abbreviatingWithTildeInPath) {
+                        Button("Remove") { settings.extraLogFolders.removeAll { $0 == f }; store.actions.refresh() }
+                    }
+                    SDivider()
+                }
+                SRow(title: "Add a log folder") { Button("Add…") { addLogFolder() } }
             }
             SGroup(title: "Settings file", footer: "Moves your preferences to another Mac. The file holds settings only: no history, account details or photo.") {
                 SRow(title: "Export settings") { Button("Export…") { store.actions.exportSettings() } }

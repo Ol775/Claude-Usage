@@ -135,27 +135,30 @@ func scan() -> Snapshot {
     let oldest = cal.date(byAdding: .day, value: -364, to: startToday)!          // read up to a year of logs
     snap.dailyDates = (0..<30).map { cal.date(byAdding: .day, value: $0, to: start30)! }
 
-    let root = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/projects")
-    guard let en = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) else {
-        snap.days = ActivityStore.shared.merge([:]); return snap
-    }
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    let extra = (UserDefaults.standard.stringArray(forKey: "extraLogFolders") ?? []).map { URL(fileURLWithPath: $0) }
+    var seenRoots = Set<String>()
+    let roots = ([home.appendingPathComponent(".claude/projects")] + extra).filter { seenRoots.insert($0.standardizedFileURL.path).inserted }   // no folder twice, or its logs would count twice
     let cache = LogCache.shared
     var live = Set<String>()
     var all: [Rec] = []
-    for case let url as URL in en where url.pathExtension == "jsonl" {
-        guard let v = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]),
-              let mtime = v.contentModificationDate, mtime >= oldest else { continue }
-        let size = v.fileSize ?? 0, path = url.path
-        live.insert(path)
-        if let c = cache.files[path], c.mtime == mtime, c.size == size { all += c.recs + c.tail; continue }
-        if let c = cache.files[path], size > c.size, c.consumed <= c.size {          // the log grew: read only the new part
-            let more = parseLog(url, oldest: oldest, from: c.consumed)
-            cache.files[path] = (mtime, size, more.consumed, c.recs + more.recs, more.tail)
-        } else {
-            let all1 = parseLog(url, oldest: oldest)                                  // new or rewritten file: read it all
-            cache.files[path] = (mtime, size, all1.consumed, all1.recs, all1.tail)
+    for root in roots {
+        guard let en = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) else { continue }
+        for case let url as URL in en where url.pathExtension == "jsonl" {
+            guard let v = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]),
+                  let mtime = v.contentModificationDate, mtime >= oldest else { continue }
+            let size = v.fileSize ?? 0, path = url.path
+            guard live.insert(path).inserted else { continue }          // same file reached through two folders
+            if let c = cache.files[path], c.mtime == mtime, c.size == size { all += c.recs + c.tail; continue }
+            if let c = cache.files[path], size > c.size, c.consumed <= c.size {          // the log grew: read only the new part
+                let more = parseLog(url, oldest: oldest, from: c.consumed)
+                cache.files[path] = (mtime, size, more.consumed, c.recs + more.recs, more.tail)
+            } else {
+                let all1 = parseLog(url, oldest: oldest)                                  // new or rewritten file: read it all
+                cache.files[path] = (mtime, size, all1.consumed, all1.recs, all1.tail)
+            }
+            if let c = cache.files[path] { all += c.recs + c.tail }
         }
-        if let c = cache.files[path] { all += c.recs + c.tail }
     }
     for p in cache.files.keys where !live.contains(p) { cache.files[p] = nil }
 

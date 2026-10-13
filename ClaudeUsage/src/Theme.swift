@@ -212,6 +212,8 @@ final class Settings: ObservableObject {
     @Published var quietStart: Int { didSet { save(quietStart, "quietStart") } }                        // hour of day, 0–23
     @Published var quietEnd: Int { didSet { save(quietEnd, "quietEnd") } }
     @Published var betaUpdates: Bool { didSet { save(betaUpdates, "betaUpdates") } }
+    /// Extra Claude Code log folders to count (e.g. logs synced from a Windows PC). Machine-specific, so not exported.
+    @Published var extraLogFolders: [String] { didSet { save(extraLogFolders, "extraLogFolders") } }
     /// Limit alerts are held back until this time ("Snooze 1 hour" on an alert). Not exported.
     @Published var snoozedUntil: Date? { didSet { if Settings.persist { d.set(snoozedUntil, forKey: "snoozedUntil") } } }
     var alertsPaused: Bool { inQuietHours() || (snoozedUntil.map { $0 > Clock.now } ?? false) }
@@ -310,6 +312,7 @@ final class Settings: ObservableObject {
         quietEnd = min(max(d.object(forKey: "quietEnd") as? Int ?? 8, 0), 23)
         betaUpdates = d.object(forKey: "betaUpdates") as? Bool ?? false
         snoozedUntil = d.object(forKey: "snoozedUntil") as? Date
+        extraLogFolders = d.stringArray(forKey: "extraLogFolders") ?? []
         currentTheme = theme
     }
 

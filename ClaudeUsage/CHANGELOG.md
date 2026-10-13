@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.0 – beta (2026-10-13)
+- Count Claude Code usage from other computers: Settings → Data → Other computers adds a log folder (for example a synced Windows .claude/projects) whose tokens and costs are included. Folders are only read; the setting isn't part of settings export. A PowerShell helper for Windows (`windows/Sync-ClaudeLogs.ps1`) copies Claude Code's logs into a folder that syncs to your Mac, once or every 15 minutes
+
 ## 0.15.4 – beta (2026-10-13)
 - Reports: saved limit history now loads at launch, so the Day, Week and Month limit charts no longer sit empty until the first successful Claude fetch (e.g. after a login-expired or offline start)
 

@@ -7,7 +7,7 @@
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.15.4 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.0 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -22,7 +22,7 @@ Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitt
 - Light / Dark / **OLED black** / Follow system, six colour themes plus **any custom colour** (Claude orange by default)
 - **Make it yours**: five fonts including the built-in **OpenDyslexic**, four text sizes, card corners, your own greeting name, a **menu bar icon in any colour**, and your profile picture in the sidebar
 - Menu bar display options, configurable alert thresholds, **quiet hours** and **Snooze 1 Hour** / **Open Dashboard** buttons on alerts
-- CSV export, copy-summary, **settings export/import** to move to another Mac, and a choice of how long history is kept
+- CSV export, copy-summary, **settings export/import** to move to another Mac, a choice of how long history is kept, and **other computers**: add a synced Claude Code log folder (e.g. from Windows) to count its tokens too ([`windows/Sync-ClaudeLogs.ps1`](windows/Sync-ClaudeLogs.ps1) copies a Windows PC's logs into a synced folder, on a schedule)
 - Optional local profile photo
 - Sign in/out through Claude's official login (via Claude Code)
 - Settings and the menu are available in **English, German, French and Spanish**

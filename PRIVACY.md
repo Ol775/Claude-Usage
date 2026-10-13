@@ -10,7 +10,7 @@ Your usage history, saved activity, settings and profile photo are stored only i
 
 ## What the app reads
 
-- **Claude Code's logs** in `~/.claude/projects`, read-only, to count tokens and estimate cost.
+- **Claude Code's logs** in `~/.claude/projects`, read-only, to count tokens and estimate cost, plus any extra log folders you add in Settings → Data (for logs synced from another computer).
 - **Claude Code's sign-in token** from your keychain. It is used only to ask Anthropic for your usage limits. The app never stores it, logs it or sends it anywhere else.
 - **Codex's ChatGPT login** (`~/.codex/auth.json`), only if you turn ChatGPT usage on (experimental, paid plans only). It is read-only and used only to ask ChatGPT for your usage limits. The app never changes, refreshes, copies or stores that login and does not read your chats.
 
