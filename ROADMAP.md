@@ -46,7 +46,7 @@ The biggest gap is that most testing happened on one Mac.
 - ✅ **Signing-key rotation and recovery procedure** in [RELEASING.md](RELEASING.md); restoring from both backups (iCloud and Proton) and signing a test file was rehearsed.
 - Keep the legacy `.sig` for a few more releases, then remove it.
 - ✅ **Third security review** (0.15.1, see [SECURITY.md](SECURITY.md#security-reviews)): two low-severity fixes, nothing medium or above outstanding. Re-run it after any change to the updater, diagnostics or install scripts.
-- ✅ An opt-in **beta update channel** (Settings → About → Get beta versions; `PRERELEASE=1 ./release.sh` publishes one).
+- ✅ An opt-in **beta update channel** (Settings → About → Get beta versions; `./release.sh --beta` publishes one).
 - ✅ Short privacy statement ([PRIVACY.md](PRIVACY.md)) matching the in-app one. Still to do: a software bill of materials (the app has no third-party dependencies).
 
 ### B4. Product polish ⏳
