@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.4 – beta (2026-10-13)
+- Fixed: a limit window whose reset time wobbled across the hour could be drawn as two windows (a gap in the Reports lines, duplicate peak bars, skewed Insights averages)
+
 ## 0.16.3 – beta (2026-10-13)
 - Model prices now update themselves: a daily job on GitHub reads Anthropic's pricing page and updates the price list the app already fetches once a day, so new models and price changes appear without an app update
 - Fixed: Sonnet 5.5's cache price, and Opus 4 / 4.1 (now $15/$75 per million tokens) were estimated too low; older Opus 4.x and Haiku 3.5 now have their own prices

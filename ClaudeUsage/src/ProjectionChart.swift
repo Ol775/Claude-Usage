@@ -32,7 +32,7 @@ struct ProjectionCard: View {
         var groups: [Int: [Pt]] = [:]
         for s in store.gptSamples where s.t >= start && s.t <= now {
             guard let w = gptWindow(s), let r = w.reset else { continue }
-            groups[Int(r.timeIntervalSince1970 / 600), default: []].append(Pt(t: s.t, v: w.percent))
+            groups[windowKey(r), default: []].append(Pt(t: s.t, v: w.percent))
         }
         return groups.keys.sorted().map { (id: "gpt\($0)", pts: groups[$0]!) }
     }

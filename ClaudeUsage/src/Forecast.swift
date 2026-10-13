@@ -139,6 +139,10 @@ enum Predictor {
 }
 
 
+/// Groups readings of one limit window for charts: its reset time in 10-minute steps, rounded so the server's second-level wobble
+/// around a reset on the hour (17:59:59 vs 18:00:00) can't split one window into two.
+func windowKey(_ reset: Date) -> Int { Int((reset.timeIntervalSince1970 / 600).rounded()) }
+
 /// Identifies a limit window by its reset time (in minutes since 1970). A new reading within 10 minutes of the previous one is the
 /// same window (the server's timestamp wobbles), so the previous id is kept; a bigger jump is a new window.
 func stableWindow(previous: Int?, new: Int) -> Int {

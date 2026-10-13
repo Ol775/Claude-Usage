@@ -55,7 +55,7 @@ struct ReportsView: View {
         var out: [String: LimitPoint] = [:]
         func add(_ name: String, _ t: Date, _ v: Double, _ reset: Date?) {
             let b = floor(t.timeIntervalSince1970 / bucket)
-            let w = "\(name)\(Int((reset?.timeIntervalSince1970 ?? 0) / 600))"
+            let w = "\(name)\(reset.map(windowKey) ?? 0)"
             let key = "\(w)-\(b)"
             let when = Date(timeIntervalSince1970: b * bucket + bucket / 2)
             if let e = out[key], e.v >= v { return }
@@ -74,7 +74,7 @@ struct ReportsView: View {
         for s in samples {
             guard let r = range == .month ? s.weeklyReset : s.sessionReset else { continue }
             let v = range == .month ? s.weekly : s.session
-            let k = Int(r.timeIntervalSince1970 / 600)
+            let k = windowKey(r)
             if let e = best[k], e.1 >= v { continue }
             best[k] = (r, v)
         }

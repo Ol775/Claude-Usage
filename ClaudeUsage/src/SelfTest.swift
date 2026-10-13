@@ -106,6 +106,8 @@ func runSelfTests() -> Int32 {
     check(Pricing.forModel("claude-sonnet-5-5-20260101")?.cacheRead == 0.10 && Pricing.forModel("claude-sonnet-5-1")?.cacheRead == 0.20, "Sonnet 5.5 has its own cache price")
     check(Pricing.forModel("claude-opus-4-1-20250805")?.input == 15 && Pricing.forModel("claude-opus-4-8")?.input == 5, "Opus 4.1 is priced above Opus 4.8")
 
+    let hour = Date(timeIntervalSince1970: 1_790_999_600 - Double(1_790_999_600 % 3600))
+    check(windowKey(hour) == windowKey(hour.addingTimeInterval(-1)) && windowKey(hour) != windowKey(hour.addingTimeInterval(1200)), "a reset wobbling across the hour stays one window")
     // Saved history: a finished day never shrinks when old log files are pruned; today is always refreshed
     var big = DayRecord(); big.input = 5000; var small = DayRecord(); small.input = 100
     check(ActivityStore.reconcile(saved: big, scanned: small, isToday: false) == nil, "a finished day keeps its larger saved total")

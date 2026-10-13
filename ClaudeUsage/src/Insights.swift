@@ -43,7 +43,7 @@ struct InsightsView: View {
         var best: [Int: Double] = [:]
         for s in store.samples where s.t >= since {
             guard let r = weekly ? s.weeklyReset : s.sessionReset else { continue }
-            let k = Int(r.timeIntervalSince1970 / 600)
+            let k = windowKey(r)
             best[k] = max(best[k] ?? 0, weekly ? s.weekly : s.session)
         }
         return Array(best.values)
