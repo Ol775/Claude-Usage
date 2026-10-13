@@ -4,6 +4,7 @@
   On the Mac, add that folder in Claude Usage: Settings > Data > Other computers.
 
 .EXAMPLE
+  .\Sync-ClaudeLogs.ps1                                                                   # asks for the folder
   .\Sync-ClaudeLogs.ps1 -Destination "$env:USERPROFILE\iCloudDrive\ClaudeLogs"             # copy once
   .\Sync-ClaudeLogs.ps1 -Destination "$env:USERPROFILE\iCloudDrive\ClaudeLogs" -Install    # copy now, then every 5 minutes (change with -IntervalMinutes)
   .\Sync-ClaudeLogs.ps1 -Uninstall                                                         # stop the scheduled copy
@@ -28,7 +29,11 @@ if ($Uninstall) {
     Write-Host "Scheduled copy removed. Copied logs stay where they are."
     return
 }
-if (-not $Destination) { throw "Give -Destination: the folder that syncs to your Mac." }
+if (-not $Destination) {
+    $Destination = (Read-Host "Folder that syncs to your Mac (e.g. C:\Users\you\iCloudDrive\ClaudeLogs)").Trim().Trim('"')
+    if (-not $Destination) { throw "No folder given." }
+    if (-not $Install) { $Install = (Read-Host "Also copy every 15 minutes in the background? (y/N)") -match '^[yY]' }
+}
 if (-not (Test-Path -LiteralPath $Source -PathType Container)) { throw "Claude Code logs not found at $Source (use -Source if they live elsewhere)." }
 
 $src = (Resolve-Path -LiteralPath $Source).Path.TrimEnd('\', '/')

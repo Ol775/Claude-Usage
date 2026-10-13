@@ -22,7 +22,7 @@ Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitt
 - Light / Dark / **OLED black** / Follow system, six colour themes plus **any custom colour** (Claude orange by default)
 - **Make it yours**: five fonts including the built-in **OpenDyslexic**, four text sizes, card corners, your own greeting name, a **menu bar icon in any colour**, and your profile picture in the sidebar
 - Menu bar display options, configurable alert thresholds, **quiet hours** and **Snooze 1 Hour** / **Open Dashboard** buttons on alerts
-- CSV export, copy-summary, **settings export/import** to move to another Mac, a choice of how long history is kept, and **other computers**: add a synced Claude Code log folder (e.g. from Windows) to count its tokens too ([`windows/Sync-ClaudeLogs.ps1`](windows/Sync-ClaudeLogs.ps1) copies a Windows PC's logs into a synced folder, on a schedule)
+- CSV export, copy-summary, **settings export/import** to move to another Mac, a choice of how long history is kept, and **other computers**: add a synced Claude Code log folder (e.g. from Windows) to count its tokens too (the [Windows helper](windows/README.md) copies a Windows PC's logs into a synced folder, on a schedule)
 - Optional local profile photo
 - Sign in/out through Claude's official login (via Claude Code)
 - Settings and the menu are available in **English, German, French and Spanish**
