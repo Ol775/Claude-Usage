@@ -74,6 +74,7 @@ func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], t
     let usageNeedle = Data("\"usage\"".utf8), toolNeedle = Data("\"tool_use\"".utf8), userNeedle = Data("\"type\":\"user\"".utf8)
     let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     let iso2 = ISO8601DateFormatter()
+    let horizon = Clock.now.addingTimeInterval(2 * 86400)     // logs can come from other computers or a synced folder: ignore dates far in the future
 
     func record(_ line: Data) -> Rec? {
         let hasUsage = line.range(of: usageNeedle) != nil
@@ -82,7 +83,7 @@ func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], t
         guard hasUsage || hasTool || isUser,                       // cheap pre-filter before JSON parsing
               let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
               let ts = obj["timestamp"] as? String,
-              let date = iso.date(from: ts) ?? iso2.date(from: ts), date >= oldest,
+              let date = iso.date(from: ts) ?? iso2.date(from: ts), date >= oldest, date <= horizon,
               let msg = obj["message"] as? [String: Any] else { return nil }
         let session = obj["sessionId"] as? String ?? ""
 
@@ -107,8 +108,9 @@ func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], t
         let usage = msg["usage"] as? [String: Any]
         guard usage != nil || !tools.isEmpty else { return nil }
         let u = usage ?? [:]
-        let use = Usage(input: u["input_tokens"] as? Int ?? 0, output: u["output_tokens"] as? Int ?? 0,
-                        cacheWrite: u["cache_creation_input_tokens"] as? Int ?? 0, cacheRead: u["cache_read_input_tokens"] as? Int ?? 0)
+        func tokens(_ k: String) -> Int { min(max(u[k] as? Int ?? 0, 0), 100_000_000_000) }      // a crafted log must not overflow the totals (that would crash the app at every launch)
+        let use = Usage(input: tokens("input_tokens"), output: tokens("output_tokens"),
+                        cacheWrite: tokens("cache_creation_input_tokens"), cacheRead: tokens("cache_read_input_tokens"))
         let key = usage == nil ? "" : "\(msg["id"] as? String ?? "")|\(obj["requestId"] as? String ?? "")"
         return Rec(date: date, model: msg["model"] as? String ?? "unknown", key: key, project: project, session: session, u: use, toolIds: tools, promptId: nil)
     }

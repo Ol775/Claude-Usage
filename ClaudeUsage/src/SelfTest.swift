@@ -155,6 +155,19 @@ func runSelfTests() -> Int32 {
     check(recs.first { !$0.key.isEmpty }?.model == "claude-opus-5-5", "model read")
     check(recs.first?.project == "Projects-Demo", "project name from folder (got \(recs.first?.project ?? "nil"))")
 
+    // A crafted log (huge counts, far-future date) must neither overflow the totals nor reach the saved activity
+    let evil = """
+    {"type":"assistant","requestId":"e1","timestamp":"2026-10-06T10:00:00.000Z","sessionId":"s","message":{"id":"e1","model":"x","usage":{"input_tokens":9223372036854775807,"output_tokens":-5,"cache_read_input_tokens":9000000000000000000}}}
+    {"type":"assistant","requestId":"e2","timestamp":"2099-01-01T10:00:00.000Z","sessionId":"s","message":{"id":"e2","model":"x","usage":{"input_tokens":1}}}
+    """
+    let ev = FileManager.default.temporaryDirectory.appendingPathComponent("cub-selftest-evil-\(ProcessInfo.processInfo.processIdentifier).jsonl")
+    try? evil.write(to: ev, atomically: true, encoding: .utf8)
+    let er = parseLog(ev, oldest: Date(timeIntervalSince1970: 0)); let erecs = er.recs + er.tail
+    try? FileManager.default.removeItem(at: ev)
+    check(erecs.count == 1 && erecs[0].u.input == 100_000_000_000 && erecs[0].u.output == 0 && erecs[0].u.cacheRead == 100_000_000_000, "crafted log: counts are clamped and a far-future date is dropped (got \(erecs.count) records)")
+    var sum = Usage(); for _ in 0..<1000 { sum.add(erecs[0].u) }
+    check(sum.input == 100_000_000_000_000, "clamped counts can be summed many times without overflowing")
+
     // Update authenticity
     let key = Curve25519.Signing.PrivateKey()
     let pubB64 = key.publicKey.rawRepresentation.base64EncodedString()

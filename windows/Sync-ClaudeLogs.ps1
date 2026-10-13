@@ -39,6 +39,7 @@ if (-not (Test-Path -LiteralPath $Source -PathType Container)) { throw "Claude C
 $src = (Resolve-Path -LiteralPath $Source).Path.TrimEnd('\', '/')
 New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 $dst = (Resolve-Path -LiteralPath $Destination).Path
+if ($dst -eq $src -or $dst.StartsWith($src + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw "The destination can't be inside the Claude Code logs folder ($src): pick a separate synced folder." }
 $oldest = (Get-Date).AddDays(-365)
 $copied = 0
 Get-ChildItem -LiteralPath $src -Recurse -Filter *.jsonl -File | Where-Object { $_.LastWriteTime -ge $oldest } | ForEach-Object {

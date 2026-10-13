@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.2 – beta (2026-10-13)
+- Security review fixes: token counts from logs are kept to a sane range and entries dated far in the future are ignored, so a crafted or corrupted log (for example in a synced folder) can't crash the app or pollute saved activity; the Windows helper refuses a destination inside Claude Code's own log folder
+
 ## 0.16.1 – beta (2026-10-13)
 - Settings → Data → Other computers links to the Windows helper guide. The guide (windows/README.md) explains setup step by step; the helper script now asks for the folder if you don't give one and copies every 5 minutes by default (-IntervalMinutes to change)
 
