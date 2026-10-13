@@ -54,6 +54,7 @@ The biggest gap is that most testing happened on one Mac.
 - ✅ "Delete all my data" button, retention settings and settings export/import (Settings → Data).
 - ✅ Notification actions (Snooze 1 Hour, Open Dashboard) and quiet hours (0.13.0).
 - ✅ **Personalisation** (0.11.0): five fonts including a built-in OpenDyslexic, four text sizes, a custom accent colour, card corner styles, a greeting name, a menu bar icon in any colour, and your profile picture in the sidebar.
+- ✅ **Other computers** (0.16.0): Settings → Data → Other computers counts Claude Code logs synced from another machine, with a [Windows helper](windows/README.md) script that copies a PC's logs into a synced folder (guide linked from the app in 0.16.1).
 - ChatGPT graduates from experimental if verified (B1), with a screenshot refresh.
 - Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).
 
@@ -75,7 +76,8 @@ Version 1.0 ships (stage switches to stable, README and in-app wording drop "bet
 
 ## Later (not blocking 1.0)
 - Independent sign-in, blocked until Anthropic offers a public OAuth client for third-party apps.
-- iCloud folder sync (per-Mac activity files summed together) if there is demand.
+- **Windows port** ⏳: a native Windows app so a PC shows its own limits and tokens without a Mac. The macOS app is Swift with AppKit and SwiftUI, so this is a separate app rather than a build target. What carries over is the logic and data: the log parser, `pricing.json`, the forecaster and the Reports and Insights design. What has to be rebuilt is the UI, the tray icon and notifications, the updater and signing, and finding Claude Code's sign-in on Windows (macOS reads it from the keychain). Until then, the [Windows helper](windows/README.md) covers the "count my PC's tokens on my Mac" case. Not started; it would get its own roadmap once the macOS app reaches 1.0.
+- iCloud folder sync (per-Mac activity files summed together) if there is demand. The log-folder setting from 0.16.0 covers the common case.
 - Multiple Claude accounts.
 
 Ideas or bugs? [Open an issue](https://github.com/Ol775/Claude-Usage/issues/new).
