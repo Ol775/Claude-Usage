@@ -102,6 +102,19 @@ func runSelfTests() -> Int32 {
     let calm = Limit(name: "Weekly – all models", percent: 20, resets: now.addingTimeInterval(86400))
     if case .hits = Predictor.forecast(calm, samples: [], now: now) { check(false, "20% with 6 days elapsed must not predict a limit hit") }
 
+    // Prices: Sonnet 5.5 reads cache at half Sonnet 5's rate; Opus 4/4.1 cost three times Opus 4.5+
+    check(Pricing.forModel("claude-sonnet-5-5-20260101")?.cacheRead == 0.10 && Pricing.forModel("claude-sonnet-5-1")?.cacheRead == 0.20, "Sonnet 5.5 has its own cache price")
+    check(Pricing.forModel("claude-opus-4-1-20250805")?.input == 15 && Pricing.forModel("claude-opus-4-8")?.input == 5, "Opus 4.1 is priced above Opus 4.8")
+
+    // Saved history: a finished day never shrinks when old log files are pruned; today is always refreshed
+    var big = DayRecord(); big.input = 5000; var small = DayRecord(); small.input = 100
+    check(ActivityStore.reconcile(saved: big, scanned: small, isToday: false) == nil, "a finished day keeps its larger saved total")
+    check(ActivityStore.reconcile(saved: big, scanned: small, isToday: true)?.input == 100, "today is refreshed from the logs")
+    check(ActivityStore.reconcile(saved: small, scanned: big, isToday: false)?.input == 5000, "a finished day can grow")
+    var repriced = big; repriced.cost = 3
+    check(ActivityStore.reconcile(saved: big, scanned: repriced, isToday: false)?.cost == 3, "a new price updates a saved day's cost")
+    check(ActivityStore.reconcile(saved: nil, scanned: small, isToday: false)?.input == 100, "a new day is saved")
+
     // Diagnostics: only fixed-vocabulary lines, no identity (the provider's lines are checked in the app; here the shape of the text)
     let diagText = Legal.diagnostics
     check(!diagText.contains("@") && !diagText.lowercased().contains("token") && !diagText.contains("/Users/"), "diagnostics hold no email, token or user path")

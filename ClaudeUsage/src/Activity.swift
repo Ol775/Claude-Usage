@@ -17,11 +17,17 @@ struct Pricing {
         ("claude-mythos-5", Pricing(input: 10, output: 50, cacheRead: 1.00)),
         ("claude-opus-5-5", Pricing(input: 4, output: 20, cacheRead: 0.20)),
         ("claude-opus-5", Pricing(input: 5, output: 25, cacheRead: 0.50)),
-        ("claude-opus-4", Pricing(input: 5, output: 25, cacheRead: 0.50)),
+        ("claude-opus-4-5", Pricing(input: 5, output: 25, cacheRead: 0.50)),
+        ("claude-opus-4-6", Pricing(input: 5, output: 25, cacheRead: 0.50)),
+        ("claude-opus-4-7", Pricing(input: 5, output: 25, cacheRead: 0.50)),
+        ("claude-opus-4-8", Pricing(input: 5, output: 25, cacheRead: 0.50)),
+        ("claude-opus-4", Pricing(input: 15, output: 75, cacheRead: 1.50)),        // Opus 4 and 4.1
+        ("claude-sonnet-5-5", Pricing(input: 2, output: 10, cacheRead: 0.10)),
         ("claude-sonnet-5", Pricing(input: 2, output: 10, cacheRead: 0.20)),
         ("claude-sonnet-4", Pricing(input: 3, output: 15, cacheRead: 0.30)),
         ("claude-haiku-5", Pricing(input: 0.10, output: 0.50, cacheRead: 0.01, longMultiplier: 5)),
         ("claude-haiku-4", Pricing(input: 1, output: 5, cacheRead: 0.10)),
+        ("claude-3-5-haiku", Pricing(input: 0.8, output: 4, cacheRead: 0.08)),
     ]
 
     // Prices can be refreshed without a new app release: pricing.json in the repo is fetched at most once a day,
@@ -125,8 +131,8 @@ final class ActivityStore {
         lock.lock(); defer { lock.unlock() }
         var changed = false
         for (k, v) in scanned {
-            if let old = days[k], old.billable == v.billable, old.toolCalls == v.toolCalls, old.prompts == v.prompts, old.responses == v.responses { continue }
-            days[k] = v; changed = true
+            guard let kept = Self.reconcile(saved: days[k], scanned: v, isToday: k >= dayKey(Clock.now)) else { continue }
+            days[k] = kept; changed = true
         }
         if Settings.shared.activityKeepDays > 0 {           // retention setting: drop days older than the cut-off
             let cutoff = dayKey(Clock.now.addingTimeInterval(-Double(Settings.shared.activityKeepDays) * 86400))
@@ -136,6 +142,16 @@ final class ActivityStore {
         }
         if changed, let d = try? JSONEncoder().encode(days) { try? d.write(to: url, options: .atomic) }
         return days
+    }
+
+    /// The record to store for a day, or nil to keep what is saved. A finished day only grows: Claude Code deletes old log files whole,
+    /// so a day split across several files can shrink in a later scan, and that must not erase tokens already counted.
+    static func reconcile(saved: DayRecord?, scanned: DayRecord, isToday: Bool) -> DayRecord? {
+        guard let old = saved else { return scanned }
+        if !isToday && scanned.billable < old.billable { return nil }
+        let same = old.billable == scanned.billable && old.toolCalls == scanned.toolCalls && old.prompts == scanned.prompts
+            && old.responses == scanned.responses && old.cacheRead == scanned.cacheRead && abs(old.cost - scanned.cost) < 0.005
+        return same ? nil : scanned
     }
 
     /// When the user first appeared signed in – shown in Insights as "recording since".

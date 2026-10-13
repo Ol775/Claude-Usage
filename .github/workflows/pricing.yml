@@ -1,0 +1,21 @@
+name: Update model prices
+on:
+  schedule: [{cron: "17 5 * * *"}]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: python3 .github/scripts/update_pricing.py
+      - name: Commit changes
+        run: |
+          git diff --quiet ClaudeUsage/pricing.json && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update model prices from Anthropic's pricing page" ClaudeUsage/pricing.json
+          git push
