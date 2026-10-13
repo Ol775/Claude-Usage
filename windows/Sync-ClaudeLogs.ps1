@@ -1,11 +1,11 @@
-<#
+﻿<#
 .SYNOPSIS
   Copies Claude Code's usage logs from this Windows PC into a folder that syncs to your Mac (iCloud Drive, OneDrive, a shared folder).
   On the Mac, add that folder in Claude Usage: Settings > Data > Other computers.
 
 .EXAMPLE
   .\Sync-ClaudeLogs.ps1 -Destination "$env:USERPROFILE\iCloudDrive\ClaudeLogs"             # copy once
-  .\Sync-ClaudeLogs.ps1 -Destination "$env:USERPROFILE\iCloudDrive\ClaudeLogs" -Install    # copy now, then every 15 minutes
+  .\Sync-ClaudeLogs.ps1 -Destination "$env:USERPROFILE\iCloudDrive\ClaudeLogs" -Install    # copy now, then every 5 minutes (change with -IntervalMinutes)
   .\Sync-ClaudeLogs.ps1 -Uninstall                                                         # stop the scheduled copy
 
 .NOTES
@@ -16,6 +16,7 @@
 param(
     [string]$Destination,
     [string]$Source = (Join-Path $env:USERPROFILE ".claude\projects"),
+    [int]$IntervalMinutes = 5,
     [switch]$Install,
     [switch]$Uninstall
 )
@@ -49,8 +50,8 @@ if ($Install) {
     $self = $MyInvocation.MyCommand.Path
     $taskArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$self`" -Destination `"$dst`" -Source `"$src`""
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgs
-    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15)
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
     $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
-    Write-Host "Scheduled: copies every 15 minutes while you're signed in. Remove with -Uninstall."
+    Write-Host "Scheduled: copies every $IntervalMinutes minutes while you're signed in. Remove with -Uninstall."
 }
