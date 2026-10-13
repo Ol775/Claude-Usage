@@ -4,23 +4,27 @@ For maintainers. Users don't need any of this; see [SECURITY.md](SECURITY.md) fo
 
 ## Releasing a version
 
+One order, every time:
+
 ```sh
 cd ClaudeUsage
-./bump.sh patch "what changed, written for users"   # or minor for a new feature
+./bump.sh patch "what changed, written for users"   # or minor for a new feature; also add README/screenshot changes for visible work
 ./build.sh && "Claude Usage.app/Contents/MacOS/ClaudeUsage" --selftest
-git commit -am "…" && git push
-./release.sh                                       # optional extra note: ./release.sh "Thanks to … for reporting"
+git commit -am "…" && git pull --rebase && git push  # the pre-commit hook insists on the bump
+gh run watch                                         # wait for green CI on that commit
+./release.sh --dry-run                               # every check + signed DMG test, publishes nothing
+./release.sh                                         # optional extra note: ./release.sh "Thanks to … for reporting"
 ```
 
-`release.sh` refuses to run if the tree is dirty, `main` isn't pushed, or the signing key doesn't match the public key in `src/Updater.swift`. It builds the universal DMG, signs it, publishes the GitHub release and updates the Homebrew cask. The release notes are the version's `CHANGELOG.md` entry, so write change-log notes for people, not for developers.
+`release.sh` refuses to run unless: the tree is clean and `main` is pushed, CI passed for exactly that commit, fewer than two releases have gone by since the last security review, the signing key matches the public key in `src/Updater.swift`, the universal build is the right version and passes its self-test. Then it signs the DMG, publishes the GitHub release (marked Latest) and updates the Homebrew cask. The release notes are the version's `CHANGELOG.md` entry, so write change-log notes for people, not for developers.
 
 ## Security review cadence
 
-After every two releases, run a security review of everything changed since the last one (the "Security reviews" list in [SECURITY.md](SECURITY.md) records the version), fix what it finds in a patch release, and add the entry. Review straight away after any change to `Updater.swift`, diagnostics or the install scripts. Dependabot alerts and security updates are on for the repository.
+`release.sh` enforces this (it counts releases newer than the last version in SECURITY.md's list). After every two releases, run a security review of everything changed since the last one (the "Security reviews" list in [SECURITY.md](SECURITY.md) records the version), fix what it finds in a patch release, and add the entry. Review straight away after any change to `Updater.swift`, diagnostics or the install scripts. Dependabot alerts and security updates are on for the repository.
 
 ## Beta releases
 
-`PRERELEASE=1 ./release.sh` publishes a GitHub pre-release. Only copies with **Settings → About → Get beta versions** turned on are offered it; everyone else (and Homebrew) stays on the latest normal release. Bump to a version higher than the current release, as usual. The next normal release reaches beta testers too, because it has a higher version.
+`./release.sh --beta` publishes a GitHub pre-release. Only copies with **Settings → About → Get beta versions** turned on are offered it; everyone else (and Homebrew) stays on the latest normal release. Bump to a version higher than the current release, as usual. The next normal release reaches beta testers too, because it has a higher version.
 
 ## The signing key
 
