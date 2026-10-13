@@ -14,6 +14,10 @@ git commit -am "…" && git push
 
 `release.sh` refuses to run if the tree is dirty, `main` isn't pushed, or the signing key doesn't match the public key in `src/Updater.swift`. It builds the universal DMG, signs it, publishes the GitHub release and updates the Homebrew cask. The release notes are the version's `CHANGELOG.md` entry, so write change-log notes for people, not for developers.
 
+## Security review cadence
+
+After every two releases, run a security review of everything changed since the last one (the "Security reviews" list in [SECURITY.md](SECURITY.md) records the version), fix what it finds in a patch release, and add the entry. Review straight away after any change to `Updater.swift`, diagnostics or the install scripts. Dependabot alerts and security updates are on for the repository.
+
 ## Beta releases
 
 `PRERELEASE=1 ./release.sh` publishes a GitHub pre-release. Only copies with **Settings → About → Get beta versions** turned on are offered it; everyone else (and Homebrew) stays on the latest normal release. Bump to a version higher than the current release, as usual. The next normal release reaches beta testers too, because it has a higher version.
