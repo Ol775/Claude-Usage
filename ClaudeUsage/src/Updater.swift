@@ -224,7 +224,7 @@ extension Updater {
         guard let want = info.sha256, !want.isEmpty, let sigURL = info.sigURL else {
             return "This release isn’t signed, so it won’t be installed automatically. Download it from the releases page instead."
         }
-        guard let dmgData = try? Data(contentsOf: dmg, options: .alwaysMapped),
+        guard let dmgData = try? Data(contentsOf: dmg),
               let sigData = fetchData(sigURL, timeout: 20), let sig = String(data: sigData, encoding: .utf8),
               verifySignature(signedMessage(version: info.version, dmg: dmgData), base64Signature: sig) else { return "The download’s signature didn’t check out, so it was discarded." }
         guard SHA256.hash(data: dmgData).map({ String(format: "%02x", $0) }).joined() == want.lowercased() else {
@@ -256,7 +256,7 @@ extension Updater {
     }
 
     private static func sha256Hex(of url: URL) -> String? {
-        guard let d = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+        guard let d = try? Data(contentsOf: url) else { return nil }
         return SHA256.hash(data: d).map { String(format: "%02x", $0) }.joined()
     }
 

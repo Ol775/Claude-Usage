@@ -171,8 +171,11 @@ func scan() -> Snapshot {
     var seen = Set<String>(), seenTools = Set<String>(), seenPrompts = Set<String>()
     var perDay: [String: DayRecord] = [:]
     var sessionsPerDay: [String: Set<String>] = [:]
+    var dayKeys: [Int: String] = [:]          // dayKey is slow (Calendar + String(format:)) and a year of records share ~365 days: look it up per 15-minute bucket instead
     for r in all {
-        let d = r.date, dk = dayKey(d)
+        let d = r.date
+        let bucket = Int(d.timeIntervalSinceReferenceDate / 900)
+        let dk = dayKeys[bucket] ?? { let k = dayKey(d); dayKeys[bucket] = k; return k }()
         var rec = perDay[dk] ?? DayRecord()
         defer { perDay[dk] = rec }
         if !r.session.isEmpty { sessionsPerDay[dk, default: []].insert(r.session) }

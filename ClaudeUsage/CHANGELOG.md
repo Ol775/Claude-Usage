@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.7 – beta (2026-10-14)
+- Faster refresh: day grouping of the log scan is cached per 15-minute bucket instead of recomputed for every record; update verification no longer memory-maps files
+
 ## 0.16.6 – beta (2026-10-14)
 - Fix a rare crash when a log file couldn't be read right after startup (logs are no longer memory-mapped)
 
