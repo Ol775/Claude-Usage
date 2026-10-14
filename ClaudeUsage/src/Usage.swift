@@ -70,7 +70,11 @@ func projectName(for url: URL) -> String {
 /// returned separately as `tail` and not counted as consumed – the next call re-reads it once it is complete.
 func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], tail: [Rec], consumed: Int) {
     let project = projectName(for: url)
-    guard let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return ([], [], offset) }   // mapped, so big logs aren’t loaded into memory whole
+    // Read from `offset` with FileHandle, not mmap: a mapped file whose page-in fails (e.g. a compressed file early after boot) kills the app with SIGBUS instead of throwing.
+    let start = max(offset, 0)
+    guard let fh = try? FileHandle(forReadingFrom: url) else { return ([], [], offset) }
+    defer { try? fh.close() }
+    guard (try? fh.seek(toOffset: UInt64(start))) != nil, let data = try? fh.readToEnd() else { return ([], [], offset) }
     let usageNeedle = Data("\"usage\"".utf8), toolNeedle = Data("\"tool_use\"".utf8), userNeedle = Data("\"type\":\"user\"".utf8)
     let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     let iso2 = ISO8601DateFormatter()
@@ -116,12 +120,12 @@ func parseLog(_ url: URL, oldest: Date, from offset: Int = 0) -> (recs: [Rec], t
     }
 
     var out: [Rec] = [], tail: [Rec] = []
-    var pos = min(max(offset, 0), data.count), consumed = pos
+    var pos = 0, consumed = start
     while pos < data.count {
         let nl = data[pos...].firstIndex(of: 10)
         let end = nl ?? data.count
         if let r = record(data[pos..<end]) { if nl != nil { out.append(r) } else { tail.append(r) } }
-        if let nl = nl { consumed = nl + 1 }
+        if let nl = nl { consumed = start + nl + 1 }
         pos = end + 1
     }
     return (out, tail, consumed)

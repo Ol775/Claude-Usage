@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.6 – beta (2026-10-14)
+- Fix a rare crash when a log file couldn't be read right after startup (logs are no longer memory-mapped)
+
 ## 0.16.5 – beta (2026-10-14)
 - Fix HTTP 429 on usage limits: back off for Retry-After (default 5 min) instead of re-hitting the endpoint
 
