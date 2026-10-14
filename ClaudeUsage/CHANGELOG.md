@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.5 – beta (2026-10-14)
+- Fix HTTP 429 on usage limits: back off for Retry-After (default 5 min) instead of re-hitting the endpoint
+
 ## 0.16.4 – beta (2026-10-13)
 - Fixed: a limit window whose reset time wobbled across the hour could be drawn as two windows (a gap in the Reports lines, duplicate peak bars, skewed Insights averages)
 

@@ -32,7 +32,10 @@ func parseClaudeLimits(_ json: [String: Any]) -> [Limit] {
 
 /// Reads Claude Code's own login from the keychain and asks Anthropic for the same
 /// session / weekly usage numbers that Claude Code's /usage view shows.
+/// After an HTTP 429 the endpoint is left alone until this time (Retry-After, else 5 min), so refresh clicks and timers can't keep it angry.
+private var limitsBackoffUntil = Date.distantPast
 func fetchLimits() -> (limits: [Limit], error: String?) {
+    if Date() < limitsBackoffUntil { return ([], "Usage unavailable (HTTP 429, rate limited – retrying automatically)") }
     let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
     p.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
     let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
@@ -47,10 +50,15 @@ func fetchLimits() -> (limits: [Limit], error: String?) {
     req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
     req.setValue("claude-code/2.0", forHTTPHeaderField: "User-Agent")
     let sem = DispatchSemaphore(value: 0)
-    var body: Data?; var status = 0
-    URLSession.shared.dataTask(with: req) { d, r, _ in body = d; status = (r as? HTTPURLResponse)?.statusCode ?? 0; sem.signal() }.resume()
+    var body: Data?; var status = 0; var retryAfter = 0.0
+    URLSession.shared.dataTask(with: req) { d, r, _ in
+        body = d; status = (r as? HTTPURLResponse)?.statusCode ?? 0
+        retryAfter = Double((r as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After") ?? "") ?? 0
+        sem.signal()
+    }.resume()
     sem.wait()
     if status == 401 { return ([], "Login expired – open Claude Code to refresh") }
+    if status == 429 { limitsBackoffUntil = Date().addingTimeInterval(retryAfter > 0 ? min(max(retryAfter, 60), 1800) : 300) }
     guard status == 200, let d = body, let json = try? JSONSerialization.jsonObject(with: d) as? [String: Any]
     else { return ([], "Usage unavailable (HTTP \(status))") }
     let result = parseClaudeLimits(json)
