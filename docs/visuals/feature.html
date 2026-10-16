@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Claude Usage hero</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{--bg:#0d0d0f;--text:#f4f1ee;--muted:#a9a39d;--accent:#ff8a5c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#050506}
+body{display:flex;align-items:flex-start;justify-content:flex-start}
+#stage{position:relative;width:1200px;height:800px;overflow:hidden;background:
+  radial-gradient(900px 420px at 50% 105%,rgba(255,138,92,.10),transparent 70%),
+  radial-gradient(700px 300px at 50% -10%,rgba(255,138,92,.07),transparent 70%),var(--bg);
+  font-family:'Inter',-apple-system,system-ui,sans-serif;color:var(--text)}
+.head{position:absolute;left:0;right:0;top:28px;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:14px}
+.brand img{width:48px;height:48px;border-radius:12px;display:block}
+.brand span{font-size:42px;font-weight:700;letter-spacing:-.025em}
+.tag{margin-top:11px;font-size:18px;color:#d7d2cc;font-weight:500}
+.pips{margin-top:12px;display:flex;justify-content:center;gap:26px;font-size:15.5px;color:var(--muted);font-weight:500}
+.pips i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:9px;vertical-align:1px}
+#glow{position:absolute;left:150px;top:188px;width:900px;height:570px;border-radius:16px;will-change:box-shadow}
+#win{position:absolute;left:150px;top:188px;width:900px;height:570px;border-radius:16px;overflow:hidden;
+  background:#1c1c1e;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 30px 60px rgba(0,0,0,.55)}
+#win img.pg{position:absolute;left:0;top:0;width:900px;height:570px;display:block;opacity:0}
+#cur{position:absolute;left:0;top:0;width:26px;height:26px;z-index:5;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));will-change:transform}
+#rip{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:2px solid var(--accent);z-index:4;opacity:0}
+</style></head><body>
+<div id="stage">
+  <div class="head">
+    <div class="brand"><img src="assets/icon.png" alt=""><span id="h"></span></div>
+    <div class="tag" id="sub"></div>
+    <div class="pips"><span id="chip"><i></i><b id="chiptxt"></b></span></div>
+  </div>
+  <div id="glow"></div>
+  <div id="win">
+    <div id="inner" style="position:absolute;left:0;top:0;width:900px;height:570px;transform-origin:0 0">
+    <img class="pg" id="p-o" src="assets/1-overview.png" alt="">
+    <img class="pg" id="p-light" src="assets/5-light.png" alt="">
+    <img class="pg" id="p-oled" src="assets/6-oled.png" alt="">
+    <img class="pg" id="p-pers" src="assets/8-personalise.png" alt="">
+    <img class="pg" id="p-gpt" src="assets/7-chatgpt.png" alt="">
+    <img class="pg" id="p-menu" src="assets/4-menu-bar.png" alt="">
+    </div>
+    <div id="rip" style="display:none"></div>
+    <svg id="cur" style="display:none" viewBox="0 0 26 26"><path d="M4 2 L4 21 L9 16.5 L12.5 24 L16 22.5 L12.6 15.2 L19.5 15 Z" fill="#fff" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/></svg>
+  </div>
+</div>
+<script>
+const SCENE = "__SCENE__";
+const SC = {
+ themes:{h:'Light, Dark and OLED black',sub:'Six colour themes plus any custom colour',loop:14000,
+   pages:[[0,'o'],[3500,'light'],[7000,'oled'],[10500,'pers']],labels:{o:'Dark',light:'Light',oled:'OLED black',pers:'Your own colour'},pulses:[3500,7000,10500,0]},
+ chatgpt:{h:'ChatGPT next to Claude',sub:'Optional, experimental Codex limits for paid plans, on the same cards and charts',loop:11000,
+   pages:[[0,'o'],[3000,'gpt'],[8200,'o']],labels:{},pulses:[3000,8200]},
+ menubar:{h:'Make the menu bar yours',sub:'Pick the items, labels and colours – with a live preview',loop:13000,
+   pages:[[0,'menu']],labels:{},pulses:[],
+   cam:[[0,1,450,285],[1500,1,450,285],[3000,1.75,653,142],[5800,1.75,653,142],[7200,1.5,650,400],[10200,1.5,650,400],[11800,1,450,285],[13000,1,450,285]]}
+}[SCENE];
+const TIMELINE = { loopEnd: SC.loop, fade: 450 };
+const ease = p => p<.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+const $ = id => document.getElementById(id);
+document.getElementById('h').textContent=SC.h; document.getElementById('sub').textContent=SC.sub;
+if(!Object.keys(SC.labels).length) document.getElementById('chip').style.display='none';
+const imgs={}; for(const [,k] of SC.pages) imgs[k]=$('p-'+k);
+const glow=$('glow'), inner=$('inner');
+function render(t){
+  t=((t%SC.loop)+SC.loop)%SC.loop;
+  const P=SC.pages; let i=0; while(i+1<P.length&&P[i+1][0]<=t) i++;
+  const curK=P[i][1], prevK=P[(i+P.length-1)%P.length][1];
+  const a=Math.min(1,(t-P[i][0])/TIMELINE.fade);
+  for(const k in imgs){imgs[k].style.opacity=0;imgs[k].style.zIndex=0;}
+  imgs[prevK].style.opacity=1;imgs[prevK].style.zIndex=1;
+  imgs[curK].style.opacity=prevK===curK?1:ease(a);imgs[curK].style.zIndex=2;
+  if(SC.labels[curK]) $('chiptxt').textContent=SC.labels[curK];
+  // camera
+  if(SC.cam){const K=SC.cam;let j=0;while(j+1<K.length&&K[j+1][0]<=t)j++;
+    const A=K[j],B=K[Math.min(j+1,K.length-1)];const p=B[0]>A[0]?ease((t-A[0])/(B[0]-A[0])):0;
+    const z=A[1]+(B[1]-A[1])*p,cx=A[2]+(B[2]-A[2])*p,cy=A[3]+(B[3]-A[3])*p;
+    const tx=Math.min(0,Math.max(900-900*z,450-cx*z)),ty=Math.min(0,Math.max(570-570*z,285-cy*z));
+    inner.style.transform=`translate(${tx}px,${ty}px) scale(${z})`;}
+  let pulse=0;for(const c of SC.pulses){const d=t-c;if(d>=0)pulse=Math.max(pulse,Math.exp(-d/380));}
+  const g=.2+.4*pulse;
+  glow.style.boxShadow=`0 0 90px 10px rgba(255,138,92,${g.toFixed(3)}),0 0 200px 40px rgba(255,138,92,${(g*.45).toFixed(3)})`;
+}
+let t0=performance.now(), raf;
+function tick(){ render(performance.now()-t0); raf=requestAnimationFrame(tick); }
+window.runLoop=()=>{ cancelAnimationFrame(raf); t0=performance.now(); tick(); };
+window.seekTo=s=>{ cancelAnimationFrame(raf); render(s*1000); };
+document.fonts.ready.then(()=>window.runLoop());
+</script></body></html>

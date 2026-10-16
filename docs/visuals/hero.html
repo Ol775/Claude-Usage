@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Claude Usage hero</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{--bg:#0d0d0f;--text:#f4f1ee;--muted:#a9a39d;--accent:#ff8a5c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#050506}
+body{display:flex;align-items:flex-start;justify-content:flex-start}
+#stage{position:relative;width:1200px;height:800px;overflow:hidden;background:
+  radial-gradient(900px 420px at 50% 105%,rgba(255,138,92,.10),transparent 70%),
+  radial-gradient(700px 300px at 50% -10%,rgba(255,138,92,.07),transparent 70%),var(--bg);
+  font-family:'Inter',-apple-system,system-ui,sans-serif;color:var(--text)}
+.head{position:absolute;left:0;right:0;top:28px;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:14px}
+.brand img{width:48px;height:48px;border-radius:12px;display:block}
+.brand span{font-size:42px;font-weight:700;letter-spacing:-.025em}
+.tag{margin-top:11px;font-size:18px;color:#d7d2cc;font-weight:500}
+.pips{margin-top:12px;display:flex;justify-content:center;gap:26px;font-size:15.5px;color:var(--muted);font-weight:500}
+.pips i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:9px;vertical-align:1px}
+#glow{position:absolute;left:150px;top:188px;width:900px;height:570px;border-radius:16px;will-change:box-shadow}
+#win{position:absolute;left:150px;top:188px;width:900px;height:570px;border-radius:16px;overflow:hidden;
+  background:#1c1c1e;box-shadow:0 0 0 1px rgba(255,255,255,.09),0 30px 60px rgba(0,0,0,.55)}
+#win img.pg{position:absolute;left:0;top:0;width:900px;height:570px;display:block;opacity:0}
+#cur{position:absolute;left:0;top:0;width:26px;height:26px;z-index:5;filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));will-change:transform}
+#rip{position:absolute;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:2px solid var(--accent);z-index:4;opacity:0}
+</style></head><body>
+<div id="stage">
+  <div class="head">
+    <div class="brand"><img src="assets/icon.png" alt=""><span>Claude Usage</span></div>
+    <div class="tag">Session and weekly limits in your Mac’s menu bar</div>
+    <div class="pips"><span><i></i>Forecasts</span><span><i></i>Reports</span><span><i></i>Insights</span><span><i></i>Light · Dark · OLED</span><span><i></i>Unofficial</span></div>
+  </div>
+  <div id="glow"></div>
+  <div id="win">
+    <img class="pg" id="p-overview" src="assets/1-overview.png" alt="">
+    <img class="pg" id="p-reports" src="assets/2-reports.png" alt="">
+    <img class="pg" id="p-insights" src="assets/3-insights.png" alt="">
+    <img class="pg" id="p-usage" src="assets/6-oled.png" alt="">
+    <div id="rip"></div>
+    <svg id="cur" viewBox="0 0 26 26"><path d="M4 2 L4 21 L9 16.5 L12.5 24 L16 22.5 L12.6 15.2 L19.5 15 Z" fill="#fff" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/></svg>
+  </div>
+</div>
+<script>
+// Deterministic timeline: everything is a pure function of t (ms). Loop seam: t=0 == t=LOOP.
+const TIMELINE = { loopEnd: 16000, fade: 320 };
+const PAGES = [ // [startMs, key]  (start state = overview)
+  [0,'overview'],[2500,'reports'],[5500,'insights'],[8500,'usage'],[11700,'overview']];
+const CLICKS = [2500,5500,8500,11700];
+// cursor keyframes in window-local px: [t, x, y]. Sidebar rows sit at x~90.
+const REST=[470,330];
+const KF = [[0,...REST],[1700,...REST],[2500,125,127],[4700,125,127],[5500,125,163],[7700,125,163],[8500,125,199],
+  [10900,125,199],[11700,125,92],[13300,125,92],[14700,...REST],[16000,...REST]];
+const ease = p => p<.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+const $ = id => document.getElementById(id);
+const imgs = {}; for (const [,k] of PAGES) imgs[k] = $('p-'+k);
+const cur=$('cur'), rip=$('rip'), glow=$('glow');
+
+function render(t){
+  t = ((t % TIMELINE.loopEnd)+TIMELINE.loopEnd)%TIMELINE.loopEnd;
+  // pages: previous underneath, current fades in
+  let i=0; while(i+1<PAGES.length && PAGES[i+1][0]<=t) i++;
+  const curK=PAGES[i][1], prevK=PAGES[(i+PAGES.length-1)%PAGES.length][1];
+  const a=Math.min(1,(t-PAGES[i][0])/TIMELINE.fade);
+  for (const k in imgs){ imgs[k].style.opacity=0; imgs[k].style.zIndex=0; }
+  imgs[prevK].style.opacity=1; imgs[prevK].style.zIndex=1;
+  imgs[curK].style.opacity=(prevK===curK)?1:ease(a); imgs[curK].style.zIndex=2;
+  // cursor
+  let j=0; while(j+1<KF.length && KF[j+1][0]<=t) j++;
+  const A=KF[j], B=KF[Math.min(j+1,KF.length-1)];
+  const p=B[0]>A[0]?ease((t-A[0])/(B[0]-A[0])):0;
+  const x=A[1]+(B[1]-A[1])*p, y=A[2]+(B[2]-A[2])*p;
+  let press=1, ripO=0, ripS=0.4, pulse=0;
+  for (const c of CLICKS){ const d=t-c;
+    if(d>-90&&d<120) press=.86;
+    if(d>=0&&d<650){ ripO=.7*(1-d/650); ripS=.4+d/650*.9; }
+    if(d>=0) pulse=Math.max(pulse,Math.exp(-d/380)); }
+  cur.style.transform=`translate(${x-4}px,${y-2}px) scale(${press})`;
+  rip.style.left=x+'px'; rip.style.top=y+'px'; rip.style.opacity=ripO; rip.style.transform=`scale(${ripS})`;
+  const g=.2+.4*pulse;
+  glow.style.boxShadow=`0 0 90px 10px rgba(255,138,92,${g.toFixed(3)}),0 0 200px 40px rgba(255,138,92,${(g*.45).toFixed(3)})`;
+}
+let t0=performance.now(), raf;
+function tick(){ render(performance.now()-t0); raf=requestAnimationFrame(tick); }
+window.runLoop=()=>{ cancelAnimationFrame(raf); t0=performance.now(); tick(); };
+window.seekTo=s=>{ cancelAnimationFrame(raf); render(s*1000); };
+document.fonts.ready.then(()=>window.runLoop());
+</script></body></html>

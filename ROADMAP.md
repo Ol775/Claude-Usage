@@ -64,7 +64,7 @@ The biggest gap is that most testing happened on one Mac.
 - ChatGPT graduates from experimental if verified (B1), with a screenshot refresh.
 - Optional: a WidgetKit widget and Shortcuts support (these need Xcode, which isn't installed on the build Mac).
 
-### B5. Community and project hygiene ⏳
+### B5. Community and project hygiene ✅
 - ✅ `CONTRIBUTING.md`, bug/feature issue templates, a pull-request template and `CODE_OF_CONDUCT.md`.
 - ✅ Release notes come from the change log (`release.sh`), and the support policy is in [SECURITY.md](SECURITY.md#supported-versions).
 - ✅ A short "how updates are verified" explainer in the README linking to `SECURITY.md`.
