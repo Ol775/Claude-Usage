@@ -15,7 +15,7 @@
 
 <p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="https://claude-usage.peacock665.dev/demo">Live demo</a> · <a href="#security-and-privacy">Security</a></p>
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.18 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.19 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -105,28 +105,28 @@ Pick the items, labels and colours, with a live preview of what the menu bar wil
 Optional Codex limits for paid ChatGPT plans, on the same cards and charts. Nothing is read until you connect it.
 
 <details>
-<summary><b>More screenshots</b></summary>
+<summary><b>More screens</b></summary>
 
 <br>
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/1-overview.png" alt="Overview: session and weekly limits with a forecast"></td>
-<td width="50%"><img src="docs/screenshots/2-reports.png" alt="Reports: day, week and month charts"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/1-overview.gif" alt="Overview: session and weekly limits with a forecast"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/2-reports.gif" alt="Reports: day, week and month charts"></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/3-insights.png" alt="Insights: costs, activity and heavy days"></td>
-<td width="50%"><img src="docs/screenshots/4-menu-bar.png" alt="Menu bar customisation with a live preview"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/3-insights.gif" alt="Insights: costs, activity and heavy days"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/4-menu-bar.gif" alt="Menu bar customisation with a live preview"></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/5-light.png" alt="Light mode in Claude orange"></td>
-<td width="50%"><img src="docs/screenshots/6-oled.png" alt="OLED black mode: usage by day, hour, model and project"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/5-light.gif" alt="Light mode in Claude orange"></td>
+<td width="50%"><img loading="lazy" src="docs/gallery/6-oled.gif" alt="OLED black mode: usage by day, hour, model and project"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="docs/screenshots/8-personalise.png" alt="Appearance settings: colour themes with a custom colour and fonts including OpenDyslexic; Settings is also available in German, French and Spanish"></td>
+<td colspan="2"><img loading="lazy" src="docs/gallery/8-personalise.gif" alt="Appearance settings: colour themes with a custom colour and fonts including OpenDyslexic; Settings is also available in German, French and Spanish"></td>
 </tr>
 <tr>
-<td colspan="2"><img src="docs/screenshots/7-chatgpt.png" alt="ChatGPT (Codex) limits next to Claude on the Overview, with a combined forecast chart"></td>
+<td colspan="2"><img loading="lazy" src="docs/gallery/7-chatgpt.gif" alt="ChatGPT (Codex) limits next to Claude on the Overview, with a combined forecast chart"></td>
 </tr>
 </table>
 

@@ -3,12 +3,12 @@
 # Needs node + puppeteer, ffmpeg and a Chrome. These come with the "repo-visuals" Claude Code skill:
 #   PLUGIN=~/.claude/plugins/cache/livlign/repo-visuals/0.1.5   (default)
 #   PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"   (if its own Chrome won't start)
-# Usage: ./build.sh [OUT=dir] [TARGETS="hero themes chatgpt menubar banner header"]
+# Usage: ./build.sh [OUT=dir] [TARGETS="hero themes chatgpt menubar banner header gallery"]
 set -euo pipefail
 cd "${0:A:h}"
 PLUGIN=${PLUGIN:-$HOME/.claude/plugins/cache/livlign/repo-visuals/0.1.5}
 CAP=$PLUGIN/skills/repo-visuals/scripts
-OUT=${OUT:-..}; TARGETS=${TARGETS:-hero themes chatgpt menubar banner header}
+OUT=${OUT:-..}; TARGETS=${TARGETS:-hero themes chatgpt menubar banner header gallery}
 mkdir -p assets work "$OUT"; OUT=${OUT:A}
 
 # real app screenshots -> window-only crops (the app window sits at the same place in every shot)
@@ -19,9 +19,9 @@ done
 
 # gif <name> <html> <ms> <fps> <colours> <out>   (25 fps = 4 cs per frame, the smoothest rate GIF players honour exactly)
 gif() {
-  rm -rf work/$1; node $CAP/capture.js --html "$PWD/$2" --out work/$1 --manifest work/$1.txt --duration $3 --width 1200 --height 800
-  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -vf "fps=$4,scale=1200:800:flags=lanczos+accurate_rnd+full_chroma_int,palettegen=stats_mode=full:max_colors=$5" work/$1.png
-  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -i work/$1.png -lavfi "fps=$4,scale=1200:800:flags=lanczos+accurate_rnd+full_chroma_int [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -t $(printf "%.3f" $(( $3 / 1000.0 ))) -loop 0 "$6"   # -t: concat lists the last frame twice, which would add its hold to the loop
+  rm -rf work/$1; node $CAP/capture.js --html "$PWD/$2" --out work/$1 --manifest work/$1.txt --duration $3 --width ${GW:-1200} --height ${GH:-800}
+  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -vf "fps=$4,scale=${OW:-1200}:${OH:-800}:flags=lanczos+accurate_rnd+full_chroma_int,palettegen=stats_mode=full:max_colors=$5" work/$1.png
+  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -i work/$1.png -lavfi "fps=$4,scale=${OW:-1200}:${OH:-800}:flags=lanczos+accurate_rnd+full_chroma_int [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -t $(printf "%.3f" $(( $3 / 1000.0 ))) -loop 0 "$6"   # -t: concat lists the last frame twice, which would add its hold to the loop
   ls -la "$6" | awk '{printf "%s  %.1f MB\n", $9, $5/1048576}'
 }
 feature() { sed "s/__SCENE__/$1/" feature.html > work/feature-$1.html; cp work/feature-$1.html feature-$1.html; }
@@ -33,7 +33,12 @@ for t in ${=TARGETS}; do
     chatgpt) feature chatgpt; gif chatgpt feature-chatgpt.html 11000 25 160 "$OUT/feature-chatgpt.gif" ;;
     menubar) feature menubar; gif menubar feature-menubar.html 13000 25 160 "$OUT/feature-menubar.gif" ;;
     banner)  node $CAP/screenshot.js --html "$PWD/banner.html" --out "$OUT/banner.png" --width 1280 --height 640 ;;
-      header)  node $CAP/screenshot.js --html "$PWD/header.html" --out "$OUT/header.png" --width 1280 --height 240 ;;
+      gallery) mkdir -p "$OUT/gallery"
+             for g in overview:1-overview reports:2-reports insights:3-insights menu-bar:4-menu-bar light:5-light oled:6-oled chatgpt:7-chatgpt personalise:8-personalise; do
+               sed "s/__SHOT__/${g%%:*}/" gallery.html > gallery-run.html
+               GW=960 GH=630 OW=640 OH=420 gif gal-${g%%:*} gallery-run.html 6000 25 96 "$OUT/gallery/${g#*:}.gif"
+             done; rm -f gallery-run.html ;;
+    header)  node $CAP/screenshot.js --html "$PWD/header.html" --out "$OUT/header.png" --width 1280 --height 240 ;;
   esac
 done
 rm -f feature-*.html(N)
