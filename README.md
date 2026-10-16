@@ -11,13 +11,26 @@
 
 </div>
 
-<p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="#security">Security</a></p>
+<p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="#security-and-privacy">Security</a></p>
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.12 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.13 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
+> **Install:** `brew install --cask Ol775/tap/claude-usage` · or [download the DMG](https://github.com/Ol775/Claude-Usage/releases/latest) · [more options](#install)
+
 ## Features
+
+- **Session and weekly limits** with reset times, the same numbers as Claude Code's `/usage`
+- **Forecasts** of when you'll hit a limit, with early-warning notifications
+- **Reports, Insights and Usage**: token charts, API-equivalent cost, per-model and per-project breakdowns
+- A **menu bar item you design**, with alert thresholds and quiet hours
+- **Light, Dark and OLED black**, plus any custom colour
+- **Experimental ChatGPT (Codex) limits** for paid plans, next to Claude's
+- **Signed in-app updates**, in English, German, French and Spanish, built for VoiceOver
+
+<details>
+<summary><b>Everything it does</b></summary>
 
 ### Limits and forecasts
 
@@ -55,6 +68,8 @@ Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitt
 ### Updates
 
 - **Updates**: notifies when a newer version is on GitHub, and **Update Now** downloads the signed release with a progress bar, verifies it, swaps it in (keeping a backup) and relaunches – no Terminal needed. `./update.sh` does the same from the command line. Turn on **Get beta versions** in Settings → About to try test releases early
+
+</details>
 
 > [!NOTE]
 > Limits come from Claude Code's login in your own keychain; nothing is stored in this repo.  
@@ -216,24 +231,11 @@ It checks for new versions, downloads them in the background and asks you to res
 
 </details>
 
-## Security
+## Security and privacy
 
-The app reads only your own Claude Code login and logs. Details, and how to report a problem privately, are in [SECURITY.md](SECURITY.md).
+Everything stays on your Mac, and there are no analytics. The app only talks to Anthropic (for your limits), ChatGPT (only if you connect it) and GitHub (for updates), and reads only your own Claude Code login and logs. Updates are signed with an offline key and verified before install, so a compromised GitHub account couldn't push one.
 
-### How updates are verified
-
-Each release is signed with a key that is kept offline, never on GitHub. Before installing an update, the app checks that:
-
-1. it was downloaded from this repo's GitHub releases over HTTPS;
-2. its signature is valid for exactly that version number, so an old release can't pose as a new one;
-3. its SHA-256 checksum matches;
-4. the app inside has the right bundle id, version and an intact code signature.
-
-If any check fails, the download is thrown away. So even someone who took over this GitHub account couldn't push a trusted update without the offline key. More in [SECURITY.md](SECURITY.md#how-updates-are-trusted).
-
-## Privacy and legal
-
-Everything stays on your Mac. The app only talks to Anthropic (for your usage limits), ChatGPT (for your ChatGPT limits, only if you connect it) and GitHub (for updates); there are no analytics. Limits come from Claude Code's login in your own keychain, and nothing is stored in this repo. API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way. The full terms are in the app under Settings → Help & Legal, and the privacy statement is in [PRIVACY.md](PRIVACY.md).
+Details: [SECURITY.md](SECURITY.md) (how updates are trusted, reporting a problem privately) and [PRIVACY.md](PRIVACY.md). The full terms are in the app under Settings → Help & Legal.
 
 > [!NOTE]
 > **Unofficial – not affiliated with or endorsed by Anthropic.** "Claude" and "Anthropic" are trademarks of Anthropic, PBC; "ChatGPT", "Codex" and "OpenAI" are trademarks of OpenAI. Provided as is, with no warranty. The code is released under the [MIT licence](LICENSE).

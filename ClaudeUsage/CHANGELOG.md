@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.13 – beta (2026-10-16)
+- README trimmed to cut information overload: quick install line, feature highlights with the full list collapsed, security and privacy merged into short links; no app changes
+
 ## 0.16.12 – beta (2026-10-16)
 - README: fix the Buy me a coffee badge showing as raw text; no app changes
 
