@@ -1,3 +1,5 @@
+<p><a href="README.md"><img src="docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Code of conduct
 
 This project follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).

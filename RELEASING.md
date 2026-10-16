@@ -1,3 +1,5 @@
+<p><a href="README.md"><img src="docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Releasing and the signing key
 
 For maintainers. Users don't need any of this; see [SECURITY.md](SECURITY.md) for how updates are checked.

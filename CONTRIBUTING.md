@@ -1,3 +1,5 @@
+<p><a href="README.md"><img src="docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Contributing
 
 Thanks for helping. Bug reports, ideas and pull requests are all welcome. Please follow the [code of conduct](CODE_OF_CONDUCT.md).

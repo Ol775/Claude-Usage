@@ -1,3 +1,5 @@
+<p><a href="README.md"><img src="docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Roadmap
 
 Claude Usage reached **beta** in v0.10.0. This page records what the alpha delivered and lays out the road from beta to a **1.0 production release**. Nothing here needs a paid account unless a section says so. Legend: ✅ done, 🚧 in progress, ⏳ planned.

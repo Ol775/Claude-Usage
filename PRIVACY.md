@@ -1,3 +1,5 @@
+<p><a href="README.md"><img src="docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Privacy
 
 Last updated 7 October 2026. This matches the text in the app under Settings → Help & Legal → Privacy and your data.

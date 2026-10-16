@@ -1,8 +1,12 @@
+<p><a href="../README.md"><img src="../docs/app-icon.png" alt="" width="20" align="top">&nbsp;Claude Usage</a></p>
+
 # Windows helper: count Claude Code usage from a Windows PC
 
 Claude Usage reads Claude Code's logs on the Mac it runs on. Claude Code on Windows keeps its logs on that PC, so its tokens and costs don't show up. `Sync-ClaudeLogs.ps1` copies those logs into a folder that syncs to your Mac, and the app reads them from there.
 
 Your limit percentages (session and weekly) already include Windows usage, because they come from your account. This only adds the token, cost and activity charts.
+
+<p align="center"><img src="../docs/windows-sync.svg" alt="Claude Code logs on the Windows PC are copied by Sync-ClaudeLogs.ps1 into a synced folder, which the Mac app reads under Settings, Data, Other computers" width="900"></p>
 
 ## Set up
 

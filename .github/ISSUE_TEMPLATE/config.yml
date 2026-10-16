@@ -1,0 +1,9 @@
+# Keep blank issues on: the app's "Report a Bug" button opens a pre-filled blank issue.
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem (private)
+    url: https://github.com/Ol775/Claude-Usage/security/advisories/new
+    about: Please don't open a public issue for anything that could put users at risk.
+  - name: Roadmap to 1.0
+    url: https://github.com/Ol775/Claude-Usage/blob/main/ROADMAP.md
+    about: See what's planned before suggesting a feature.

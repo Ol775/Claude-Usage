@@ -1,6 +1,8 @@
-**What does this change, and why?**
+## What does this change, and why?
 
-**How did you test it?**
+## How did you test it?
+
+## Checklist
 
 - [ ] `--selftest` passes
 - [ ] Ran `./bump.sh` (changes to `src/` or `build.sh` only)
