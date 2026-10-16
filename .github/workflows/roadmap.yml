@@ -1,0 +1,31 @@
+name: Redraw roadmap graphic
+on:
+  push:
+    branches: [main]
+    paths: [ROADMAP.md, .github/scripts/roadmap_svg.py]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+      - run: python3 .github/scripts/roadmap_svg.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_TAG: ${{ github.event.release.tag_name }}
+      - name: Commit changes
+        run: |
+          git diff --quiet docs/roadmap.svg && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Redraw roadmap graphic" docs/roadmap.svg
+          git pull --rebase
+          git push

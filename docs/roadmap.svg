@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 484" width="1000" height="484" role="img" aria-labelledby="t d">
+<title id="t">Claude Usage roadmap: 53% of the beta to 1.0 work is done</title>
+<desc id="d">Real-world confidence 0 of 5; Quality and maintainability 6 of 6; Trust, security and distribution 4 of 6; Product polish 5 of 7; Community and project hygiene 3 of 3; Production gates 0 of 7</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c1f"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient><linearGradient id="ac" x1="0" x2="1"><stop offset="0" stop-color="#ff8a5c"/><stop offset="1" stop-color="#ffb37f"/></linearGradient><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}.k{font-size:12px;font-weight:600;letter-spacing:.09em;fill:#ff8a5c}.h{font-size:26px;font-weight:700;fill:#f4f1ee}.l{font-size:16px;font-weight:600;fill:#f4f1ee}.s{font-size:14px;fill:#b3ada7}.n{font-size:14px;font-weight:600;fill:#f4f1ee}.tr{fill:#2b2b2f}.bar{transform-box:fill-box;transform-origin:left center;animation:grow 1.1s cubic-bezier(.2,.7,.2,1) both}.ping{animation:ping 2s ease-out infinite;transform-box:fill-box;transform-origin:center}@keyframes grow{from{transform:scaleX(0)}}@keyframes ping{from{opacity:.7;transform:scale(1)}to{opacity:0;transform:scale(2.6)}}@media (prefers-reduced-motion:reduce){.bar,.ping{animation:none}.ping{opacity:0}}</style></defs>
+<rect width="1000" height="484" rx="16" fill="url(#bg)" stroke="#2c2c30"/>
+<text class="k" x="36" y="44">ROADMAP TO 1.0</text>
+<text class="h" x="36" y="76">53% of the beta work is done</text>
+<text class="s" x="964" y="76" text-anchor="end">latest release v0.16.7 · beta · 18 of 34 items</text>
+<line x1="56" y1="128" x2="944" y2="128" stroke="#3a3a3f" stroke-width="3" stroke-linecap="round"/>
+<line x1="56" y1="128" x2="500" y2="128" stroke="#ff8a5c" stroke-width="3" stroke-linecap="round"/>
+<line class="bar" x1="500" y1="128" x2="735" y2="128" stroke="#ff8a5c" stroke-width="3" stroke-linecap="round"/>
+<circle cx="56" cy="128" r="9" fill="#ff8a5c" stroke="#ff8a5c" stroke-width="2"/>
+<text class="n" x="36" y="162" text-anchor="start">Alpha</text><text class="s" x="36" y="182" text-anchor="start">complete</text>
+<circle cx="500" cy="128" r="9" fill="#ff8a5c" stroke="#ff8a5c" stroke-width="2"/>
+<circle class="ping" cx="500" cy="128" r="9" fill="none" stroke="#ff8a5c" stroke-width="2"/>
+<text class="n" x="500" y="162" text-anchor="middle">Beta · you are here</text><text class="s" x="500" y="182" text-anchor="middle">v0.16.7</text>
+<circle cx="944" cy="128" r="9" fill="#232326" stroke="#ff8a5c" stroke-width="2"/>
+<text class="n" x="964" y="162" text-anchor="end">1.0</text><text class="s" x="964" y="182" text-anchor="end">0 of 7 gates</text>
+<text class="k" x="36" y="211">B1</text><text class="l" x="80" y="211">Real-world confidence</text>
+<rect class="tr" x="372" y="197" width="490" height="14" rx="7"/>
+<text class="n" x="884" y="211">0 / 5</text>
+<text class="k" x="36" y="255">B2</text><text class="l" x="80" y="255">Quality and maintainability</text>
+<rect class="tr" x="372" y="241" width="490" height="14" rx="7"/>
+<rect class="bar" style="animation-delay:0.12s" x="372" y="241" width="490.0" height="14" rx="7" fill="#5fbf8a"/>
+<text class="n" x="884" y="255">6 / 6  ✓</text>
+<text class="k" x="36" y="299">B3</text><text class="l" x="80" y="299">Trust, security and distribution</text>
+<rect class="tr" x="372" y="285" width="490" height="14" rx="7"/>
+<rect class="bar" style="animation-delay:0.24s" x="372" y="285" width="326.7" height="14" rx="7" fill="url(#ac)"/>
+<text class="n" x="884" y="299">4 / 6</text>
+<text class="k" x="36" y="343">B4</text><text class="l" x="80" y="343">Product polish</text>
+<rect class="tr" x="372" y="329" width="490" height="14" rx="7"/>
+<rect class="bar" style="animation-delay:0.36s" x="372" y="329" width="350.0" height="14" rx="7" fill="url(#ac)"/>
+<text class="n" x="884" y="343">5 / 7</text>
+<text class="k" x="36" y="387">B5</text><text class="l" x="80" y="387">Community and project hygiene</text>
+<rect class="tr" x="372" y="373" width="490" height="14" rx="7"/>
+<rect class="bar" style="animation-delay:0.48s" x="372" y="373" width="490.0" height="14" rx="7" fill="#5fbf8a"/>
+<text class="n" x="884" y="387">3 / 3  ✓</text>
+<text class="k" x="36" y="431">1.0</text><text class="l" x="80" y="431">Production gates</text>
+<rect class="tr" x="372" y="417" width="490" height="14" rx="7"/>
+<text class="n" x="884" y="431">0 / 7</text>
+</svg>

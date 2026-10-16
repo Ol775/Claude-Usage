@@ -4,6 +4,10 @@
 
 Claude Usage reached **beta** in v0.10.0. This page records what the alpha delivered and lays out the road from beta to a **1.0 production release**. Nothing here needs a paid account unless a section says so. Legend: ✅ done, 🚧 in progress, ⏳ planned.
 
+<p align="center"><img src="docs/roadmap.svg" alt="Roadmap progress: beta to 1.0, with a progress bar for each phase and the 1.0 gates" width="900"></p>
+
+<p align="center"><sub>This graphic redraws itself from the ✅ / ⏳ marks below whenever this page changes or a release is published.</sub></p>
+
 ## Alpha → beta: complete ✅
 
 | # | Item | Result |
