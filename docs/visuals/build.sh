@@ -17,21 +17,21 @@ for f in 1-overview 2-reports 3-insights 4-menu-bar 5-light 6-oled 7-chatgpt 8-p
   ffmpeg -v error -y -i ../screenshots/$f.png -vf "crop=1772:1122:314:334,scale=1880:-1:flags=lanczos" assets/$f.png
 done
 
-# gif <name> <html> <ms> <fps> <colours> <out>
+# gif <name> <html> <ms> <fps> <colours> <out>   (25 fps = 4 cs per frame, the smoothest rate GIF players honour exactly)
 gif() {
   rm -rf work/$1; node $CAP/capture.js --html "$PWD/$2" --out work/$1 --manifest work/$1.txt --duration $3 --width 1200 --height 800
   ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -vf "fps=$4,scale=1200:800:flags=lanczos+accurate_rnd+full_chroma_int,palettegen=stats_mode=full:max_colors=$5" work/$1.png
-  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -i work/$1.png -lavfi "fps=$4,scale=1200:800:flags=lanczos+accurate_rnd+full_chroma_int [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -loop 0 "$6"
+  ffmpeg -v error -y -f concat -safe 0 -i work/$1.txt -i work/$1.png -lavfi "fps=$4,scale=1200:800:flags=lanczos+accurate_rnd+full_chroma_int [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle" -t $(printf "%.3f" $(( $3 / 1000.0 ))) -loop 0 "$6"   # -t: concat lists the last frame twice, which would add its hold to the loop
   ls -la "$6" | awk '{printf "%s  %.1f MB\n", $9, $5/1048576}'
 }
 feature() { sed "s/__SCENE__/$1/" feature.html > work/feature-$1.html; cp work/feature-$1.html feature-$1.html; }
 
 for t in ${=TARGETS}; do
   case $t in
-    hero)    gif hero hero.html 16000 15 192 "$OUT/hero.gif" ;;
-    themes)  feature themes;  gif themes  feature-themes.html  14000 12 160 "$OUT/feature-themes.gif" ;;
-    chatgpt) feature chatgpt; gif chatgpt feature-chatgpt.html 11000 15 192 "$OUT/feature-chatgpt.gif" ;;
-    menubar) feature menubar; gif menubar feature-menubar.html 13000 15 192 "$OUT/feature-menubar.gif" ;;
+    hero)    gif hero hero.html 16000 25 160 "$OUT/hero.gif" ;;
+    themes)  feature themes;  gif themes  feature-themes.html  14000 25 160 "$OUT/feature-themes.gif" ;;
+    chatgpt) feature chatgpt; gif chatgpt feature-chatgpt.html 11000 25 160 "$OUT/feature-chatgpt.gif" ;;
+    menubar) feature menubar; gif menubar feature-menubar.html 13000 25 160 "$OUT/feature-menubar.gif" ;;
     banner)  node $CAP/screenshot.js --html "$PWD/banner.html" --out "$OUT/banner.png" --width 1280 --height 640 ;;
       header)  node $CAP/screenshot.js --html "$PWD/header.html" --out "$OUT/header.png" --width 1280 --height 240 ;;
   esac
