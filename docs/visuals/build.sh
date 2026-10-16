@@ -3,12 +3,12 @@
 # Needs node + puppeteer, ffmpeg and a Chrome. These come with the "repo-visuals" Claude Code skill:
 #   PLUGIN=~/.claude/plugins/cache/livlign/repo-visuals/0.1.5   (default)
 #   PUPPETEER_EXECUTABLE_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"   (if its own Chrome won't start)
-# Usage: ./build.sh [OUT=dir] [TARGETS="hero themes chatgpt menubar banner"]
+# Usage: ./build.sh [OUT=dir] [TARGETS="hero themes chatgpt menubar banner header"]
 set -euo pipefail
 cd "${0:A:h}"
 PLUGIN=${PLUGIN:-$HOME/.claude/plugins/cache/livlign/repo-visuals/0.1.5}
 CAP=$PLUGIN/skills/repo-visuals/scripts
-OUT=${OUT:-..}; TARGETS=${TARGETS:-hero themes chatgpt menubar banner}
+OUT=${OUT:-..}; TARGETS=${TARGETS:-hero themes chatgpt menubar banner header}
 mkdir -p assets work "$OUT"; OUT=${OUT:A}
 
 # real app screenshots -> window-only crops (the app window sits at the same place in every shot)
@@ -33,6 +33,7 @@ for t in ${=TARGETS}; do
     chatgpt) feature chatgpt; gif chatgpt feature-chatgpt.html 11000 15 192 "$OUT/feature-chatgpt.gif" ;;
     menubar) feature menubar; gif menubar feature-menubar.html 13000 15 192 "$OUT/feature-menubar.gif" ;;
     banner)  node $CAP/screenshot.js --html "$PWD/banner.html" --out "$OUT/banner.png" --width 1280 --height 640 ;;
+      header)  node $CAP/screenshot.js --html "$PWD/header.html" --out "$OUT/header.png" --width 1280 --height 240 ;;
   esac
 done
-rm -f feature-*.html
+rm -f feature-*.html(N)

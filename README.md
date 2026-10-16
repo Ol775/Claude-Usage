@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/header.png" alt="Claude Usage: free and open source, macOS 13 or later, unofficial" width="900"></p>
+
 <p align="center"><img src="docs/hero.gif" alt="Claude Usage tour: the Overview, Reports, Insights and Usage pages with session and weekly limits, forecasts, token charts and costs" width="900"></p>
 
 <h1 align="center">Claude Usage – Claude Code usage tracker for the macOS menu bar</h1>
@@ -13,7 +15,7 @@
 
 <p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="#security-and-privacy">Security</a></p>
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.16 beta<!--/v-->.
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.17 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 

@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.17 – beta (2026-10-16)
+- README: slim brand banner at the very top; no app changes
+
 ## 0.16.16 – beta (2026-10-16)
 - Repo housekeeping: rebuildable README visuals (docs/visuals), roadmap B5 marked done, Sponsor button; no app changes
 
