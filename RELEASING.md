@@ -7,6 +7,8 @@
 
 ## Releasing a version
 
+<p align="center"><img src="docs/release-flow.svg" alt="Release order: bump, build and self-test, push, green CI, dry run, release" width="900"></p>
+
 One order, every time:
 
 ```sh

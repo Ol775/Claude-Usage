@@ -1,36 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 250" width="1000" height="250" role="img" aria-labelledby="t d">
-<title id="t">How Windows logs reach Claude Usage on a Mac</title>
-<desc id="d">Claude Code logs on the Windows PC are copied by Sync-ClaudeLogs.ps1 into a synced folder, which the Mac app reads under Settings, Data, Other computers.</desc>
-<defs>
-<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c1f"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient>
-<marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ff8a5c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
-<style>
-text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}
-.k{font-size:12px;font-weight:600;letter-spacing:.09em;fill:#ff8a5c}
-.h{font-size:19px;font-weight:700;fill:#f4f1ee}
-.s{font-size:14px;fill:#b3ada7}
-.c{fill:#232326;stroke:#3a3a3f;stroke-width:1.2}
-</style></defs>
-<rect width="1000" height="250" rx="16" fill="url(#bg)" stroke="#2c2c30"/>
-<g>
-<rect class="c" x="28" y="45" width="200" height="160" rx="12"/>
-<text class="k" x="46" y="76">WINDOWS PC</text>
-<text class="h" x="46" y="106">Claude Code</text>
-<text class="s" x="46" y="132">Logs in</text><text class="s" x="46" y="152">.claude\projects</text>
-<rect class="c" x="268" y="45" width="200" height="160" rx="12"/>
-<text class="k" x="286" y="76">HELPER</text>
-<text class="h" x="286" y="106">Sync-ClaudeLogs</text>
-<text class="s" x="286" y="132">Copies new .jsonl files</text><text class="s" x="286" y="152">every 5 minutes</text>
-<rect class="c" x="508" y="45" width="200" height="160" rx="12"/>
-<text class="k" x="526" y="76">SYNCED FOLDER</text>
-<text class="h" x="526" y="106">Your sync service</text>
-<text class="s" x="526" y="132">iCloud, OneDrive,</text><text class="s" x="526" y="152">Dropbox or Syncthing</text>
-<rect class="c" x="748" y="45" width="224" height="160" rx="12" style="stroke:#ff8a5c"/>
-<text class="k" x="766" y="76">YOUR MAC</text>
-<text class="h" x="766" y="106">Claude Usage</text>
-<text class="s" x="766" y="132">Settings → Data →</text><text class="s" x="766" y="152">Other computers</text>
-</g>
-<g stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round">
-<path d="M232 125 H262"/><path d="M472 125 H502"/><path d="M712 125 H742"/>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 230" width="1000" height="230" role="img" aria-labelledby="t d"><title id="t">How Windows logs reach Claude Usage on a Mac</title><desc id="d">Claude Code logs on the Windows PC are copied by Sync-ClaudeLogs.ps1 into a synced folder, which the Mac app reads under Settings, Data, Other computers.</desc><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c1f"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ff8a5c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}.k{font-size:12px;font-weight:600;letter-spacing:.09em;fill:#ff8a5c}.h{font-weight:700;fill:#f4f1ee}.s{fill:#b3ada7}.f{font-size:14px;fill:#b3ada7}.c{fill:#232326;stroke:#3a3a3f;stroke-width:1.2}.a{stroke:#ff8a5c}@media (prefers-reduced-motion:no-preference){.arrow{stroke-dasharray:5 5;animation:flow 1.2s linear infinite}}@keyframes flow{to{stroke-dashoffset:-10}}</style></defs><rect width="1000" height="230" rx="16" fill="url(#bg)" stroke="#2c2c30"/>
+<rect class="c" x="28.0" y="40" width="206.0" height="150" rx="12"/>
+<text class="k" x="46.0" y="72">WINDOWS PC</text><text class="h" style="font-size:19px" x="46.0" y="102">Claude Code</text>
+<text class="s" style="font-size:14px" x="46.0" y="130">Logs in</text>
+<text class="s" style="font-size:14px" x="46.0" y="152">.claude\projects</text>
+<path class="arrow" d="M238.0 115.0 H268.0" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c" x="274.0" y="40" width="206.0" height="150" rx="12"/>
+<text class="k" x="292.0" y="72">HELPER</text><text class="h" style="font-size:19px" x="292.0" y="102">Sync-ClaudeLogs</text>
+<text class="s" style="font-size:14px" x="292.0" y="130">Copies new .jsonl files</text>
+<text class="s" style="font-size:14px" x="292.0" y="152">every 5 minutes</text>
+<path class="arrow" d="M484.0 115.0 H514.0" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c" x="520.0" y="40" width="206.0" height="150" rx="12"/>
+<text class="k" x="538.0" y="72">SYNCED FOLDER</text><text class="h" style="font-size:19px" x="538.0" y="102">Your sync service</text>
+<text class="s" style="font-size:14px" x="538.0" y="130">iCloud, OneDrive,</text>
+<text class="s" style="font-size:14px" x="538.0" y="152">Dropbox or Syncthing</text>
+<path class="arrow" d="M730.0 115.0 H760.0" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c a" x="766.0" y="40" width="206.0" height="150" rx="12"/>
+<text class="k" x="784.0" y="72">YOUR MAC</text><text class="h" style="font-size:19px" x="784.0" y="102">Claude Usage</text>
+<text class="s" style="font-size:14px" x="784.0" y="130">Settings → Data →</text>
+<text class="s" style="font-size:14px" x="784.0" y="152">Other computers</text>
 </svg>

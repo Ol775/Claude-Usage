@@ -22,6 +22,8 @@ Security fixes ship as a new patch release as soon as they are ready, normally w
 
 ## How updates are trusted
 
+<p align="center"><img src="docs/update-trust.svg" alt="An update must come from this repo's GitHub releases over HTTPS, carry a valid Ed25519 signature for that exact version, match its SHA-256 and pass the bundle checks. Any failure discards it." width="900"></p>
+
 Every release DMG is signed, together with its version number, with an Ed25519 key whose private half is kept offline on the maintainer's Mac, never on GitHub. The app has the public key built in and installs an update only if all of these pass: the download is from this repo's GitHub releases over HTTPS, the signature verifies for exactly that version (so an older signed image can't pass as a newer release), the SHA-256 matches, the app's bundle id and version are right, and its code signature is intact. Downloads have a time and size limit and may only redirect to GitHub's own hosts. An update that fails any check is discarded. Beta versions (Settings → About → Get beta versions) are GitHub pre-releases from the same repo and pass exactly the same checks. The app never builds or runs code from the repository when updating.
 
 The app is ad-hoc signed (no paid Apple Developer ID), so macOS Gatekeeper treats it as unidentified on first launch. The terminal and Homebrew installs verify the SHA-256 of the DMG; the Homebrew cask pins it. If the signing key is ever lost or exposed, a new key will be announced in the releases and the README. The maintainer's key backup, restore and rotation steps are in [RELEASING.md](RELEASING.md).

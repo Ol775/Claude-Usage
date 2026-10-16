@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.15 – beta (2026-10-16)
+- Docs: diagrams for update trust, privacy, releasing and contributing, drawn by docs/make-diagrams.py; no app changes
+
 ## 0.16.14 – beta (2026-10-16)
 - Roadmap page: self-updating progress graphic drawn from the roadmap checklist by a GitHub Action; no app changes
 

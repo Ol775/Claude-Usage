@@ -22,6 +22,8 @@ Screenshot tests and how to refresh their baselines are described in [`ClaudeUsa
 
 ## Pull requests
 
+<p align="center"><img src="docs/contribute-flow.svg" alt="Build, self-test, bump, then open a pull request that CI checks on macOS 14, 15 and latest" width="900"></p>
+
 - Keep each PR small and focused.
 - Run `--selftest` first; CI also runs it on macOS 14, 15 and latest.
 - Run `./bump.sh patch "short note"` when you change anything in `src/` or `build.sh`. It updates the version, change log and README, and a pre-commit hook checks it.

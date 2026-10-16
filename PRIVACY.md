@@ -19,6 +19,8 @@ Your usage history, saved activity, settings and profile photo are stored only i
 
 ## Network requests
 
+<p align="center"><img src="docs/privacy-flow.svg" alt="Claude Usage keeps your data on your Mac and only talks to Anthropic for your limits, ChatGPT if you connect it, and GitHub for updates" width="900"></p>
+
 The app makes up to three kinds of request, and nothing else:
 
 1. **Anthropic** (`api.anthropic.com`) for your usage limits.

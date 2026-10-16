@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 252" width="1000" height="252" role="img" aria-labelledby="t d"><title id="t">How an update is checked before it installs</title><desc id="d">An update must come from this repo&#x27;s GitHub releases over HTTPS, carry a valid Ed25519 signature for that exact version, match its SHA-256, and have the right bundle id, version and code signature. Any failure discards it.</desc><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c1c1f"/><stop offset="1" stop-color="#0d0d0f"/></linearGradient><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ff8a5c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker><style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif}.k{font-size:12px;font-weight:600;letter-spacing:.09em;fill:#ff8a5c}.h{font-weight:700;fill:#f4f1ee}.s{fill:#b3ada7}.f{font-size:14px;fill:#b3ada7}.c{fill:#232326;stroke:#3a3a3f;stroke-width:1.2}.a{stroke:#ff8a5c}@media (prefers-reduced-motion:no-preference){.arrow{stroke-dasharray:5 5;animation:flow 1.2s linear infinite}}@keyframes flow{to{stroke-dashoffset:-10}}</style></defs><rect width="1000" height="252" rx="16" fill="url(#bg)" stroke="#2c2c30"/>
+<rect class="c" x="28.0" y="40" width="164.8" height="150" rx="12"/>
+<text class="k" x="46.0" y="72">1 · SOURCE</text><text class="h" style="font-size:16px" x="46.0" y="102">GitHub</text>
+<text class="s" style="font-size:13px" x="46.0" y="130">This repo&#x27;s releases</text>
+<text class="s" style="font-size:13px" x="46.0" y="149">over HTTPS only</text>
+<path class="arrow" d="M196.8 115.0 H216.8" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c" x="222.8" y="40" width="164.8" height="150" rx="12"/>
+<text class="k" x="240.8" y="72">2 · SIGNATURE</text><text class="h" style="font-size:16px" x="240.8" y="102">Ed25519</text>
+<text class="s" style="font-size:13px" x="240.8" y="130">Valid for this</text>
+<text class="s" style="font-size:13px" x="240.8" y="149">exact version</text>
+<path class="arrow" d="M391.6 115.0 H411.6" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c" x="417.6" y="40" width="164.8" height="150" rx="12"/>
+<text class="k" x="435.6" y="72">3 · CHECKSUM</text><text class="h" style="font-size:16px" x="435.6" y="102">SHA-256</text>
+<text class="s" style="font-size:13px" x="435.6" y="130">Must match the</text>
+<text class="s" style="font-size:13px" x="435.6" y="149">published value</text>
+<path class="arrow" d="M586.4 115.0 H606.4" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c" x="612.4" y="40" width="164.8" height="150" rx="12"/>
+<text class="k" x="630.4" y="72">4 · THE APP</text><text class="h" style="font-size:16px" x="630.4" y="102">Bundle check</text>
+<text class="s" style="font-size:13px" x="630.4" y="130">Id, version and</text>
+<text class="s" style="font-size:13px" x="630.4" y="149">code signature</text>
+<path class="arrow" d="M781.2 115.0 H801.2" stroke="#ff8a5c" stroke-width="2" fill="none" marker-end="url(#ar)" stroke-linecap="round"/>
+<rect class="c a" x="807.2" y="40" width="164.8" height="150" rx="12"/>
+<text class="k" x="825.2" y="72">5 · RESULT</text><text class="h" style="font-size:16px" x="825.2" y="102">Install</text>
+<text class="s" style="font-size:13px" x="825.2" y="130">Any failed check</text>
+<text class="s" style="font-size:13px" x="825.2" y="149">discards it</text>
+<text class="f" x="500.0" y="228" text-anchor="middle">The signing key is kept offline, never on GitHub. The app never builds or runs code from the repository.</text>
+</svg>
