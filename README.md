@@ -1,13 +1,17 @@
-<p align="center"><img src="docs/hero.gif" alt="Claude Usage tour: the Overview, Reports, Insights and Usage pages with session and weekly limits, forecasts, token charts and costs, in Light, Dark and OLED themes" width="900"></p>
+<p align="center"><img src="docs/hero.gif" alt="Claude Usage tour: the Overview, Reports, Insights and Usage pages with session and weekly limits, forecasts, token charts and costs" width="900"></p>
 
-# Claude Usage – Claude Code usage tracker for the macOS menu bar
+<h1 align="center">Claude Usage – Claude Code usage tracker for the macOS menu bar</h1>
+
+<div align="center">
 
 [![Latest release](https://img.shields.io/github/v/release/Ol775/Claude-Usage?color=e8734a)](https://github.com/Ol775/Claude-Usage/releases/latest)
 [![MIT licence](https://img.shields.io/github/license/Ol775/Claude-Usage?color=e8734a)](LICENSE)
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-e8734a)
 ![Swift](https://img.shields.io/badge/Swift-SwiftUI-e8734a)
 
-**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.8 beta<!--/v-->.
+</div>
+
+**Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.9 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
@@ -34,7 +38,34 @@ Limits come from Claude Code's login in your own keychain; nothing is stored in 
 API-equivalent costs use Anthropic's published API prices and are only a guide – a Claude plan isn't billed that way.
 Unofficial – not affiliated with Anthropic.
 
-## Screenshots
+## Tour
+
+### Limits, forecasts and history
+
+The Overview shows your **session** and **weekly** limits with reset times and a forecast of when you'll hit them. **Reports**, **Insights** and **Usage** turn your saved activity into charts of tokens, limit utilisation, API-equivalent cost and your busiest days, per model and per project.
+
+### Make it yours
+
+<a href="docs/feature-themes.gif"><img src="docs/feature-themes.gif" alt="Claude Usage in Dark, Light and OLED black, then in a custom colour" width="900"></a>
+
+Light, Dark, **OLED black** or follow the system, six colour themes plus any custom colour, five fonts including OpenDyslexic, and a profile picture in the sidebar.
+
+### A menu bar item you design
+
+<a href="docs/feature-menubar.gif"><img src="docs/feature-menubar.gif" alt="Settings, Menu Bar: a live preview of the menu bar item, presets and the list of items you can switch on" width="900"></a>
+
+Pick the items, labels and colours, with a live preview of what the menu bar will show, or start from a preset.
+
+### ChatGPT next to Claude *(experimental)*
+
+<a href="docs/feature-chatgpt.gif"><img src="docs/feature-chatgpt.gif" alt="The Overview before and after connecting ChatGPT: Codex 5-hour and weekly limits appear beneath the Claude cards" width="900"></a>
+
+Optional Codex limits for paid ChatGPT plans, on the same cards and charts. Nothing is read until you connect it.
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+<br>
 
 <table>
 <tr>
@@ -57,6 +88,7 @@ Unofficial – not affiliated with Anthropic.
 </tr>
 </table>
 
+</details>
 
 ## Install
 

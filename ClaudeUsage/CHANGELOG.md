@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.9 – beta (2026-10-16)
+- Repo visuals refresh: new social-preview banner, feature GIFs (themes, menu bar, ChatGPT) and a restructured README tour; no app changes
+
 ## 0.16.8 – beta (2026-10-16)
 - README: new animated hero (docs/hero.gif) touring Overview, Reports, Insights and Usage; no app changes
 
