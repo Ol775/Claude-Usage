@@ -4,7 +4,8 @@
 
 Last updated 7 October 2026. This matches the text in the app under Settings → Help & Legal → Privacy and your data.
 
-**Short version:** Claude Usage works on your Mac. The developer runs no servers, receives no analytics and collects no data about you.
+> [!NOTE]
+> **Short version:** Claude Usage works on your Mac. The developer runs no servers, receives no analytics and collects no data about you.
 
 ## What stays on your Mac
 

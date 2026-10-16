@@ -42,7 +42,8 @@ The Mac app picks the folder up at its next refresh (within a minute or so). Win
 
 ## Privacy
 
-The logs contain your Claude Code conversations (prompts, replies, file contents Claude read). Whatever syncs the destination folder uploads them, so choose a service you trust, or a folder shared only on your own network. Claude Usage itself only reads the folder and never sends anything off your Mac. See [PRIVACY.md](../PRIVACY.md).
+> [!WARNING]
+> The logs contain your Claude Code conversations (prompts, replies, file contents Claude read). Whatever syncs the destination folder uploads them, so choose a service you trust, or a folder shared only on your own network. Claude Usage itself only reads the folder and never sends anything off your Mac. See [PRIVACY.md](../PRIVACY.md).
 
 ## Troubleshooting
 

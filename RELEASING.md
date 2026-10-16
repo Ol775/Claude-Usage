@@ -2,7 +2,8 @@
 
 # Releasing and the signing key
 
-For maintainers. Users don't need any of this; see [SECURITY.md](SECURITY.md) for how updates are checked.
+> [!NOTE]
+> For maintainers. Users don't need any of this; see [SECURITY.md](SECURITY.md) for how updates are checked.
 
 ## Releasing a version
 

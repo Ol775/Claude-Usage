@@ -4,7 +4,8 @@
 
 ## Reporting a vulnerability
 
-Please report security problems **privately** through GitHub: [Report a vulnerability](https://github.com/Ol775/Claude-Usage/security/advisories/new). Please don't open a public issue for anything that could put users at risk. Don't include real tokens or personal logs in a report.
+> [!IMPORTANT]
+> Please report security problems **privately** through GitHub: [Report a vulnerability](https://github.com/Ol775/Claude-Usage/security/advisories/new). Please don't open a public issue for anything that could put users at risk. Don't include real tokens or personal logs in a report.
 
 ## Supported versions
 
