@@ -13,13 +13,15 @@
 
 </div>
 
-<p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="#security-and-privacy">Security</a></p>
+<p align="center"><a href="#features">Features</a> · <a href="#tour">Tour</a> · <a href="#install">Install</a> · <a href="#faq">FAQ</a> · <a href="#roadmap">Roadmap</a> · <a href="https://claude-usage.peacock665.dev/demo">Live demo</a> · <a href="#security-and-privacy">Security</a></p>
 
 **Claude Usage** is a free, open-source Mac app that shows your **Claude Code session and weekly usage limits** in the menu bar, with reset times, forecasts of when you'll hit the limit, and charts of your token usage. It's a native Swift and SwiftUI app for macOS 13 and later (the download runs natively on both Apple silicon and Intel Macs), with Light, Dark and OLED black themes. Current version: <!--v-->v0.16.18 beta<!--/v-->.
 
 Keep an eye on how much of your Claude plan (Pro or Max) you've used, avoid hitting the limit mid-task, and see what your usage would cost at API prices. The source is in [`ClaudeUsage/`](ClaudeUsage).
 
 > **Install:** `brew install --cask Ol775/tap/claude-usage` · or [download the DMG](https://github.com/Ol775/Claude-Usage/releases/latest) · [more options](#install)
+
+**Try it first:** the [interactive demo](https://claude-usage.peacock665.dev/demo) runs a simulated Claude Code session in your browser, with the limits, forecast, alerts, reports, insights and menu bar all reacting. It uses sample data and reads nothing from your Mac. More at [claude-usage.peacock665.dev](https://claude-usage.peacock665.dev).
 
 ## Features
 
