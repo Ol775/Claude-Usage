@@ -36,15 +36,20 @@ func parseClaudeLimits(_ json: [String: Any]) -> [Limit] {
 private var limitsBackoffUntil = Date.distantPast
 func fetchLimits() -> (limits: [Limit], error: String?) {
     if Date() < limitsBackoffUntil { return ([], "Usage unavailable (HTTP 429, rate limited – retrying automatically)") }
-    let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-    p.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
-    let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
-    do { try p.run() } catch { return ([], "Can't read Claude Code login") }
-    DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }   // never hang on a keychain prompt
-    let out = pipe.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
-    guard let cred = try? JSONSerialization.jsonObject(with: out) as? [String: Any],
-          let oauth = cred["claudeAiOauth"] as? [String: Any], let token = oauth["accessToken"] as? String
-    else { return ([], "Sign in to Claude Code to see limits") }
+    // Claude Code stores its login under account = your user name. Other tools (MCP auth) can leave a second item with the
+    // same service name and another account (e.g. "unknown") that has no claudeAiOauth, so ask for yours first, then any.
+    var token: String?
+    for account in [NSUserName(), nil] {
+        let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        p.arguments = ["find-generic-password", "-s", "Claude Code-credentials"] + (account.map { ["-a", $0] } ?? []) + ["-w"]
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
+        do { try p.run() } catch { return ([], "Can't read Claude Code login") }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 10) { if p.isRunning { p.terminate() } }   // never hang on a keychain prompt
+        let out = pipe.fileHandleForReading.readDataToEndOfFile(); p.waitUntilExit()
+        if let cred = try? JSONSerialization.jsonObject(with: out) as? [String: Any],
+           let oauth = cred["claudeAiOauth"] as? [String: Any], let t = oauth["accessToken"] as? String { token = t; break }
+    }
+    guard let token = token else { return ([], "Sign in to Claude Code to see limits") }
     var req = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!, timeoutInterval: 15)
     req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")

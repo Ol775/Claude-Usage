@@ -3,6 +3,9 @@
 Versions follow `MAJOR.MINOR.PATCH` and are currently **beta**. Bump `VERSION` (use `./bump.sh`) with every change:
 **minor** for new features, **patch** for fixes and polish. The build number is the git commit count and rises automatically.
 
+## 0.16.20 – beta (2026-11-06)
+- Fix 'Sign in to see limits' when the keychain holds two Claude Code items: look up the login by your user name first
+
 ## 0.16.19 – beta (2026-10-16)
 - README gallery: the extra screenshots are now short GIFs; no app changes
 
