@@ -5,7 +5,7 @@
 <rect width="1000" height="484" rx="16" fill="url(#bg)" stroke="#2c2c30"/>
 <text class="k" x="36" y="44">ROADMAP TO 1.0</text>
 <text class="h" x="36" y="76">53% of the beta work is done</text>
-<text class="s" x="964" y="76" text-anchor="end">latest release v0.16.7 · beta · 18 of 34 items</text>
+<text class="s" x="964" y="76" text-anchor="end">latest release v0.16.20 · beta · 18 of 34 items</text>
 <line x1="56" y1="128" x2="944" y2="128" stroke="#3a3a3f" stroke-width="3" stroke-linecap="round"/>
 <line x1="56" y1="128" x2="500" y2="128" stroke="#ff8a5c" stroke-width="3" stroke-linecap="round"/>
 <line class="bar" x1="500" y1="128" x2="735" y2="128" stroke="#ff8a5c" stroke-width="3" stroke-linecap="round"/>
@@ -13,7 +13,7 @@
 <text class="n" x="36" y="162" text-anchor="start">Alpha</text><text class="s" x="36" y="182" text-anchor="start">complete</text>
 <circle cx="500" cy="128" r="9" fill="#ff8a5c" stroke="#ff8a5c" stroke-width="2"/>
 <circle class="ping" cx="500" cy="128" r="9" fill="none" stroke="#ff8a5c" stroke-width="2"/>
-<text class="n" x="500" y="162" text-anchor="middle">Beta · you are here</text><text class="s" x="500" y="182" text-anchor="middle">v0.16.7</text>
+<text class="n" x="500" y="162" text-anchor="middle">Beta · you are here</text><text class="s" x="500" y="182" text-anchor="middle">v0.16.20</text>
 <circle cx="944" cy="128" r="9" fill="#232326" stroke="#ff8a5c" stroke-width="2"/>
 <text class="n" x="964" y="162" text-anchor="end">1.0</text><text class="s" x="964" y="182" text-anchor="end">0 of 7 gates</text>
 <text class="k" x="36" y="211">B1</text><text class="l" x="80" y="211">Real-world confidence</text>
