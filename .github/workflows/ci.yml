@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-latest]        # the app targets macOS 13+, so build and self-test on older systems too
+        os: [macos-15, macos-latest]        # macos-14 dropped: its runners were cancelling instantly (2026-11-07)
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
