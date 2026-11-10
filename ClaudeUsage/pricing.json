@@ -1,7 +1,19 @@
 {
-  "updated": "2026-11-06",
+  "updated": "2026-11-10",
   "note": "$ per million tokens; cache writes are 1.25x input. Haiku 5.5 prices are x5 for prompts over 100k tokens (longMultiplier). Edit this file to update prices without an app release.",
   "models": [
+    {
+      "prefix": "claude-fable-5-2",
+      "input": 8.0,
+      "output": 40.0,
+      "cacheRead": 0.2
+    },
+    {
+      "prefix": "claude-mythos-5-2",
+      "input": 8.0,
+      "output": 40.0,
+      "cacheRead": 0.2
+    },
     {
       "prefix": "claude-fable-5-1",
       "input": 10.0,
